@@ -921,7 +921,7 @@ let activeDomain    = 'all';
 let activeRequirements = {}; // key → { target, weight }
 let previewAnimId   = null;
 
-// ─── WebGL preview ────────────────────────────────────────────────
+// ─── WebGL preview — renderer ported directly from TPMS Builder v0.5.5 ───────
 const detailCanvas = document.getElementById('detailCanvas');
 const gl = detailCanvas.getContext('webgl');
 let previewProg = null, previewQuadBuf = null;
@@ -933,125 +933,148 @@ function mat3Mul(A,B){
     r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];
   return r;
 }
-
 function rotAxisAngle(ax,ay,az,angle){
   const c=Math.cos(angle),s=Math.sin(angle),t=1-c;
-  const l=Math.sqrt(ax*ax+ay*ay+az*az)||1;
-  ax/=l;ay/=l;az/=l;
+  const l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;
   return[t*ax*ax+c,t*ax*ay+s*az,t*ax*az-s*ay,
          t*ax*ay-s*az,t*ay*ay+c,t*ay*az+s*ax,
          t*ax*az+s*ay,t*ay*az-s*ax,t*az*az+c];
 }
-
-// Initialise to isometric view
 previewRot = mat3Mul(
   rotAxisAngle(0,1,0, Math.PI/4),
   rotAxisAngle(1,0,0, Math.atan(1/Math.sqrt(2)))
 );
 
-function toF(v){const s=parseFloat(parseFloat(v).toFixed(6)).toString();return s.includes('.')?s:s+'.0';}
-
+function toFloat(v){const s=parseFloat(parseFloat(v).toFixed(6)).toString();return s.includes('.')?s:s+'.0';}
 function glslTrig(t,fx,fy,fz){
-  if(t==='sin(x)')return'sin('+fx+'*gx)';
-  if(t==='cos(x)')return'cos('+fx+'*gx)';
-  if(t==='sin(y)')return'sin('+fy+'*gy)';
-  if(t==='cos(y)')return'cos('+fy+'*gy)';
-  if(t==='sin(z)')return'sin('+fz+'*gz)';
-  if(t==='cos(z)')return'cos('+fz+'*gz)';
+  if(t==='sin(x)')return'sin('+fx+'*gx)';if(t==='cos(x)')return'cos('+fx+'*gx)';
+  if(t==='sin(y)')return'sin('+fy+'*gy)';if(t==='cos(y)')return'cos('+fy+'*gy)';
+  if(t==='sin(z)')return'sin('+fz+'*gz)';if(t==='cos(z)')return'cos('+fz+'*gz)';
   return'1.0';
 }
 
-function buildFrag(terms, mode, offsetVal, wallVal, cellMult, pipeR, phaseShift) {
-  const active = terms.filter(t => t.on && t.factors && t.factors.length);
-  const lines  = active.map(t => {
-    const parts = t.factors.map(f => '('+glslTrig(f.trig,toF(f.fx),toF(f.fy),toF(f.fz))+')');
-    return '  v+='+toF(t.coef)+'*'+parts.join('*')+';';
-  }).join('\n');
+// GLSL strings for double-frequency presets that can't be expressed as factor products.
+// Keyed by all known name variants from the Builder and sweep exports.
+const GLSL_PRESETS = {
+  'lidinoid':       '1.1*(sin(2.*gx)*cos(gy)*sin(gz)+sin(gx)*sin(2.*gy)*cos(gz)+cos(gx)*sin(gy)*sin(2.*gz))-0.2*(cos(2.*gx)*cos(2.*gy)+cos(2.*gy)*cos(2.*gz)+cos(2.*gz)*cos(2.*gx))-0.4*(cos(2.*gx)+cos(2.*gy)+cos(2.*gz))',
+  'fks':            'cos(2.*gx)*sin(gy)*cos(gz)+cos(2.*gy)*sin(gz)*cos(gx)+cos(2.*gz)*sin(gx)*cos(gy)',
+  'Fischer-Koch S': 'cos(2.*gx)*sin(gy)*cos(gz)+cos(2.*gy)*sin(gz)*cos(gx)+cos(2.*gz)*sin(gx)*cos(gy)',
+  'frd':            'sin(2.*gx)*cos(gy)*sin(gz)+sin(gx)*sin(2.*gy)*cos(gz)+cos(gx)*sin(gy)*sin(2.*gz)-cos(2.*gx)*cos(2.*gy)-cos(2.*gy)*cos(2.*gz)-cos(2.*gz)*cos(2.*gx)+0.3',
+  'F-RD':           'sin(2.*gx)*cos(gy)*sin(gz)+sin(gx)*sin(2.*gy)*cos(gz)+cos(gx)*sin(gy)*sin(2.*gz)-cos(2.*gx)*cos(2.*gy)-cos(2.*gy)*cos(2.*gz)-cos(2.*gz)*cos(2.*gx)+0.3',
+  'splitP':         'sin(gx)*sin(gy)*cos(gz)+sin(gy)*sin(gz)*cos(gx)+sin(gz)*sin(gx)*cos(gy)-0.3',
+  'Split-P':        'sin(gx)*sin(gy)*cos(gz)+sin(gy)*sin(gz)*cos(gx)+sin(gz)*sin(gx)*cos(gy)-0.3',
+  'gyroidHarmonic': 'sin(gx)*cos(gy)+sin(gy)*cos(gz)+sin(gz)*cos(gx)+0.3*(sin(2.*gx)*cos(2.*gy)+sin(2.*gy)*cos(2.*gz)+sin(2.*gz)*cos(2.*gx))',
+  'primitiveC':     '2.0*(cos(gx)+cos(gy)+cos(gz))-(cos(2.*gx)+cos(2.*gy)+cos(2.*gz))',
+  'octo':           'cos(gx)+cos(gy)+cos(gz)-0.5*(cos(2.*gx)*cos(2.*gy)+cos(2.*gy)*cos(2.*gz)+cos(2.*gz)*cos(2.*gx))',
+  'pHarmonic':      'cos(gx)+cos(gy)+cos(gz)+0.25*(cos(2.*gx)+cos(2.*gy)+cos(2.*gz))',
+};
 
-  const H = toF(Math.PI * (cellMult || 1));
-  const isPi = mode === 'pi-tpms';
+function buildFrag(terms, preset, shellMode, piMode, offsetVal, wallVal, pipeRVal, cellMult, phaseShift) {
+  const active  = (terms||[]).filter(t => t.on && t.factors && t.factors.length);
+  const rawGlsl = GLSL_PRESETS[preset] || null;
+  const H       = toFloat(Math.PI * (cellMult||1));
+  const TWO_PI  = 2 * Math.PI;
 
-  let fieldFuncs, implicitExpr, featureSize;
-  if(isPi){
-    const TWO_PI = 2*Math.PI;
-    const dxS = toF((phaseShift?.x||0)*TWO_PI);
-    const dyS = toF((phaseShift?.y||0)*TWO_PI);
-    const dzS = toF((phaseShift?.z||0)*TWO_PI);
-    const pRS = toF(pipeR||0.1);
-    fieldFuncs =
-      'float evalA(vec3 p){float v=0.0;float gx=p.x,gy=p.y,gz=p.z;'+lines+' return v;}'+
-      'float evalB(vec3 p){float v=0.0;float gx=p.x+'+dxS+',gy=p.y+'+dyS+',gz=p.z+'+dzS+';'+lines+' return v;}';
-    implicitExpr = 'max(abs(evalA(p)),abs(evalB(p)))-'+pRS;
-    featureSize  = toF(pipeR||0.1);
-  } else {
-    const offS  = toF(offsetVal||0);
-    const wallS = toF(wallVal||0.3);
-    fieldFuncs  =
-      'float evalA(vec3 p){float v=0.0;float gx=p.x,gy=p.y,gz=p.z;'+lines+' return v;}'+
-      'float evalB(vec3 p){return 0.0;}';
-    implicitExpr = mode==='shell'
-      ? 'abs(evalA(p)-'+offS+')-'+wallS
-      : 'evalA(p)-'+offS;
-    featureSize  = wallS;
+  function fieldBody(px, py, pz) {
+    const coords = 'float gx='+px+',gy='+py+',gz='+pz+';';
+    if(rawGlsl) return coords+' v='+rawGlsl+';';
+    return coords+'\n'+active.map(t=>{
+      const parts=t.factors.map(f=>'('+glslTrig(f.trig,toFloat(f.fx),toFloat(f.fy),toFloat(f.fz))+')');
+      return'  v+='+toFloat(t.coef)+'*'+parts.join('*')+';';
+    }).join('\n');
   }
 
-  const nrmE = toF(Math.max(0.002, parseFloat(featureSize)*0.08));
+  let baseFunc, implicitExpr;
+  const featureSize = piMode ? (pipeRVal||0.1) : shellMode ? (wallVal||0.3) : Math.PI*(cellMult||1)*0.25;
+
+  if(piMode) {
+    const dxS = toFloat((phaseShift?.x||0)*TWO_PI);
+    const dyS = toFloat((phaseShift?.y||0)*TWO_PI);
+    const dzS = toFloat((phaseShift?.z||0)*TWO_PI);
+    const pRS = toFloat(pipeRVal||0.1);
+    baseFunc =
+      'float evalA(vec3 p,float H){float v=0.0;'+fieldBody('p.x','p.y','p.z')+' return v;}'+
+      'float evalB(vec3 p,float H){float v=0.0;'+fieldBody('p.x+'+dxS,'p.y+'+dyS,'p.z+'+dzS)+' return v;}'+
+      'float base(vec3 p,float H){return evalA(p,H);}';
+    implicitExpr = 'max(abs(evalA(p,H)),abs(evalB(p,H)))-'+pRS;
+  } else {
+    const offS  = toFloat(offsetVal||0);
+    const wallS = toFloat(wallVal||0.3);
+    baseFunc =
+      'float base(vec3 p,float H){float v=0.0;'+fieldBody('p.x','p.y','p.z')+' return v;}';
+    implicitExpr = shellMode
+      ? 'abs(base(p,H)-('+offS+'))-'+wallS
+      : 'base(p,H)-('+offS+')';
+  }
+
+  const fsS = toFloat(featureSize);
 
   return [
-    'precision mediump float;',
-    'uniform vec2 res; uniform mat3 rot; uniform float zoom;',
-    'float sdf(vec3 p,float H){p=mod(p+H,2.0*H)-H;'+fieldFuncs+' return '+implicitExpr+';}',
-    'vec3 nrm(vec3 p,float H,float e){return normalize(vec3(',
-    '  sdf(p+vec3(e,0,0),H)-sdf(p-vec3(e,0,0),H),',
-    '  sdf(p+vec3(0,e,0),H)-sdf(p-vec3(0,e,0),H),',
-    '  sdf(p+vec3(0,0,e),H)-sdf(p-vec3(0,0,e),H)));}',
-    'vec3 palette(float t){',
-    '  vec3 a=vec3(0.5,0.5,0.5),b=vec3(0.5,0.5,0.5),c=vec3(1.0,1.0,1.0),d=vec3(0.0,0.1,0.2);',
-    '  return a+b*cos(6.283*(c*t+d));}',
+    'precision highp float;',
+    'uniform vec2 res;uniform mat3 rot;uniform float zoom;',
+    baseFunc,
+    'float implicit(vec3 p,float H){return '+implicitExpr+';}',
+    'float boxSDF(vec3 p,float H){vec3 d=abs(p)-H;return length(max(d,0.0))+min(max(d.x,max(d.y,d.z)),0.0);}',
+    'float sceneSDF(vec3 p,float H){return max(implicit(p,H),boxSDF(p,H));}',
+    'vec3 nrm(vec3 p,float H,float e){return normalize(vec3(sceneSDF(p+vec3(e,0,0),H)-sceneSDF(p-vec3(e,0,0),H),sceneSDF(p+vec3(0,e,0),H)-sceneSDF(p-vec3(0,e,0),H),sceneSDF(p+vec3(0,0,e),H)-sceneSDF(p-vec3(0,0,e),H)));}',
+    'vec3 palette(float t){vec3 a=vec3(0.55,0.57,0.42),b=vec3(0.43,0.42,0.30),c=vec3(1.0,1.0,1.0),d=vec3(0.02,0.0,0.05);return clamp(a+b*cos(6.28318*(c*t+d)),0.0,1.0);}',
     'void main(){',
     '  vec2 uv=(gl_FragCoord.xy-res*0.5)/min(res.x,res.y);',
     '  vec3 ro=rot*vec3(0.0,0.0,zoom);',
-    '  vec3 rd=normalize(rot*vec3(uv,-1.8));',
-    '  vec3 bgCol=vec3(0.016,0.024,0.032);',
+    '  vec3 rd=normalize(rot*vec3(uv.x,uv.y,-1.6));',
+    '  float H='+H+';',
+    '  float r=clamp(length(uv)*1.1,0.0,1.0);',
+    '  vec3 bgCol=mix(vec3(0.07,0.07,0.07),vec3(0.03,0.03,0.03),r*r);',
     '  vec4 bg=vec4(bgCol,1.0);',
-    '  float H='+H+',nrmE='+nrmE+';',
-    '  float maxStep=H*0.3,thresh='+toF(parseFloat(featureSize)*0.012)+';',
-    '  float tEn=-1.0,tEx=-1.0;',
-    '  float b2=dot(rd,ro),c2=dot(ro,ro)-H*H*3.0;',
-    '  float disc=b2*b2-c2;',
-    '  if(disc<0.0){gl_FragColor=bg;return;}',
-    '  float sq=sqrt(disc);',
-    '  tEn=(-b2-sq); tEx=(-b2+sq);',
-    '  if(tEx<0.0){gl_FragColor=bg;return;}',
-    '  float t=max(tEn,0.0);',
-    '  bool hit=false;',
-    '  for(int i=0;i<96;i++){',
-    '    float d=sdf(ro+rd*t,H);',
+    '  float featureSize='+fsS+';',
+    '  float camScale=clamp(zoom/16.0,0.15,1.0);',
+    '  float thresh=featureSize*0.008*camScale;',
+    '  float maxStep=featureSize*0.25*camScale;',
+    '  float nrmE=featureSize*0.06*camScale;',
+    '  vec3 iv=vec3(1.0)/rd;',
+    '  vec3 tb=(-vec3(H,H,H)-ro)*iv,tt=(vec3(H,H,H)-ro)*iv;',
+    '  vec3 tmi=min(tb,tt),tma=max(tb,tt);',
+    '  float tEn=max(max(tmi.x,tmi.y),tmi.z);',
+    '  float tEx=min(min(tma.x,tma.y),tma.z);',
+    '  if(tEn>tEx||tEx<0.0){gl_FragColor=bg;return;}',
+    '  float t=max(tEn,0.001);bool hit=false;',
+    '  for(int i=0;i<512;i++){',
+    '    vec3 p=ro+rd*t;float d=sceneSDF(p,H);',
     '    if(d<thresh){hit=true;break;}',
     '    if(t>tEx+0.01)break;',
     '    t+=clamp(d*0.85,thresh*0.5,maxStep);',
     '  }',
-    '  if(!hit){gl_FragColor=bg;return;}',
+    '  if(!hit){',
+    '    if(tEn>=0.0){',
+    '      vec3 pc=ro+rd*tEn,ep=abs(pc)/H;',
+    '      vec2 fp;if(ep.x>ep.y&&ep.x>ep.z)fp=ep.yz;else if(ep.y>ep.z)fp=ep.xz;else fp=ep.xy;',
+    '      float ed=min(1.0-fp.x,1.0-fp.y);',
+    '      if(ed<0.04){float w=smoothstep(0.04,0.005,ed);gl_FragColor=mix(bg,vec4(0.78,0.96,0.26,1.0),w*0.4);return;}',
+    '    }',
+    '    gl_FragColor=bg;return;',
+    '  }',
     '  vec3 pos=ro+rd*t,n=nrm(pos,H,nrmE);',
     '  if(dot(n,-rd)<0.0)n=-n;',
     '  float dy=dot(n,vec3(0,1,0)),dz=dot(n,vec3(0,0,1));',
     '  float hue=dy*dy*0.33+dz*dz*0.67;',
     '  vec3 iridBase=palette(hue),iridShift=palette(hue+0.5);',
     '  vec3 l1=normalize(vec3(1,1.8,2)),l2=normalize(vec3(-0.8,-0.3,0.6));',
-    '  float diff=0.35+max(dot(n,l1),0.0)*0.7+max(dot(n,l2),0.0)*0.25;',
-    '  float spec=pow(max(dot(reflect(-l1,n),-rd),0.0),120.0)*1.5;',
+    '  float l3fill=max(dot(n,normalize(vec3(-0.5,-1.0,-1.5))),0.0)*0.3;',
+    '  float diff=0.35+max(dot(n,l1),0.0)*0.7+max(dot(n,l2),0.0)*0.25+l3fill;',
+    '  float spec1=pow(max(dot(reflect(-l1,n),-rd),0.0),120.0)*0.7;',
+    '  float spec2=pow(max(dot(reflect(-l1,n),-rd),0.0),20.0)*0.2;',
     '  float rim=pow(1.0-max(dot(n,-rd),0.0),2.5)*0.8;',
-    '  vec3 col=iridBase*diff+vec3(1,0.98,0.95)*spec+iridShift*rim*0.6;',
+    '  vec3 green=vec3(0.784,0.961,0.259);',
+    '  vec3 col=iridBase*diff+vec3(1,1,1)*spec1+green*spec2*0.6+green*rim*0.45;',
     '  col=mix(bgCol,col,exp(-t*0.010));',
     '  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);',
     '}'
   ].join('\n');
 }
 
-function mkShader(type, src){
-  const s=gl.createShader(type);
-  gl.shaderSource(s,src); gl.compileShader(s);
-  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+function mkShader(type,src){
+  const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));
   return s;
 }
 
@@ -1059,10 +1082,19 @@ const VERT='attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
 
 function buildPreview(design){
   if(!gl||!design) return;
-  const g     = design.geometry || {};
-  const terms = design.surface_terms || [];
-  const frag  = buildFrag(terms, g.mode||'solid', g.offset||0, g.wall_thickness||0.3, g.cell_scale||1, g.pipe_radius||0.1, g.phase_shift);
-  const prog  = gl.createProgram();
+  const g      = design.geometry || {};
+  const terms  = design.surface_terms || [];
+  const preset = design.preset || '';
+  const isPi   = design.mode === 'pi-tpms';
+  const isShell= design.mode === 'shell';
+  const frag   = buildFrag(
+    terms, preset, isShell, isPi,
+    g.offset||0, g.wall_thickness||0.3,
+    design.pipe_radius||g.pipe_radius||0.1,
+    g.cell_scale||1,
+    design.phase_shift||g.phase_shift
+  );
+  const prog = gl.createProgram();
   gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, VERT));
   gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, frag));
   gl.linkProgram(prog);

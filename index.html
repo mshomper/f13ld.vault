@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScaffoldVault — Metamaterial Structure Library</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #06080d;
+  --surface:  #0b0f16;
+  --panel:    #0f1520;
+  --border:   #172030;
+  --border2:  #1e2d40;
+  --accent:   #00e5c0;
+  --accent2:  #0088ff;
+  --accent3:  #ff5f3e;
+  --gold:     #f0b429;
+  --text:     #c8dce8;
+  --muted:    #3d5a6e;
+  --muted2:   #1e3040;
+  --success:  #00c97a;
+  --dim:      rgba(255,255,255,0.04);
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px; }
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,192,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,192,0.018) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Noise */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 999; opacity: 0.5;
+}
+
+/* ── App shell ── */
+.app {
+  display: grid;
+  grid-template-rows: 64px 1fr;
+  grid-template-columns: 320px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Topbar ── */
+.topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11,15,22,0.95);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.brand-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+}
+
+.topbar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.db-stat {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.db-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulse 2.5s ease infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-link {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: 0.08em;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.topbar-link:hover { color: var(--accent); border-color: rgba(0,229,192,0.3); }
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 24px 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 20px 10px;
+  margin-top: 24px;
+}
+
+.section-label:first-child { margin-top: 0; }
+
+/* Domain pills */
+.domain-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 16px;
+  margin-bottom: 4px;
+}
+
+.domain-pill {
+  padding: 8px 6px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.domain-pill:hover { border-color: var(--accent); color: var(--accent); }
+.domain-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,192,0.07); }
+
+/* Sliders */
+.slider-group {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+.slider-row {
+  margin-bottom: 14px;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.slider-name {
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.slider-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+}
+
+.slider-hint {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.range-inputs {
+  display: grid;
+  grid-template-columns: 1fr 12px 1fr;
+  gap: 4px;
+  align-items: center;
+}
+
+.range-inputs input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.range-inputs input:focus { border-color: var(--accent); }
+.range-inputs .sep { text-align: center; color: var(--muted); font-size: 10px; }
+
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.weight-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+input[type=range] {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 2px;
+}
+
+.weight-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--accent2);
+  min-width: 20px;
+  text-align: right;
+}
+
+/* Select */
+select {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 10.5px;
+  padding: 7px 28px 7px 10px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233d5a6e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.15s;
+}
+
+select:focus { border-color: var(--accent); }
+
+/* Search button */
+.search-btn {
+  margin: 8px 16px 0;
+  width: calc(100% - 32px);
+  padding: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  border-radius: 7px;
+  color: #06080d;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.search-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.search-btn:active { transform: none; }
+
+.clear-btn {
+  margin: 8px 16px 0;
+  width: calc(100% - 32px);
+  padding: 8px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+/* ── Main ── */
+.main {
+  display: grid;
+  grid-template-rows: 1fr 300px;
+  overflow: hidden;
+}
+
+/* ── Results panel ── */
+.results-area {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.results-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.results-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 2px 9px;
+  border-radius: 10px;
+}
+
+.sort-group {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.sort-group select { width: auto; font-size: 10px; padding: 4px 24px 4px 8px; }
+
+/* Cards grid */
+.cards-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.cards-wrap::-webkit-scrollbar { width: 4px; }
+.cards-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* Design card */
+.design-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  animation: fadeUp 0.3s ease both;
+  position: relative;
+}
+
+.design-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.design-card.selected {
+  border-color: var(--accent);
+  background: rgba(0,229,192,0.04);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-preset {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.card-rank {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.card-rank.r1 { color: var(--accent); }
+.card-rank.r2 { color: var(--accent2); }
+.card-rank.r3 { color: #9b6fff; }
+
+.card-preview {
+  height: 120px;
+  background: #040608;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-preview canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.card-preview .preview-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  opacity: 0.08;
+}
+
+.card-metrics {
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.card-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-metric-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.card-metric-label {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.card-score {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,229,192,0.12);
+  border: 1px solid rgba(0,229,192,0.25);
+  border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--accent);
+  padding: 2px 6px;
+}
+
+.card-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-tags {
+  display: flex;
+  gap: 5px;
+}
+
+.tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 8.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+.tag.pi   { border-color: rgba(0,229,192,0.25); color: var(--accent); }
+.tag.shell { border-color: rgba(0,136,255,0.25); color: var(--accent2); }
+.tag.solid { border-color: rgba(240,180,41,0.25); color: var(--gold); }
+
+.get-recipe-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid rgba(0,229,192,0.3);
+  border-radius: 4px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.get-recipe-btn:hover { background: rgba(0,229,192,0.08); }
+
+/* Empty state */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon { font-size: 36px; opacity: 0.15; margin-bottom: 12px; }
+.empty-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.empty-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted2); }
+
+/* ── Detail panel ── */
+.detail-panel {
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr;
+  overflow: hidden;
+}
+
+.detail-preview {
+  border-right: 1px solid var(--border);
+  background: #040608;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#detailCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#detailCanvas.visible { opacity: 1; }
+
+.detail-placeholder {
+  position: absolute;
+  text-align: center;
+}
+
+.detail-placeholder .icon { font-size: 32px; opacity: 0.1; margin-bottom: 8px; }
+.detail-placeholder .hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2); }
+
+.detail-metrics {
+  padding: 16px 20px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+
+.detail-metrics::-webkit-scrollbar { width: 3px; }
+.detail-metrics::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.detail-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  margin-top: 16px;
+}
+
+.detail-section-title:first-child { margin-top: 0; }
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.metric-name { font-size: 11px; color: var(--muted); }
+.metric-value { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text); }
+.metric-value.highlight { color: var(--accent); }
+
+.detail-actions {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-header {
+  margin-bottom: 8px;
+}
+
+.detail-preset {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.detail-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.action-btn {
+  padding: 11px 16px;
+  border-radius: 7px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  color: #06080d;
+  font-weight: 600;
+}
+
+.action-btn.primary:hover { opacity: 0.88; }
+
+.action-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+.action-btn.secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+
+.geometry-info {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+.geometry-info span { color: var(--text); }
+
+.detail-score-big {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.score-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-name">ScaffoldVault</div>
+      <div class="brand-tag">BETA</div>
+    </div>
+    <div class="topbar-center">
+      <div class="db-stat">
+        <div class="db-dot"></div>
+        <span id="dbCount">—</span> designs · <span id="dbPresets">—</span> surface types
+      </div>
+    </div>
+    <div class="topbar-right">
+      <a class="topbar-link" href="https://mshomper.github.io/tpms-builder" target="_blank">TPMS Builder ↗</a>
+      <a class="topbar-link" href="https://mshomper.github.io/metamaterial-sweep-tool" target="_blank">Sweep Tool ↗</a>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="section-label">Application Domain</div>
+    <div class="domain-grid">
+      <button class="domain-pill active" data-domain="all"    onclick="setDomain('all',this)">All</button>
+      <button class="domain-pill"        data-domain="biomedical"  onclick="setDomain('biomedical',this)">Biomedical</button>
+      <button class="domain-pill"        data-domain="aerospace"   onclick="setDomain('aerospace',this)">Aerospace</button>
+      <button class="domain-pill"        data-domain="automotive"  onclick="setDomain('automotive',this)">Automotive</button>
+      <button class="domain-pill"        data-domain="oilgas"      onclick="setDomain('oilgas',this)">Oil &amp; Gas</button>
+      <button class="domain-pill"        data-domain="thermal"     onclick="setDomain('thermal',this)">Thermal</button>
+    </div>
+
+    <div class="section-label" style="margin-top:20px">Surface Type</div>
+    <div style="padding:0 16px;margin-bottom:4px">
+      <select id="presetSel" onchange="onFilterChange()">
+        <option value="">Any surface</option>
+      </select>
+    </div>
+
+    <div class="section-label">Mode</div>
+    <div style="padding:0 16px;margin-bottom:4px">
+      <select id="modeSel" onchange="onFilterChange()">
+        <option value="">Any mode</option>
+        <option value="pi-tpms">PI-TPMS</option>
+        <option value="shell">Shell</option>
+        <option value="solid">Solid</option>
+      </select>
+    </div>
+
+    <div class="section-label">Target Requirements</div>
+    <div class="slider-group" id="requirementsPanel">
+      <!-- Dynamically populated per domain -->
+    </div>
+
+    <button class="search-btn" onclick="runSearch()">▶ Find Structures</button>
+    <button class="clear-btn" onclick="clearFilters()">✕ Clear all filters</button>
+
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Results -->
+    <div class="results-area">
+      <div class="results-header">
+        <div class="results-title">Results</div>
+        <div class="results-count" id="resultsCount">—</div>
+        <div class="sort-group">
+          Sort by
+          <select id="sortSel" onchange="onSortChange()">
+            <option value="score">Match score</option>
+            <option value="anisotropy">Anisotropy</option>
+            <option value="volume_fraction">Volume fraction</option>
+            <option value="connect_idx">Connectivity</option>
+            <option value="pore_size">Pore size</option>
+            <option value="stiffness_density">Stiffness density</option>
+          </select>
+        </div>
+      </div>
+      <div class="cards-wrap" id="cardsWrap">
+        <div class="empty-state">
+          <div class="empty-icon">⬡</div>
+          <div class="empty-title">Set your requirements and search</div>
+          <div class="empty-sub">Select a domain · adjust targets · click Find Structures</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="detail-panel">
+
+      <div class="detail-preview">
+        <canvas id="detailCanvas"></canvas>
+        <div class="detail-placeholder" id="detailPlaceholder">
+          <div class="icon">⬡</div>
+          <div class="hint">Select a result</div>
+        </div>
+      </div>
+
+      <div class="detail-metrics" id="detailMetrics">
+        <div style="color:var(--muted2);font-family:'DM Mono',monospace;font-size:10px;padding-top:8px">
+          Click a design card to inspect its full metrics.
+        </div>
+      </div>
+
+      <div class="detail-actions" id="detailActions">
+        <div class="detail-header">
+          <div class="detail-preset" id="detailPreset">—</div>
+          <div class="detail-meta" id="detailMeta">select a design</div>
+        </div>
+        <div>
+          <div class="detail-score-big" id="detailScore">—</div>
+          <div class="score-label">match score</div>
+        </div>
+        <div class="geometry-info" id="detailGeo">—</div>
+        <button class="action-btn primary" id="downloadBtn" onclick="downloadRecipe()" disabled>
+          ↓ Get Recipe JSON
+        </button>
+        <button class="action-btn secondary" onclick="openInBuilder()" id="builderBtn" disabled>
+          Open in Builder ↗
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// ScaffoldVault Explorer
+// ═══════════════════════════════════════════════════════════════
+
+const SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_DAlrNLqbUZiwkaA6wPSMIw_YUNY85LX';
+
+// ─── Domain config — which metrics to show and weight ────────────
+const DOMAIN_CONFIG = {
+  all: {
+    requirements: [
+      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:1 },
+      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:50,   step:0.1, weight:1 },
+      { key:'connect_idx',      label:'Connectivity κ',      unit:'',    min:0,    max:1,    step:0.33,weight:1 },
+      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:1 },
+    ]
+  },
+  biomedical: {
+    requirements: [
+      { key:'microstrain_avg',  label:'Target microstrain',  unit:'με',  min:100,  max:5000, step:50,  weight:2 },
+      { key:'pore_size',        label:'Min pore size',       unit:'µm',  min:100,  max:1000, step:10,  weight:2 },
+      { key:'throat_size',      label:'Min throat diam.',    unit:'µm',  min:50,   max:500,  step:5,   weight:1 },
+      { key:'connect_idx',      label:'Connectivity κ',      unit:'',    min:0,    max:1,    step:0.33,weight:1 },
+      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:40,   step:0.5, weight:1 },
+    ]
+  },
+  aerospace: {
+    requirements: [
+      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:2 },
+      { key:'load_path_eff',    label:'Load path eff. λ',   unit:'',    min:0,    max:10,   step:0.1, weight:2 },
+      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:30,   step:0.5, weight:1 },
+      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:1 },
+    ]
+  },
+  automotive: {
+    requirements: [
+      { key:'ortho_contrast',   label:'Ortho contrast Ω',   unit:'',    min:0,    max:1,    step:0.05,weight:2 },
+      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:2 },
+      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:40,   step:0.5, weight:1 },
+      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:1 },
+    ]
+  },
+  oilgas: {
+    requirements: [
+      { key:'connect_idx',      label:'Connectivity κ',      unit:'',    min:0,    max:1,    step:0.33,weight:2 },
+      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:2 },
+      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:1 },
+    ]
+  },
+  thermal: {
+    requirements: [
+      { key:'thermal_anisotropy',label:'Thermal anisotropy kα',unit:'×', min:1,    max:20,   step:0.1, weight:2 },
+      { key:'k_density',         label:'Thermal / density k/ρ',unit:'',  min:0,    max:10,   step:0.1, weight:2 },
+      { key:'connect_idx',       label:'Connectivity κ',       unit:'',  min:0,    max:1,    step:0.33,weight:1 },
+    ]
+  },
+};
+
+// ─── State ────────────────────────────────────────────────────────
+let allDesigns    = [];   // full database pull
+let filteredResults = []; // after domain/preset/mode filter + scoring
+let selectedDesign  = null;
+let activeDomain    = 'all';
+let activeRequirements = {}; // key → { target, weight }
+let previewAnimId   = null;
+
+// ─── WebGL preview ────────────────────────────────────────────────
+const detailCanvas = document.getElementById('detailCanvas');
+const gl = detailCanvas.getContext('webgl');
+let previewProg = null, previewQuadBuf = null;
+let previewRot  = [1,0,0,0,1,0,0,0,1];
+
+function mat3Mul(A,B){
+  const r=new Array(9);
+  for(let c=0;c<3;c++) for(let row=0;row<3;row++)
+    r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];
+  return r;
+}
+
+function rotAxisAngle(ax,ay,az,angle){
+  const c=Math.cos(angle),s=Math.sin(angle),t=1-c;
+  const l=Math.sqrt(ax*ax+ay*ay+az*az)||1;
+  ax/=l;ay/=l;az/=l;
+  return[t*ax*ax+c,t*ax*ay+s*az,t*ax*az-s*ay,
+         t*ax*ay-s*az,t*ay*ay+c,t*ay*az+s*ax,
+         t*ax*az+s*ay,t*ay*az-s*ax,t*az*az+c];
+}
+
+// Initialise to isometric view
+previewRot = mat3Mul(
+  rotAxisAngle(0,1,0, Math.PI/4),
+  rotAxisAngle(1,0,0, Math.atan(1/Math.sqrt(2)))
+);
+
+function toF(v){const s=parseFloat(parseFloat(v).toFixed(6)).toString();return s.includes('.')?s:s+'.0';}
+
+function glslTrig(t,fx,fy,fz){
+  if(t==='sin(x)')return'sin('+fx+'*gx)';
+  if(t==='cos(x)')return'cos('+fx+'*gx)';
+  if(t==='sin(y)')return'sin('+fy+'*gy)';
+  if(t==='cos(y)')return'cos('+fy+'*gy)';
+  if(t==='sin(z)')return'sin('+fz+'*gz)';
+  if(t==='cos(z)')return'cos('+fz+'*gz)';
+  return'1.0';
+}
+
+function buildFrag(terms, mode, offsetVal, wallVal, cellMult, pipeR, phaseShift) {
+  const active = terms.filter(t => t.on && t.factors && t.factors.length);
+  const lines  = active.map(t => {
+    const parts = t.factors.map(f => '('+glslTrig(f.trig,toF(f.fx),toF(f.fy),toF(f.fz))+')');
+    return '  v+='+toF(t.coef)+'*'+parts.join('*')+';';
+  }).join('\n');
+
+  const H = toF(Math.PI * (cellMult || 1));
+  const isPi = mode === 'pi-tpms';
+
+  let fieldFuncs, implicitExpr, featureSize;
+  if(isPi){
+    const TWO_PI = 2*Math.PI;
+    const dxS = toF((phaseShift?.x||0)*TWO_PI);
+    const dyS = toF((phaseShift?.y||0)*TWO_PI);
+    const dzS = toF((phaseShift?.z||0)*TWO_PI);
+    const pRS = toF(pipeR||0.1);
+    fieldFuncs =
+      'float evalA(vec3 p){float v=0.0;float gx=p.x,gy=p.y,gz=p.z;'+lines+' return v;}'+
+      'float evalB(vec3 p){float v=0.0;float gx=p.x+'+dxS+',gy=p.y+'+dyS+',gz=p.z+'+dzS+';'+lines+' return v;}';
+    implicitExpr = 'max(abs(evalA(p)),abs(evalB(p)))-'+pRS;
+    featureSize  = toF(pipeR||0.1);
+  } else {
+    const offS  = toF(offsetVal||0);
+    const wallS = toF(wallVal||0.3);
+    fieldFuncs  =
+      'float evalA(vec3 p){float v=0.0;float gx=p.x,gy=p.y,gz=p.z;'+lines+' return v;}'+
+      'float evalB(vec3 p){return 0.0;}';
+    implicitExpr = mode==='shell'
+      ? 'abs(evalA(p)-'+offS+')-'+wallS
+      : 'evalA(p)-'+offS;
+    featureSize  = wallS;
+  }
+
+  const nrmE = toF(Math.max(0.002, parseFloat(featureSize)*0.08));
+
+  return [
+    'precision mediump float;',
+    'uniform vec2 res; uniform mat3 rot; uniform float zoom;',
+    'float sdf(vec3 p,float H){p=mod(p+H,2.0*H)-H;'+fieldFuncs+' return '+implicitExpr+';}',
+    'vec3 nrm(vec3 p,float H,float e){return normalize(vec3(',
+    '  sdf(p+vec3(e,0,0),H)-sdf(p-vec3(e,0,0),H),',
+    '  sdf(p+vec3(0,e,0),H)-sdf(p-vec3(0,e,0),H),',
+    '  sdf(p+vec3(0,0,e),H)-sdf(p-vec3(0,0,e),H)));}',
+    'vec3 palette(float t){',
+    '  vec3 a=vec3(0.5,0.5,0.5),b=vec3(0.5,0.5,0.5),c=vec3(1.0,1.0,1.0),d=vec3(0.0,0.1,0.2);',
+    '  return a+b*cos(6.283*(c*t+d));}',
+    'void main(){',
+    '  vec2 uv=(gl_FragCoord.xy-res*0.5)/min(res.x,res.y);',
+    '  vec3 ro=rot*vec3(0.0,0.0,zoom);',
+    '  vec3 rd=normalize(rot*vec3(uv,-1.8));',
+    '  vec3 bgCol=vec3(0.016,0.024,0.032);',
+    '  vec4 bg=vec4(bgCol,1.0);',
+    '  float H='+H+',nrmE='+nrmE+';',
+    '  float maxStep=H*0.3,thresh='+toF(parseFloat(featureSize)*0.012)+';',
+    '  float tEn=-1.0,tEx=-1.0;',
+    '  float b2=dot(rd,ro),c2=dot(ro,ro)-H*H*3.0;',
+    '  float disc=b2*b2-c2;',
+    '  if(disc<0.0){gl_FragColor=bg;return;}',
+    '  float sq=sqrt(disc);',
+    '  tEn=(-b2-sq); tEx=(-b2+sq);',
+    '  if(tEx<0.0){gl_FragColor=bg;return;}',
+    '  float t=max(tEn,0.0);',
+    '  bool hit=false;',
+    '  for(int i=0;i<96;i++){',
+    '    float d=sdf(ro+rd*t,H);',
+    '    if(d<thresh){hit=true;break;}',
+    '    if(t>tEx+0.01)break;',
+    '    t+=clamp(d*0.85,thresh*0.5,maxStep);',
+    '  }',
+    '  if(!hit){gl_FragColor=bg;return;}',
+    '  vec3 pos=ro+rd*t,n=nrm(pos,H,nrmE);',
+    '  if(dot(n,-rd)<0.0)n=-n;',
+    '  float dy=dot(n,vec3(0,1,0)),dz=dot(n,vec3(0,0,1));',
+    '  float hue=dy*dy*0.33+dz*dz*0.67;',
+    '  vec3 iridBase=palette(hue),iridShift=palette(hue+0.5);',
+    '  vec3 l1=normalize(vec3(1,1.8,2)),l2=normalize(vec3(-0.8,-0.3,0.6));',
+    '  float diff=0.35+max(dot(n,l1),0.0)*0.7+max(dot(n,l2),0.0)*0.25;',
+    '  float spec=pow(max(dot(reflect(-l1,n),-rd),0.0),120.0)*1.5;',
+    '  float rim=pow(1.0-max(dot(n,-rd),0.0),2.5)*0.8;',
+    '  vec3 col=iridBase*diff+vec3(1,0.98,0.95)*spec+iridShift*rim*0.6;',
+    '  col=mix(bgCol,col,exp(-t*0.010));',
+    '  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);',
+    '}'
+  ].join('\n');
+}
+
+function mkShader(type, src){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+
+const VERT='attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
+
+function buildPreview(design){
+  if(!gl||!design) return;
+  const g     = design.geometry || {};
+  const terms = design.surface_terms || [];
+  const frag  = buildFrag(terms, g.mode||'solid', g.offset||0, g.wall_thickness||0.3, g.cell_scale||1, g.pipe_radius||0.1, g.phase_shift);
+  const prog  = gl.createProgram();
+  gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, frag));
+  gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.error(gl.getProgramInfoLog(prog));return;}
+  if(previewProg) gl.deleteProgram(previewProg);
+  previewProg = prog;
+  gl.useProgram(previewProg);
+  if(!previewQuadBuf){
+    previewQuadBuf=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,previewQuadBuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  } else {
+    gl.bindBuffer(gl.ARRAY_BUFFER,previewQuadBuf);
+  }
+  const loc=gl.getAttribLocation(previewProg,'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+}
+
+function resizeDetail(){
+  const rect = detailCanvas.parentElement.getBoundingClientRect();
+  detailCanvas.width  = rect.width;
+  detailCanvas.height = rect.height;
+  if(gl) gl.viewport(0,0,detailCanvas.width,detailCanvas.height);
+}
+
+function renderDetailFrame(){
+  if(!gl||!previewProg) return;
+  const wy=0.003, wx=wy/1.6180339887;
+  previewRot=mat3Mul(rotAxisAngle(0,1,0,wy),previewRot);
+  previewRot=mat3Mul(rotAxisAngle(1,0,0,wx),previewRot);
+  gl.useProgram(previewProg);
+  gl.uniform2f(gl.getUniformLocation(previewProg,'res'),detailCanvas.width,detailCanvas.height);
+  gl.uniformMatrix3fv(gl.getUniformLocation(previewProg,'rot'),false,previewRot);
+  gl.uniform1f(gl.getUniformLocation(previewProg,'zoom'),Math.PI*(selectedDesign?.geometry?.cell_scale||1)*5.1);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  previewAnimId=requestAnimationFrame(renderDetailFrame);
+}
+
+// ─── Database ─────────────────────────────────────────────────────
+async function loadDatabase(){
+  try {
+    // Fetch all designs (page in chunks to handle >1000)
+    let all = [], from = 0, chunk = 1000;
+    while(true){
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/designs?select=*&order=created_at.desc&offset=${from}&limit=${chunk}`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Range: `${from}-${from+chunk-1}` } }
+      );
+      if(!res.ok) throw new Error('DB fetch failed: '+res.status);
+      const rows = await res.json();
+      all = all.concat(rows);
+      if(rows.length < chunk) break;
+      from += chunk;
+    }
+    allDesigns = all;
+
+    // Update topbar stats
+    const presets = new Set(all.map(d=>d.preset));
+    document.getElementById('dbCount').textContent   = all.length.toLocaleString();
+    document.getElementById('dbPresets').textContent = presets.size;
+
+    // Populate preset dropdown
+    const sel = document.getElementById('presetSel');
+    sel.innerHTML = '<option value="">Any surface</option>';
+    [...presets].sort().forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p;
+      sel.appendChild(opt);
+    });
+
+  } catch(e){
+    console.error('ScaffoldVault DB error:', e);
+    document.getElementById('dbCount').textContent = 'error';
+  }
+}
+
+// ─── Domain + requirements UI ────────────────────────────────────
+function setDomain(domain, btn){
+  activeDomain = domain;
+  document.querySelectorAll('.domain-pill').forEach(b => b.classList.toggle('active', b===btn));
+  renderRequirementsPanel();
+}
+
+function renderRequirementsPanel(){
+  const cfg  = DOMAIN_CONFIG[activeDomain] || DOMAIN_CONFIG.all;
+  const panel = document.getElementById('requirementsPanel');
+  panel.innerHTML = '';
+  activeRequirements = {};
+
+  cfg.requirements.forEach(req => {
+    activeRequirements[req.key] = { target: null, weight: req.weight };
+
+    const div = document.createElement('div');
+    div.className = 'slider-row';
+    div.innerHTML = `
+      <div class="slider-label">
+        <span class="slider-name">${req.label}</span>
+        <span class="slider-hint">${req.unit}</span>
+      </div>
+      <div class="range-inputs">
+        <input type="number" id="req_min_${req.key}" placeholder="min"
+          step="${req.step}" min="${req.min}" max="${req.max}"
+          oninput="onReqChange('${req.key}')">
+        <span class="sep">—</span>
+        <input type="number" id="req_max_${req.key}" placeholder="max"
+          step="${req.step}" min="${req.min}" max="${req.max}"
+          oninput="onReqChange('${req.key}')">
+      </div>
+      <div class="weight-row">
+        <span class="weight-label">importance</span>
+        <input type="range" id="req_w_${req.key}" min="0.1" max="3" step="0.1" value="${req.weight}"
+          oninput="onWeightChange('${req.key}',this.value)">
+        <span class="weight-val" id="req_wv_${req.key}">${req.weight}×</span>
+      </div>
+    `;
+    panel.appendChild(div);
+  });
+}
+
+function onReqChange(key){
+  const minEl = document.getElementById('req_min_'+key);
+  const maxEl = document.getElementById('req_max_'+key);
+  const mn    = minEl.value !== '' ? parseFloat(minEl.value) : null;
+  const mx    = maxEl.value !== '' ? parseFloat(maxEl.value) : null;
+  if(!activeRequirements[key]) activeRequirements[key] = { target: null, weight: 1 };
+  // Target = midpoint if both set, else whichever is set
+  activeRequirements[key].target = mn !== null && mx !== null ? (mn+mx)/2
+    : mn !== null ? mn : mx !== null ? mx : null;
+  activeRequirements[key].min = mn;
+  activeRequirements[key].max = mx;
+}
+
+function onWeightChange(key, val){
+  if(activeRequirements[key]) activeRequirements[key].weight = parseFloat(val);
+  document.getElementById('req_wv_'+key).textContent = parseFloat(val).toFixed(1)+'×';
+}
+
+// ─── Search + scoring ────────────────────────────────────────────
+function runSearch(){
+  const presetFilter = document.getElementById('presetSel').value;
+  const modeFilter   = document.getElementById('modeSel').value;
+
+  // Apply hard filters
+  let pool = allDesigns;
+  if(activeDomain !== 'all') pool = pool.filter(d => d.domain === activeDomain);
+  if(presetFilter)           pool = pool.filter(d => d.preset === presetFilter);
+  if(modeFilter)             pool  = pool.filter(d => d.mode  === modeFilter);
+
+  // Score each design against requirements
+  const activeReqs = Object.entries(activeRequirements)
+    .filter(([,r]) => r.target !== null);
+
+  pool.forEach(d => {
+    if(activeReqs.length === 0){ d._score = 100; return; }
+
+    let totalWeight = 0, totalPenalty = 0;
+    activeReqs.forEach(([key, req]) => {
+      const val = d[key] ?? d['metrics']?.[key] ?? null;
+      if(val === null) return;
+
+      const target = req.target;
+      const range  = Math.abs(target) || 1;
+      let penalty  = Math.abs(val - target) / range;
+
+      // Hard min/max violations get extra penalty
+      if(req.min !== null && val < req.min) penalty += 2;
+      if(req.max !== null && val > req.max) penalty += 2;
+
+      totalPenalty += penalty * req.weight;
+      totalWeight  += req.weight;
+    });
+
+    const normPenalty = totalWeight > 0 ? totalPenalty / totalWeight : 0;
+    d._score = Math.max(0, Math.round(100 * Math.exp(-normPenalty * 1.5)));
+  });
+
+  // Sort
+  pool.sort((a,b) => b._score - a._score);
+  filteredResults = pool;
+  renderCards();
+}
+
+function onSortChange(){
+  const key = document.getElementById('sortSel').value;
+  if(key === 'score'){
+    filteredResults.sort((a,b) => b._score - a._score);
+  } else {
+    filteredResults.sort((a,b) => (b[key]??0) - (a[key]??0));
+  }
+  renderCards();
+}
+
+function onFilterChange(){ /* auto-search on filter change if results exist */
+  if(filteredResults.length > 0) runSearch();
+}
+
+function clearFilters(){
+  activeDomain = 'all';
+  document.querySelectorAll('.domain-pill').forEach(b => b.classList.toggle('active', b.dataset.domain==='all'));
+  document.getElementById('presetSel').value = '';
+  document.getElementById('modeSel').value   = '';
+  renderRequirementsPanel();
+  filteredResults = [];
+  renderCards();
+}
+
+// ─── Render cards ────────────────────────────────────────────────
+function renderCards(){
+  const wrap = document.getElementById('cardsWrap');
+  document.getElementById('resultsCount').textContent =
+    filteredResults.length > 0 ? filteredResults.length+' designs' : '—';
+
+  if(filteredResults.length === 0){
+    wrap.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⬡</div>
+      <div class="empty-title">${allDesigns.length > 0 ? 'No matches found' : 'Loading database…'}</div>
+      <div class="empty-sub">${allDesigns.length > 0 ? 'Try adjusting your requirements or domain filter' : 'Please wait'}</div>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = '';
+  filteredResults.slice(0, 60).forEach((d, i) => {
+    const modeTag = d.mode === 'pi-tpms' ? 'pi' : d.mode === 'shell' ? 'shell' : 'solid';
+    const card = document.createElement('div');
+    card.className = 'design-card';
+    card.style.animationDelay = (i * 20) + 'ms';
+    card.innerHTML = `
+      ${d._score !== undefined ? `<div class="card-score">${d._score}</div>` : ''}
+      <div class="card-top">
+        <div class="card-preset">${d.preset}</div>
+        <div class="card-rank">${d.domain} · ${d.material}</div>
+      </div>
+      <div class="card-preview">
+        <div class="preview-placeholder">⬡</div>
+      </div>
+      <div class="card-metrics">
+        <div class="card-metric">
+          <div class="card-metric-val">${d.anisotropy?.toFixed(2)??'—'}×</div>
+          <div class="card-metric-label">Anisotropy</div>
+        </div>
+        <div class="card-metric">
+          <div class="card-metric-val">${d.volume_fraction?.toFixed(1)??'—'}%</div>
+          <div class="card-metric-label">Vol. fraction</div>
+        </div>
+        <div class="card-metric">
+          <div class="card-metric-val">${d.connect_idx?.toFixed(2)??'—'}</div>
+          <div class="card-metric-label">Connectivity</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-tags">
+          <span class="tag ${modeTag}">${d.mode}</span>
+          ${d.pipe_radius ? `<span class="tag">r=${d.pipe_radius.toFixed(3)}</span>` : ''}
+        </div>
+        <button class="get-recipe-btn" onclick="event.stopPropagation();quickDownload(${JSON.stringify(i)})">↓ Recipe</button>
+      </div>
+    `;
+    card.addEventListener('click', () => selectDesign(d, card));
+    wrap.appendChild(card);
+  });
+}
+
+// ─── Design selection ─────────────────────────────────────────────
+function selectDesign(d, cardEl){
+  document.querySelectorAll('.design-card.selected').forEach(c => c.classList.remove('selected'));
+  cardEl.classList.add('selected');
+  selectedDesign = d;
+
+  // Detail preview
+  resizeDetail();
+  buildPreview(d);
+  if(previewAnimId) cancelAnimationFrame(previewAnimId);
+  detailCanvas.classList.add('visible');
+  document.getElementById('detailPlaceholder').style.display = 'none';
+  previewAnimId = requestAnimationFrame(renderDetailFrame);
+
+  // Detail metrics
+  const g = d.geometry || {};
+  document.getElementById('detailPreset').textContent = d.preset;
+  document.getElementById('detailMeta').textContent =
+    `${d.domain} · ${d.material} · ${d.mode}`;
+  document.getElementById('detailScore').textContent =
+    d._score !== undefined ? d._score : '—';
+  document.getElementById('detailGeo').innerHTML =
+    `mode <span>${d.mode}</span><br>` +
+    (d.pipe_radius ? `pipe r <span>${d.pipe_radius.toFixed(3)}</span><br>` : '') +
+    (d.phase_shift ? `shift <span>(${d.phase_shift.x}, ${d.phase_shift.y}, ${d.phase_shift.z})</span><br>` : '') +
+    `cell scale <span>${g.cell_scale??'—'}</span><br>` +
+    `E solid <span>${d.e_solid_gpa} GPa</span>`;
+
+  renderDetailMetrics(d);
+
+  document.getElementById('downloadBtn').disabled = false;
+  document.getElementById('builderBtn').disabled  = false;
+}
+
+function renderDetailMetrics(d){
+  const el = document.getElementById('detailMetrics');
+  const row = (name, val, unit='', hi=false) =>
+    `<div class="metric-row">
+      <span class="metric-name">${name}</span>
+      <span class="metric-value${hi?' highlight':''}">${val}${unit}</span>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="detail-section-title">Elastic</div>
+    ${row('Ex', (d.ex_gpa??0).toFixed(2), ' GPa')}
+    ${row('Ey', (d.ey_gpa??0).toFixed(2), ' GPa')}
+    ${row('Ez', (d.ez_gpa??0).toFixed(2), ' GPa')}
+    ${row('Anisotropy α', (d.anisotropy??0).toFixed(2), '×', true)}
+    ${row('Stiff axis', d.stiff_axis??'—')}
+    ${row('Connectivity κ', (d.connect_idx??0).toFixed(2), '', true)}
+    ${row('Stiffness / ρ', (d.stiffness_density??0).toFixed(1))}
+    ${row('Load path eff. λ', (d.load_path_eff??0).toFixed(3))}
+    ${row('Ortho contrast Ω', (d.ortho_contrast??0).toFixed(3))}
+    ${row('Volume fraction', (d.volume_fraction??0).toFixed(2), '%')}
+
+    <div class="detail-section-title">Strain</div>
+    ${row('Avg microstrain', d.microstrain_avg?.toLocaleString()??'—', ' με', true)}
+    ${row('Strain energy U', (d.u_strain??0).toFixed(1), ' kJ/m³')}
+
+    <div class="detail-section-title">Pore</div>
+    ${row('Mean pore size φ', d.pore_size??'—', ' µm', true)}
+    ${row('Throat diam. φt', d.throat_size??'—', ' µm')}
+    ${row('Void percolation', (d.perc_idx??0).toFixed(2))}
+
+    <div class="detail-section-title">Thermal</div>
+    ${row('keff X', (d.keff_x??0).toFixed(3))}
+    ${row('keff Y', (d.keff_y??0).toFixed(3))}
+    ${row('keff Z', (d.keff_z??0).toFixed(3))}
+    ${row('Thermal aniso. kα', (d.thermal_anisotropy??0).toFixed(2), '×')}
+  `;
+}
+
+// ─── Recipe export ────────────────────────────────────────────────
+function buildRecipeJSON(d){
+  const g = d.geometry || {};
+  return {
+    meta: {
+      version:   '0.5.0',
+      timestamp: new Date().toISOString(),
+      preset:    d.preset,
+      source:    'ScaffoldVault',
+    },
+    surface: {
+      type:  'terms',
+      preset: d.preset,
+      label:  d.preset,
+      terms:  d.surface_terms || [],
+    },
+    geometry: {
+      offset:        g.offset        ?? 0,
+      cell_scale:    g.cell_scale    ?? 1,
+      mode:          d.mode          || 'solid',
+      wall_thickness: g.wall_thickness ?? null,
+      pipe_radius:   d.pipe_radius   ?? null,
+      phase_shift:   d.phase_shift   ?? null,
+      gradient:      { enabled: false },
+      normal_weights: g.normal_weights ?? null,
+    },
+    homogenization: {
+      grid:           64,
+      E_solid_GPa:    d.e_solid_gpa  ?? 100,
+      poisson:        0.3,
+      volume_fraction: d.volume_fraction ?? null,
+      Ex_GPa:         d.ex_gpa       ?? null,
+      Ey_GPa:         d.ey_gpa       ?? null,
+      Ez_GPa:         d.ez_gpa       ?? null,
+      anisotropy:     d.anisotropy   ?? null,
+      method:         'FFT-CG',
+    }
+  };
+}
+
+function downloadRecipe(){
+  if(!selectedDesign) return;
+  const recipe = buildRecipeJSON(selectedDesign);
+  const blob   = new Blob([JSON.stringify(recipe, null, 2)], {type:'application/json'});
+  const url    = URL.createObjectURL(blob);
+  const a      = document.createElement('a');
+  a.href       = url;
+  a.download   = `scaffoldvault_${selectedDesign.preset}_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function quickDownload(idx){
+  const d = filteredResults[idx];
+  if(!d) return;
+  const recipe = buildRecipeJSON(d);
+  const blob   = new Blob([JSON.stringify(recipe, null, 2)], {type:'application/json'});
+  const url    = URL.createObjectURL(blob);
+  const a      = document.createElement('a');
+  a.href       = url;
+  a.download   = `scaffoldvault_${d.preset}_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openInBuilder(){
+  window.open('https://mshomper.github.io/tpms-builder', '_blank');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────
+window.addEventListener('resize', () => { resizeDetail(); });
+resizeDetail();
+renderRequirementsPanel();
+loadDatabase();
+</script>
+</body>
+</html>

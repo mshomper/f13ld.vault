@@ -3,724 +3,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScaffoldVault — Metamaterial Structure Library</title>
+<title>ScaffoldVault</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
-:root {
-  --bg:       #06080d;
-  --surface:  #0b0f16;
-  --panel:    #0f1520;
-  --border:   #172030;
-  --border2:  #1e2d40;
-  --accent:   #00e5c0;
-  --accent2:  #0088ff;
-  --accent3:  #ff5f3e;
-  --gold:     #f0b429;
-  --text:     #c8dce8;
-  --muted:    #3d5a6e;
-  --muted2:   #1e3040;
-  --success:  #00c97a;
-  --dim:      rgba(255,255,255,0.04);
+:root{
+  --bg:#06080d; --surface:#0b0f16; --panel:#0f1520;
+  --border:#172030; --border2:#1e2d40;
+  --accent:#00e5c0; --accent2:#0088ff; --accent3:#ff5f3e;
+  --gold:#f0b429; --text:#c8dce8; --muted:#3d5a6e;
+  --muted2:#1e3040; --success:#00c97a;
 }
 
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px; }
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;}
 
-/* Grid background */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image:
-    linear-gradient(rgba(0,229,192,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,192,0.018) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,229,192,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,192,.018) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.4;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
 }
 
-/* Noise */
-body::after {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-  pointer-events: none; z-index: 999; opacity: 0.5;
-}
-
-/* ── App shell ── */
-.app {
-  display: grid;
-  grid-template-rows: 64px 1fr;
-  grid-template-columns: 320px 1fr;
-  height: 100vh;
-  overflow: hidden;
-}
+/* ── Shell ── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
 /* ── Topbar ── */
-.topbar {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 0 28px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(11,15,22,0.95);
-  backdrop-filter: blur(12px);
-  z-index: 10;
+.topbar{
+  flex-shrink:0;
+  display:flex;align-items:center;gap:16px;
+  padding:0 20px;height:56px;
+  border-bottom:1px solid var(--border);
+  background:rgba(11,15,22,.96);backdrop-filter:blur(12px);
+  z-index:100;
 }
+.brand-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--accent);letter-spacing:-.02em;}
+.brand-tag{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--muted);letter-spacing:.18em;padding:2px 6px;border:1px solid var(--border2);border-radius:3px;}
+.db-stat{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.db-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2.5s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.topbar-link{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted);text-decoration:none;padding:4px 9px;border:1px solid var(--border);border-radius:4px;transition:all .2s;white-space:nowrap;}
+.topbar-link:hover{color:var(--accent);border-color:rgba(0,229,192,.3);}
 
-.brand-name {
-  font-family: 'Syne', sans-serif;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--accent);
-  letter-spacing: -0.02em;
-}
+/* Hamburger — mobile only */
+.hamburger{display:none;background:transparent;border:1px solid var(--border2);border-radius:5px;padding:6px 8px;cursor:pointer;flex-direction:column;gap:4px;}
+.hamburger span{display:block;width:18px;height:1.5px;background:var(--muted);border-radius:2px;transition:all .2s;}
 
-.brand-tag {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border: 1px solid var(--border2);
-  border-radius: 3px;
-}
-
-.topbar-center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.db-stat {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.db-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 8px var(--success);
-  animation: pulse 2.5s ease infinite;
-}
-
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-@keyframes spin   { to { transform: rotate(360deg); } }
-@keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
-
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.topbar-link {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-  text-decoration: none;
-  letter-spacing: 0.08em;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.topbar-link:hover { color: var(--accent); border-color: rgba(0,229,192,0.3); }
+/* ── Body row ── */
+.body-row{flex:1;display:flex;overflow:hidden;position:relative;}
 
 /* ── Sidebar ── */
-.sidebar {
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-  overflow-y: auto;
-  padding: 24px 0 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+.sidebar{
+  width:300px;flex-shrink:0;
+  border-right:1px solid var(--border);
+  background:var(--surface);
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+  padding:20px 0 40px;
+  transition:transform .25s ease;
+  z-index:50;
 }
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border2);}
 
-.sidebar::-webkit-scrollbar { width: 3px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
-
-.section-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 0 20px 10px;
-  margin-top: 24px;
-}
-
-.section-label:first-child { margin-top: 0; }
+.section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:0 16px 8px;margin-top:20px;}
+.section-label:first-child{margin-top:0;}
 
 /* Domain pills */
-.domain-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 0 16px;
-  margin-bottom: 4px;
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:0 14px;margin-bottom:4px;}
+.domain-pill{padding:7px 4px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.04em;cursor:pointer;text-align:center;transition:all .15s;}
+.domain-pill:hover{border-color:var(--accent);color:var(--accent);}
+.domain-pill.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,192,.07);}
+
+/* Selects */
+.ctrl-group{padding:0 14px;margin-bottom:12px;}
+select{width:100%;background:var(--panel);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:10.5px;padding:7px 26px 7px 9px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233d5a6e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .15s;}
+select:focus{border-color:var(--accent);}
+
+/* Requirements */
+.req-panel{padding:0 14px;}
+.req-row{margin-bottom:14px;}
+.req-label-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.req-name{font-size:11px;color:var(--text);}
+.req-range-hint{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);}
+.req-inputs{display:grid;grid-template-columns:1fr 10px 1fr;gap:3px;align-items:center;}
+.req-inputs input{width:100%;background:var(--panel);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:5px 7px;outline:none;transition:border-color .15s;}
+.req-inputs input:focus{border-color:var(--accent);}
+.req-inputs .sep{text-align:center;color:var(--muted);font-size:10px;}
+.weight-row{display:flex;align-items:center;gap:7px;margin-top:5px;}
+.weight-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);white-space:nowrap;}
+input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer;}
+.weight-val{font-family:'DM Mono',monospace;font-size:9px;color:var(--accent2);min-width:22px;text-align:right;}
+
+/* Score cutoff */
+.cutoff-row{display:flex;align-items:center;gap:8px;padding:0 14px;margin-bottom:14px;}
+.cutoff-label{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted);white-space:nowrap;}
+.cutoff-row input[type=number]{width:52px;background:var(--panel);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:5px 7px;outline:none;text-align:center;}
+.cutoff-row input[type=number]:focus{border-color:var(--accent);}
+
+/* Buttons */
+.search-btn{margin:6px 14px 0;width:calc(100% - 28px);padding:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:7px;color:#06080d;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:opacity .2s,transform .15s;}
+.search-btn:hover{opacity:.88;transform:translateY(-1px);}
+.clear-btn{margin:7px 14px 0;width:calc(100% - 28px);padding:7px;background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;}
+.clear-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+
+/* ── Main content ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* Results header */
+.results-header{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);}
+.results-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
+.results-count{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted);background:var(--panel);border:1px solid var(--border);padding:2px 8px;border-radius:10px;}
+.sort-group{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted);}
+.sort-group select{width:auto;font-size:9.5px;padding:3px 22px 3px 7px;}
+
+/* Cards + detail split */
+.content-split{flex:1;display:flex;overflow:hidden;}
+
+/* Cards area */
+.cards-area{flex:1;overflow-y:auto;padding:12px;min-width:0;}
+.cards-area::-webkit-scrollbar{width:3px;}
+.cards-area::-webkit-scrollbar-thumb{background:var(--border2);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;align-content:start;}
+
+/* ── Compact design card ── */
+.design-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  overflow:hidden;cursor:pointer;position:relative;
+  transition:border-color .2s,transform .15s;
+  animation:fadeUp .25s ease both;
 }
+.design-card:hover{border-color:var(--accent);transform:translateY(-1px);}
+.design-card.selected{border-color:var(--accent);background:rgba(0,229,192,.04);}
 
-.domain-pill {
-  padding: 8px 6px;
-  border: 1px solid var(--border2);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  font-family: 'DM Mono', monospace;
-  font-size: 9.5px;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.15s;
+/* Score badge — prominent, top right */
+.score-badge{
+  position:absolute;top:7px;right:7px;
+  min-width:32px;height:22px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:5px;
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+  padding:0 6px;
+  z-index:2;
 }
+.score-badge.s-high{background:rgba(0,201,122,.18);color:#00c97a;border:1px solid rgba(0,201,122,.3);}
+.score-badge.s-mid {background:rgba(240,180,41,.15);color:#f0b429;border:1px solid rgba(240,180,41,.3);}
+.score-badge.s-low {background:rgba(255,95,62,.12);color:#ff5f3e;border:1px solid rgba(255,95,62,.25);}
 
-.domain-pill:hover { border-color: var(--accent); color: var(--accent); }
-.domain-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,192,0.07); }
+/* Card WebGL mini-preview */
+.card-gl{height:90px;background:#040608;position:relative;overflow:hidden;}
+.card-gl canvas{width:100%;height:100%;display:block;opacity:0;transition:opacity .3s;}
+.card-gl canvas.visible{opacity:1;}
+.card-gl .placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.07;}
 
-/* Sliders */
-.slider-group {
-  padding: 0 16px;
-  margin-bottom: 16px;
-}
+/* Card metrics strip */
+.card-body{padding:8px 9px 7px;}
+.card-metrics-row{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;}
+.card-metric{display:flex;flex-direction:column;gap:1px;}
+.card-metric-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--text);}
+.card-metric-lbl{font-size:8.5px;color:var(--muted);}
 
-.slider-row {
-  margin-bottom: 14px;
-}
-
-.slider-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 6px;
-}
-
-.slider-name {
-  font-size: 11.5px;
-  color: var(--text);
-}
-
-.slider-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--accent);
-}
-
-.slider-hint {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-}
-
-.range-inputs {
-  display: grid;
-  grid-template-columns: 1fr 12px 1fr;
-  gap: 4px;
-  align-items: center;
-}
-
-.range-inputs input {
-  width: 100%;
-  background: var(--panel);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  padding: 5px 8px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.range-inputs input:focus { border-color: var(--accent); }
-.range-inputs .sep { text-align: center; color: var(--muted); font-size: 10px; }
-
-.weight-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.weight-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-input[type=range] {
-  flex: 1;
-  accent-color: var(--accent);
-  cursor: pointer;
-  height: 2px;
-}
-
-.weight-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--accent2);
-  min-width: 20px;
-  text-align: right;
-}
-
-/* Select */
-select {
-  width: 100%;
-  background: var(--panel);
-  border: 1px solid var(--border2);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-  font-size: 10.5px;
-  padding: 7px 28px 7px 10px;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233d5a6e'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: border-color 0.15s;
-}
-
-select:focus { border-color: var(--accent); }
-
-/* Search button */
-.search-btn {
-  margin: 8px 16px 0;
-  width: calc(100% - 32px);
-  padding: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border: none;
-  border-radius: 7px;
-  color: #06080d;
-  font-family: 'Syne', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
-}
-
-.search-btn:hover { opacity: 0.88; transform: translateY(-1px); }
-.search-btn:active { transform: none; }
-
-.clear-btn {
-  margin: 8px 16px 0;
-  width: calc(100% - 32px);
-  padding: 8px;
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: 7px;
-  color: var(--muted);
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.clear-btn:hover { border-color: var(--accent3); color: var(--accent3); }
-
-/* ── Main ── */
-.main {
-  display: grid;
-  grid-template-rows: 1fr 300px;
-  overflow: hidden;
-}
-
-/* ── Results panel ── */
-.results-area {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid var(--border);
-}
-
-.results-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.results-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-}
-
-.results-count {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  padding: 2px 9px;
-  border-radius: 10px;
-}
-
-.sort-group {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.sort-group select { width: auto; font-size: 10px; padding: 4px 24px 4px 8px; }
-
-/* Cards grid */
-.cards-wrap {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 24px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  align-content: start;
-}
-
-.cards-wrap::-webkit-scrollbar { width: 4px; }
-.cards-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-/* Design card */
-.design-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color 0.2s, transform 0.15s;
-  animation: fadeUp 0.3s ease both;
-  position: relative;
-}
-
-.design-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-}
-
-.design-card.selected {
-  border-color: var(--accent);
-  background: rgba(0,229,192,0.04);
-}
-
-.card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.card-preset {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--accent);
-  letter-spacing: 0.05em;
-}
-
-.card-rank {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-}
-
-.card-rank.r1 { color: var(--accent); }
-.card-rank.r2 { color: var(--accent2); }
-.card-rank.r3 { color: #9b6fff; }
-
-.card-preview {
-  height: 120px;
-  background: #040608;
-  position: relative;
-  overflow: hidden;
-}
-
-.card-preview canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.card-preview .preview-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  opacity: 0.08;
-}
-
-.card-metrics {
-  padding: 10px 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-
-.card-metric {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.card-metric-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.card-metric-label {
-  font-size: 9px;
-  color: var(--muted);
-}
-
-.card-score {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,229,192,0.12);
-  border: 1px solid rgba(0,229,192,0.25);
-  border-radius: 4px;
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--accent);
-  padding: 2px 6px;
-}
-
-.card-footer {
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-tags {
-  display: flex;
-  gap: 5px;
-}
-
-.tag {
-  font-family: 'DM Mono', monospace;
-  font-size: 8.5px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid var(--border2);
-  color: var(--muted);
-}
-
-.tag.pi   { border-color: rgba(0,229,192,0.25); color: var(--accent); }
-.tag.shell { border-color: rgba(0,136,255,0.25); color: var(--accent2); }
-.tag.solid { border-color: rgba(240,180,41,0.25); color: var(--gold); }
-
-.get-recipe-btn {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  padding: 4px 10px;
-  background: transparent;
-  border: 1px solid rgba(0,229,192,0.3);
-  border-radius: 4px;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.get-recipe-btn:hover { background: rgba(0,229,192,0.08); }
+/* Card footer */
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding:5px 9px 7px;}
+.mode-tag{font-family:'DM Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;border:1px solid var(--border2);color:var(--muted);}
+.mode-tag.pi{border-color:rgba(0,229,192,.25);color:var(--accent);}
+.mode-tag.shell{border-color:rgba(0,136,255,.25);color:var(--accent2);}
+.mode-tag.solid{border-color:rgba(240,180,41,.25);color:var(--gold);}
+.recipe-btn{font-family:'DM Mono',monospace;font-size:8.5px;padding:3px 8px;background:transparent;border:1px solid rgba(0,229,192,.25);border-radius:3px;color:var(--accent);cursor:pointer;transition:background .15s;}
+.recipe-btn:hover{background:rgba(0,229,192,.08);}
 
 /* Empty state */
-.empty-state {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.empty-icon { font-size: 36px; opacity: 0.15; margin-bottom: 12px; }
-.empty-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-.empty-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted2); }
+.empty-state{padding:48px 20px;text-align:center;grid-column:1/-1;}
+.empty-icon{font-size:32px;opacity:.1;margin-bottom:10px;}
+.empty-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--muted);margin-bottom:5px;}
+.empty-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);}
 
 /* ── Detail panel ── */
-.detail-panel {
-  background: var(--surface);
-  display: grid;
-  grid-template-columns: 220px 1fr 1fr;
-  overflow: hidden;
+.detail-panel{
+  width:260px;flex-shrink:0;
+  border-left:1px solid var(--border);
+  background:var(--surface);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.detail-gl{
+  height:180px;flex-shrink:0;
+  background:#040608;position:relative;
+}
+#detailCanvas{width:100%;height:100%;display:block;opacity:0;transition:opacity .3s;}
+#detailCanvas.visible{opacity:1;}
+.detail-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+.detail-placeholder .icon{font-size:28px;opacity:.08;}
+.detail-placeholder .hint{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted2);}
+
+.detail-body{flex:1;overflow-y:auto;padding:12px 14px;}
+.detail-body::-webkit-scrollbar{width:3px;}
+.detail-body::-webkit-scrollbar-thumb{background:var(--border2);}
+
+.detail-preset{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:2px;}
+.detail-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;}
+.detail-score-row{display:flex;align-items:baseline;gap:6px;margin-bottom:12px;}
+.detail-score-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;}
+.detail-score-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+
+.dsec{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin:10px 0 5px;}
+.drow{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+.drow-name{font-size:10px;color:var(--muted);}
+.drow-val{font-family:'DM Mono',monospace;font-size:10px;color:var(--text);}
+.drow-val.hi{color:var(--accent);}
+
+.geo-block{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'DM Mono',monospace;font-size:9.5px;line-height:1.9;color:var(--muted);margin-bottom:10px;}
+.geo-block span{color:var(--text);}
+
+.detail-btns{display:flex;flex-direction:column;gap:7px;padding:0 14px 14px;}
+.btn-primary{padding:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;color:#06080d;font-family:'DM Mono',monospace;font-size:10.5px;font-weight:600;cursor:pointer;transition:opacity .2s;text-align:center;}
+.btn-primary:hover{opacity:.88;}
+.btn-primary:disabled{opacity:.3;cursor:not-allowed;}
+.btn-secondary{padding:8px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;text-align:center;}
+.btn-secondary:hover{border-color:var(--accent2);color:var(--accent2);}
+.btn-secondary:disabled{opacity:.3;cursor:not-allowed;}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:49;}
+
+/* ══════════════════════════════════════
+   MOBILE  (≤ 768px)
+══════════════════════════════════════ */
+@media(max-width:768px){
+  .hamburger{display:flex;}
+  .db-stat{display:none;}
+  .topbar-link{display:none;}
+
+  .body-row{position:relative;}
+
+  /* Sidebar slides in from left as a drawer */
+  .sidebar{
+    position:fixed;top:56px;left:0;bottom:0;
+    transform:translateX(-100%);
+    box-shadow:4px 0 24px rgba(0,0,0,.5);
+  }
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-overlay.open{display:block;}
+
+  /* Full-width main */
+  .main{width:100%;}
+
+  /* Cards: 2 columns on phone */
+  .cards-grid{grid-template-columns:repeat(2,1fr);}
+
+  /* Detail panel stacks below cards */
+  .content-split{flex-direction:column;}
+  .detail-panel{
+    width:100%;border-left:none;
+    border-top:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .detail-gl{height:160px;}
+
+  /* Detail body scrolls horizontally on small screens */
+  .detail-body{padding:10px 12px;}
+
+  .detail-btns{flex-direction:row;padding:0 12px 12px;}
+  .btn-primary,.btn-secondary{flex:1;}
 }
 
-.detail-preview {
-  border-right: 1px solid var(--border);
-  background: #040608;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#detailCanvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-#detailCanvas.visible { opacity: 1; }
-
-.detail-placeholder {
-  position: absolute;
-  text-align: center;
-}
-
-.detail-placeholder .icon { font-size: 32px; opacity: 0.1; margin-bottom: 8px; }
-.detail-placeholder .hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2); }
-
-.detail-metrics {
-  padding: 16px 20px;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-}
-
-.detail-metrics::-webkit-scrollbar { width: 3px; }
-.detail-metrics::-webkit-scrollbar-thumb { background: var(--border2); }
-
-.detail-section-title {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.15em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  margin-top: 16px;
-}
-
-.detail-section-title:first-child { margin-top: 0; }
-
-.metric-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-}
-
-.metric-name { font-size: 11px; color: var(--muted); }
-.metric-value { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text); }
-.metric-value.highlight { color: var(--accent); }
-
-.detail-actions {
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.detail-header {
-  margin-bottom: 8px;
-}
-
-.detail-preset {
-  font-family: 'Syne', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 3px;
-}
-
-.detail-meta {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.action-btn {
-  padding: 11px 16px;
-  border-radius: 7px;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: center;
-}
-
-.action-btn.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border: none;
-  color: #06080d;
-  font-weight: 600;
-}
-
-.action-btn.primary:hover { opacity: 0.88; }
-
-.action-btn.secondary {
-  background: transparent;
-  border: 1px solid var(--border2);
-  color: var(--muted);
-}
-
-.action-btn.secondary:hover { border-color: var(--accent2); color: var(--accent2); }
-
-.geometry-info {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px 12px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  line-height: 1.8;
-  color: var(--muted);
-}
-
-.geometry-info span { color: var(--text); }
-
-.detail-score-big {
-  font-family: 'Syne', sans-serif;
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.score-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* Loading spinner */
-.spinner {
-  width: 18px; height: 18px;
-  border: 2px solid var(--border2);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  display: inline-block;
+@media(max-width:400px){
+  .cards-grid{grid-template-columns:1fr 1fr;}
+  .card-gl{height:75px;}
 }
 </style>
 </head>
@@ -729,233 +286,660 @@ select:focus { border-color: var(--accent); }
 
   <!-- Topbar -->
   <header class="topbar">
-    <div class="brand">
+    <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div style="display:flex;align-items:baseline;gap:8px">
       <div class="brand-name">ScaffoldVault</div>
       <div class="brand-tag">BETA</div>
     </div>
-    <div class="topbar-center">
-      <div class="db-stat">
-        <div class="db-dot"></div>
-        <span id="dbCount">—</span> designs · <span id="dbPresets">—</span> surface types
-      </div>
+    <div class="db-stat">
+      <div class="db-dot"></div>
+      <span id="dbCount">—</span> designs &nbsp;·&nbsp; <span id="dbPresets">—</span> surfaces
     </div>
     <div class="topbar-right">
-      <a class="topbar-link" href="https://mshomper.github.io/tpms-builder" target="_blank">TPMS Builder ↗</a>
-      <a class="topbar-link" href="https://mshomper.github.io/metamaterial-sweep-tool" target="_blank">Sweep Tool ↗</a>
+      <a class="topbar-link" href="https://mshomper.github.io/tpms-builder" target="_blank">Builder ↗</a>
+      <a class="topbar-link" href="https://mshomper.github.io/metamaterial-sweep-tool" target="_blank">Sweep ↗</a>
     </div>
   </header>
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <div class="section-label">Application Domain</div>
-    <div class="domain-grid">
-      <button class="domain-pill active" data-domain="all"    onclick="setDomain('all',this)">All</button>
-      <button class="domain-pill"        data-domain="biomedical"  onclick="setDomain('biomedical',this)">Biomedical</button>
-      <button class="domain-pill"        data-domain="aerospace"   onclick="setDomain('aerospace',this)">Aerospace</button>
-      <button class="domain-pill"        data-domain="automotive"  onclick="setDomain('automotive',this)">Automotive</button>
-      <button class="domain-pill"        data-domain="oilgas"      onclick="setDomain('oilgas',this)">Oil &amp; Gas</button>
-      <button class="domain-pill"        data-domain="thermal"     onclick="setDomain('thermal',this)">Thermal</button>
-    </div>
+  <div class="body-row">
 
-    <div class="section-label" style="margin-top:20px">Surface Type</div>
-    <div style="padding:0 16px;margin-bottom:4px">
-      <select id="presetSel" onchange="onFilterChange()">
-        <option value="">Any surface</option>
-      </select>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
 
-    <div class="section-label">Mode</div>
-    <div style="padding:0 16px;margin-bottom:4px">
-      <select id="modeSel" onchange="onFilterChange()">
-        <option value="">Any mode</option>
-        <option value="pi-tpms">PI-TPMS</option>
-        <option value="shell">Shell</option>
-        <option value="solid">Solid</option>
-      </select>
-    </div>
+      <div class="section-label">Domain</div>
+      <div class="domain-grid">
+        <button class="domain-pill active" data-domain="all"       onclick="setDomain('all',this)">All</button>
+        <button class="domain-pill"        data-domain="biomedical" onclick="setDomain('biomedical',this)">Biomedical</button>
+        <button class="domain-pill"        data-domain="aerospace"  onclick="setDomain('aerospace',this)">Aerospace</button>
+        <button class="domain-pill"        data-domain="automotive" onclick="setDomain('automotive',this)">Automotive</button>
+        <button class="domain-pill"        data-domain="oilgas"     onclick="setDomain('oilgas',this)">Oil &amp; Gas</button>
+        <button class="domain-pill"        data-domain="thermal"    onclick="setDomain('thermal',this)">Thermal</button>
+      </div>
 
-    <div class="section-label">Target Requirements</div>
-    <div class="slider-group" id="requirementsPanel">
-      <!-- Dynamically populated per domain -->
-    </div>
+      <div class="section-label" style="margin-top:18px">Surface Type</div>
+      <div class="ctrl-group">
+        <select id="presetSel" onchange="onFilterChange()">
+          <option value="">Any surface</option>
+        </select>
+      </div>
 
-    <button class="search-btn" onclick="runSearch()">▶ Find Structures</button>
-    <button class="clear-btn" onclick="clearFilters()">✕ Clear all filters</button>
+      <div class="section-label">Mode</div>
+      <div class="ctrl-group">
+        <select id="modeSel" onchange="onFilterChange()">
+          <option value="">Any mode</option>
+          <option value="pi-tpms">PI-TPMS</option>
+          <option value="shell">Shell</option>
+          <option value="solid">Solid</option>
+        </select>
+      </div>
 
-  </aside>
+      <div class="section-label">Target Requirements</div>
+      <div class="req-panel" id="reqPanel"></div>
 
-  <!-- Main -->
-  <main class="main">
+      <div class="section-label">Min Match Score</div>
+      <div class="cutoff-row">
+        <span class="cutoff-label">Exclude below</span>
+        <input type="number" id="scoreCutoff" value="30" min="0" max="99" step="5">
+        <span class="cutoff-label">/ 100</span>
+      </div>
 
-    <!-- Results -->
-    <div class="results-area">
+      <button class="search-btn" onclick="runSearch()">▶ Find Structures</button>
+      <button class="clear-btn"  onclick="clearFilters()">✕ Clear filters</button>
+
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
       <div class="results-header">
         <div class="results-title">Results</div>
         <div class="results-count" id="resultsCount">—</div>
         <div class="sort-group">
-          Sort by
+          <span>Sort</span>
           <select id="sortSel" onchange="onSortChange()">
             <option value="score">Match score</option>
             <option value="anisotropy">Anisotropy</option>
-            <option value="volume_fraction">Volume fraction</option>
+            <option value="volume_fraction">Vol. fraction</option>
             <option value="connect_idx">Connectivity</option>
             <option value="pore_size">Pore size</option>
-            <option value="stiffness_density">Stiffness density</option>
+            <option value="stiffness_density">Stiff density</option>
           </select>
         </div>
       </div>
-      <div class="cards-wrap" id="cardsWrap">
-        <div class="empty-state">
-          <div class="empty-icon">⬡</div>
-          <div class="empty-title">Set your requirements and search</div>
-          <div class="empty-sub">Select a domain · adjust targets · click Find Structures</div>
+
+      <div class="content-split">
+
+        <div class="cards-area">
+          <div class="cards-grid" id="cardsGrid">
+            <div class="empty-state">
+              <div class="empty-icon">⬡</div>
+              <div class="empty-title">Set your requirements</div>
+              <div class="empty-sub">Choose a domain · set targets · tap Find Structures</div>
+            </div>
+          </div>
         </div>
+
+        <!-- Detail panel -->
+        <div class="detail-panel">
+          <div class="detail-gl">
+            <canvas id="detailCanvas"></canvas>
+            <div class="detail-placeholder" id="detailPlaceholder">
+              <div class="icon">⬡</div>
+              <div class="hint">Select a result to preview</div>
+            </div>
+          </div>
+          <div class="detail-body" id="detailBody">
+            <div style="color:var(--muted2);font-family:'DM Mono',monospace;font-size:9.5px;padding-top:4px">
+              Tap a card to inspect full metrics.
+            </div>
+          </div>
+          <div class="detail-btns">
+            <button class="btn-primary"   id="dlBtn"      onclick="downloadRecipe()" disabled>↓ Recipe JSON</button>
+            <button class="btn-secondary" id="builderBtn" onclick="openInBuilder()"  disabled>Builder ↗</button>
+          </div>
+        </div>
+
       </div>
-    </div>
+    </main>
 
-    <!-- Detail panel -->
-    <div class="detail-panel">
-
-      <div class="detail-preview">
-        <canvas id="detailCanvas"></canvas>
-        <div class="detail-placeholder" id="detailPlaceholder">
-          <div class="icon">⬡</div>
-          <div class="hint">Select a result</div>
-        </div>
-      </div>
-
-      <div class="detail-metrics" id="detailMetrics">
-        <div style="color:var(--muted2);font-family:'DM Mono',monospace;font-size:10px;padding-top:8px">
-          Click a design card to inspect its full metrics.
-        </div>
-      </div>
-
-      <div class="detail-actions" id="detailActions">
-        <div class="detail-header">
-          <div class="detail-preset" id="detailPreset">—</div>
-          <div class="detail-meta" id="detailMeta">select a design</div>
-        </div>
-        <div>
-          <div class="detail-score-big" id="detailScore">—</div>
-          <div class="score-label">match score</div>
-        </div>
-        <div class="geometry-info" id="detailGeo">—</div>
-        <button class="action-btn primary" id="downloadBtn" onclick="downloadRecipe()" disabled>
-          ↓ Get Recipe JSON
-        </button>
-        <button class="action-btn secondary" onclick="openInBuilder()" id="builderBtn" disabled>
-          Open in Builder ↗
-        </button>
-      </div>
-
-    </div>
-
-  </main>
+  </div>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// ScaffoldVault Explorer
+// ScaffoldVault — Explorer
 // ═══════════════════════════════════════════════════════════════
 
 const SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DAlrNLqbUZiwkaA6wPSMIw_YUNY85LX';
 
-// ─── Domain config — which metrics to show and weight ────────────
+// ─── Domain → requirement configs ────────────────────────────────
 const DOMAIN_CONFIG = {
-  all: {
-    requirements: [
-      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:1 },
-      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:50,   step:0.1, weight:1 },
-      { key:'connect_idx',      label:'Connectivity κ',      unit:'',    min:0,    max:1,    step:0.33,weight:1 },
-      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:1 },
-    ]
-  },
-  biomedical: {
-    requirements: [
-      { key:'microstrain_avg',  label:'Target microstrain',  unit:'με',  min:100,  max:5000, step:50,  weight:2 },
-      { key:'pore_size',        label:'Min pore size',       unit:'µm',  min:100,  max:1000, step:10,  weight:2 },
-      { key:'throat_size',      label:'Min throat diam.',    unit:'µm',  min:50,   max:500,  step:5,   weight:1 },
-      { key:'connect_idx',      label:'Connectivity κ',      unit:'',    min:0,    max:1,    step:0.33,weight:1 },
-      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:40,   step:0.5, weight:1 },
-    ]
-  },
-  aerospace: {
-    requirements: [
-      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:2 },
-      { key:'load_path_eff',    label:'Load path eff. λ',   unit:'',    min:0,    max:10,   step:0.1, weight:2 },
-      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:30,   step:0.5, weight:1 },
-      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:1 },
-    ]
-  },
-  automotive: {
-    requirements: [
-      { key:'ortho_contrast',   label:'Ortho contrast Ω',   unit:'',    min:0,    max:1,    step:0.05,weight:2 },
-      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:2 },
-      { key:'volume_fraction',  label:'Volume fraction',     unit:'%',   min:0.1,  max:40,   step:0.5, weight:1 },
-      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:1 },
-    ]
-  },
-  oilgas: {
-    requirements: [
-      { key:'connect_idx',      label:'Connectivity κ',      unit:'',    min:0,    max:1,    step:0.33,weight:2 },
-      { key:'stiffness_density',label:'Stiffness density',   unit:'',    min:0,    max:1000, step:10,  weight:2 },
-      { key:'anisotropy',       label:'Anisotropy ratio',    unit:'×',   min:1,    max:20,   step:0.1, weight:1 },
-    ]
-  },
-  thermal: {
-    requirements: [
-      { key:'thermal_anisotropy',label:'Thermal anisotropy kα',unit:'×', min:1,    max:20,   step:0.1, weight:2 },
-      { key:'k_density',         label:'Thermal / density k/ρ',unit:'',  min:0,    max:10,   step:0.1, weight:2 },
-      { key:'connect_idx',       label:'Connectivity κ',       unit:'',  min:0,    max:1,    step:0.33,weight:1 },
-    ]
-  },
+  all: { requirements: [
+    { key:'anisotropy',       label:'Anisotropy ratio',     unit:'×',  weight:1 },
+    { key:'volume_fraction',  label:'Volume fraction',      unit:'%',  weight:1 },
+    { key:'connect_idx',      label:'Connectivity κ',       unit:'',   weight:1 },
+    { key:'stiffness_density',label:'Stiffness density E/ρ',unit:'',   weight:1 },
+  ]},
+  biomedical: { requirements: [
+    { key:'microstrain_avg',  label:'Target microstrain',   unit:'με', weight:2 },
+    { key:'pore_size',        label:'Pore size',            unit:'µm', weight:2 },
+    { key:'throat_size',      label:'Throat diameter',      unit:'µm', weight:1 },
+    { key:'connect_idx',      label:'Connectivity κ',       unit:'',   weight:1 },
+    { key:'volume_fraction',  label:'Volume fraction',      unit:'%',  weight:1 },
+  ]},
+  aerospace: { requirements: [
+    { key:'anisotropy',       label:'Anisotropy ratio',     unit:'×',  weight:2 },
+    { key:'load_path_eff',    label:'Load path eff. λ',     unit:'',   weight:2 },
+    { key:'volume_fraction',  label:'Volume fraction',      unit:'%',  weight:1 },
+    { key:'stiffness_density',label:'Stiffness density',    unit:'',   weight:1 },
+  ]},
+  automotive: { requirements: [
+    { key:'ortho_contrast',   label:'Ortho contrast Ω',    unit:'',   weight:2 },
+    { key:'stiffness_density',label:'Stiffness density',    unit:'',   weight:2 },
+    { key:'volume_fraction',  label:'Volume fraction',      unit:'%',  weight:1 },
+  ]},
+  oilgas: { requirements: [
+    { key:'connect_idx',      label:'Connectivity κ',       unit:'',   weight:2 },
+    { key:'stiffness_density',label:'Stiffness density',    unit:'',   weight:2 },
+    { key:'anisotropy',       label:'Anisotropy ratio',     unit:'×',  weight:1 },
+  ]},
+  thermal: { requirements: [
+    { key:'thermal_anisotropy',label:'Thermal anisotropy kα',unit:'×', weight:2 },
+    { key:'k_density',         label:'Thermal / density k/ρ',unit:'',  weight:2 },
+    { key:'connect_idx',       label:'Connectivity κ',       unit:'',  weight:1 },
+  ]},
 };
 
 // ─── State ────────────────────────────────────────────────────────
-let allDesigns    = [];   // full database pull
-let filteredResults = []; // after domain/preset/mode filter + scoring
+let allDesigns     = [];
+let dbStats        = {};   // key → { min, max }
+let filteredResults = [];
 let selectedDesign  = null;
 let activeDomain    = 'all';
-let activeRequirements = {}; // key → { target, weight }
-let previewAnimId   = null;
+let activeReqs      = {};  // key → { min, max, weight }
 
-// ─── WebGL preview — renderer ported directly from TPMS Builder v0.5.5 ───────
+// ─── Sidebar toggle (mobile) ──────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+// ─── Database load ────────────────────────────────────────────────
+async function loadDatabase() {
+  try {
+    let all = [], from = 0, chunk = 1000;
+    while(true) {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/designs?select=*&order=created_at.desc&offset=${from}&limit=${chunk}`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      if(!res.ok) throw new Error('DB ' + res.status);
+      const rows = await res.json();
+      all = all.concat(rows);
+      if(rows.length < chunk) break;
+      from += chunk;
+    }
+    allDesigns = all;
+
+    // Compute global min/max per metric
+    const metricKeys = [
+      'anisotropy','volume_fraction','connect_idx','stiffness_density',
+      'load_path_eff','ortho_contrast','axial_dominance','aniso_efficiency',
+      'ex_gpa','ey_gpa','ez_gpa','microstrain_avg','microstrain_x','microstrain_y','microstrain_z',
+      'u_strain','pore_size','throat_size','perc_idx','surface_complexity',
+      'keff_x','keff_y','keff_z','thermal_anisotropy','k_density',
+    ];
+    dbStats = {};
+    metricKeys.forEach(k => {
+      const vals = all.map(d => d[k]).filter(v => v !== null && v !== undefined && isFinite(v));
+      if(vals.length) dbStats[k] = { min: Math.min(...vals), max: Math.max(...vals) };
+    });
+
+    // Topbar stats
+    const presets = new Set(all.map(d => d.preset));
+    document.getElementById('dbCount').textContent   = all.length.toLocaleString();
+    document.getElementById('dbPresets').textContent = presets.size;
+
+    // Preset dropdown
+    const sel = document.getElementById('presetSel');
+    sel.innerHTML = '<option value="">Any surface</option>';
+    [...presets].sort().forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p; sel.appendChild(o);
+    });
+
+    renderReqPanel();
+  } catch(e) {
+    console.error('ScaffoldVault DB error:', e);
+    document.getElementById('dbCount').textContent = 'error';
+  }
+}
+
+// ─── Requirements panel ───────────────────────────────────────────
+function setDomain(domain, btn) {
+  activeDomain = domain;
+  document.querySelectorAll('.domain-pill').forEach(b => b.classList.toggle('active', b === btn));
+  renderReqPanel();
+}
+
+function renderReqPanel() {
+  const cfg   = DOMAIN_CONFIG[activeDomain] || DOMAIN_CONFIG.all;
+  const panel = document.getElementById('reqPanel');
+  panel.innerHTML = '';
+  activeReqs = {};
+
+  cfg.requirements.forEach(req => {
+    activeReqs[req.key] = { min: null, max: null, weight: req.weight };
+    const stats = dbStats[req.key];
+    const hint  = stats
+      ? `${fmtVal(stats.min, req.key)} – ${fmtVal(stats.max, req.key)} ${req.unit}`
+      : req.unit;
+
+    const div = document.createElement('div');
+    div.className = 'req-row';
+    div.innerHTML = `
+      <div class="req-label-row">
+        <span class="req-name">${req.label}</span>
+        <span class="req-range-hint" id="hint_${req.key}">${hint}</span>
+      </div>
+      <div class="req-inputs">
+        <input type="number" id="rmin_${req.key}" placeholder="min"
+          oninput="onReqChange('${req.key}')">
+        <span class="sep">—</span>
+        <input type="number" id="rmax_${req.key}" placeholder="max"
+          oninput="onReqChange('${req.key}')">
+      </div>
+      <div class="weight-row">
+        <span class="weight-label">importance</span>
+        <input type="range" id="wt_${req.key}" min="0.1" max="3" step="0.1" value="${req.weight}"
+          oninput="onWeightChange('${req.key}',this.value)">
+        <span class="weight-val" id="wtv_${req.key}">${req.weight}×</span>
+      </div>
+    `;
+    panel.appendChild(div);
+  });
+}
+
+function fmtVal(v, key) {
+  if(v === undefined || v === null) return '—';
+  if(key === 'pore_size' || key === 'throat_size' || key === 'microstrain_avg') return Math.round(v).toLocaleString();
+  return v >= 100 ? Math.round(v) : v.toFixed(2);
+}
+
+function onReqChange(key) {
+  const mn = document.getElementById('rmin_'+key)?.value;
+  const mx = document.getElementById('rmax_'+key)?.value;
+  activeReqs[key].min = mn !== '' && mn !== undefined ? parseFloat(mn) : null;
+  activeReqs[key].max = mx !== '' && mx !== undefined ? parseFloat(mx) : null;
+}
+
+function onWeightChange(key, val) {
+  activeReqs[key].weight = parseFloat(val);
+  document.getElementById('wtv_'+key).textContent = parseFloat(val).toFixed(1) + '×';
+}
+
+// ─── Scoring ──────────────────────────────────────────────────────
+// Penalty for each metric normalized against:
+//   - user-set range (max-min) if both are provided
+//   - global db range if user hasn't set bounds
+// Score = 100 × exp(−weighted_penalty × 1.5), capped 0-100
+function scoreDesign(d) {
+  const reqs = Object.entries(activeReqs).filter(([,r]) => r.min !== null || r.max !== null);
+  if(reqs.length === 0) return 100;
+
+  let totalPenalty = 0, totalWeight = 0;
+
+  reqs.forEach(([key, req]) => {
+    // Map Supabase lowercase keys
+    const val = d[key] ?? d[key.toLowerCase()] ?? null;
+    if(val === null || !isFinite(val)) return;
+
+    // Determine normalization range
+    let range;
+    if(req.min !== null && req.max !== null) {
+      range = req.max - req.min || 1;
+    } else {
+      const g = dbStats[key];
+      range = g ? (g.max - g.min || 1) : 1;
+    }
+
+    // Target = midpoint of user range; if only one bound set, use that
+    const target = (req.min !== null && req.max !== null) ? (req.min + req.max) / 2
+                 : req.min !== null ? req.min
+                 : req.max;
+
+    let penalty = Math.abs(val - target) / range;
+
+    // Extra penalty for hard violations of explicit bounds
+    if(req.min !== null && val < req.min) penalty += (req.min - val) / range;
+    if(req.max !== null && val > req.max) penalty += (val - req.max) / range;
+
+    totalPenalty += penalty * req.weight;
+    totalWeight  += req.weight;
+  });
+
+  const norm = totalWeight > 0 ? totalPenalty / totalWeight : 0;
+  return Math.max(0, Math.round(100 * Math.exp(-norm * 1.5)));
+}
+
+function scoreBadgeClass(s) {
+  return s >= 70 ? 's-high' : s >= 40 ? 's-mid' : 's-low';
+}
+
+// ─── Search ───────────────────────────────────────────────────────
+function runSearch() {
+  // Close sidebar on mobile after search
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+
+  const presetF = document.getElementById('presetSel').value;
+  const modeF   = document.getElementById('modeSel').value;
+  const cutoff  = parseInt(document.getElementById('scoreCutoff').value) || 0;
+
+  let pool = allDesigns;
+  if(activeDomain !== 'all') pool = pool.filter(d => d.domain === activeDomain);
+  if(presetF)                pool = pool.filter(d => d.preset  === presetF);
+  if(modeF)                  pool = pool.filter(d => d.mode    === modeF);
+
+  // Score and filter
+  pool.forEach(d => { d._score = scoreDesign(d); });
+  pool = pool.filter(d => d._score >= cutoff);
+  pool.sort((a,b) => b._score - a._score);
+
+  // Cap at 25
+  filteredResults = pool.slice(0, 25);
+  renderCards();
+}
+
+function onSortChange() {
+  const key = document.getElementById('sortSel').value;
+  if(key === 'score') filteredResults.sort((a,b) => b._score - a._score);
+  else filteredResults.sort((a,b) => (b[key]??0) - (a[key]??0));
+  renderCards();
+}
+
+function onFilterChange() {
+  if(filteredResults.length > 0) runSearch();
+}
+
+function clearFilters() {
+  activeDomain = 'all';
+  document.querySelectorAll('.domain-pill').forEach(b => b.classList.toggle('active', b.dataset.domain === 'all'));
+  document.getElementById('presetSel').value = '';
+  document.getElementById('modeSel').value   = '';
+  renderReqPanel();
+  filteredResults = [];
+  renderCards();
+}
+
+// ─── Card rendering ───────────────────────────────────────────────
+function renderCards() {
+  const grid = document.getElementById('cardsGrid');
+  document.getElementById('resultsCount').textContent =
+    filteredResults.length > 0 ? filteredResults.length + ' shown' : '—';
+
+  if(filteredResults.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⬡</div>
+      <div class="empty-title">${allDesigns.length > 0 ? 'No matches' : 'Loading…'}</div>
+      <div class="empty-sub">${allDesigns.length > 0 ? 'Adjust requirements or lower the min score' : 'Please wait'}</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = '';
+  filteredResults.forEach((d, i) => {
+    const score   = d._score ?? 0;
+    const modeTag = d.mode === 'pi-tpms' ? 'pi' : d.mode === 'shell' ? 'shell' : 'solid';
+    const card    = document.createElement('div');
+    card.className = 'design-card';
+    card.style.animationDelay = (i * 18) + 'ms';
+    card.dataset.idx = i;
+
+    card.innerHTML = `
+      <div class="score-badge ${scoreBadgeClass(score)}">${score}</div>
+      <div class="card-gl" id="cardgl_${i}">
+        <canvas id="cardcanvas_${i}" width="1" height="1"></canvas>
+        <div class="placeholder">⬡</div>
+      </div>
+      <div class="card-body">
+        <div class="card-metrics-row">
+          <div class="card-metric">
+            <div class="card-metric-val">${(d.anisotropy??0).toFixed(2)}×</div>
+            <div class="card-metric-lbl">Anisotropy</div>
+          </div>
+          <div class="card-metric">
+            <div class="card-metric-val">${(d.volume_fraction??0).toFixed(1)}%</div>
+            <div class="card-metric-lbl">Vol. frac.</div>
+          </div>
+          <div class="card-metric">
+            <div class="card-metric-val">${(d.connect_idx??0).toFixed(2)}</div>
+            <div class="card-metric-lbl">Connectivity</div>
+          </div>
+          <div class="card-metric">
+            <div class="card-metric-val">${d.pore_size ?? '—'}</div>
+            <div class="card-metric-lbl">Pore µm</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="mode-tag ${modeTag}">${d.mode}</span>
+        <button class="recipe-btn" onclick="event.stopPropagation();quickDownload(${i})">↓ Recipe</button>
+      </div>
+    `;
+    card.addEventListener('click', () => selectDesign(d, card, i));
+    grid.appendChild(card);
+  });
+
+  // Lazy-render card GL previews
+  requestAnimationFrame(renderCardPreviews);
+}
+
+// ─── Card mini-previews ───────────────────────────────────────────
+// Each card gets its own small canvas rendered once (no animation — saves GPU)
+function renderCardPreviews() {
+  filteredResults.forEach((d, i) => {
+    const canvas = document.getElementById('cardcanvas_' + i);
+    const container = document.getElementById('cardgl_' + i);
+    if(!canvas || !container) return;
+
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if(!w || !h) return;
+
+    canvas.width  = w;
+    canvas.height = h;
+
+    const cgl = canvas.getContext('webgl');
+    if(!cgl) return;
+
+    cgl.viewport(0, 0, w, h);
+
+    const g      = d.geometry || {};
+    const isPi   = d.mode === 'pi-tpms';
+    const isShell= d.mode === 'shell';
+    const frag   = buildFrag(
+      d.surface_terms || [], d.preset || '', isShell, isPi,
+      g.offset||0, g.wall_thickness||0.3,
+      d.pipe_radius||g.pipe_radius||0.1,
+      g.cell_scale||1,
+      d.phase_shift||g.phase_shift
+    );
+
+    const vs = cgl.createShader(cgl.VERTEX_SHADER);
+    cgl.shaderSource(vs, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}');
+    cgl.compileShader(vs);
+
+    const fs = cgl.createShader(cgl.FRAGMENT_SHADER);
+    cgl.shaderSource(fs, frag);
+    cgl.compileShader(fs);
+    if(!cgl.getShaderParameter(fs, cgl.COMPILE_STATUS)) return;
+
+    const prog = cgl.createProgram();
+    cgl.attachShader(prog, vs); cgl.attachShader(prog, fs);
+    cgl.linkProgram(prog);
+    if(!cgl.getProgramParameter(prog, cgl.LINK_STATUS)) return;
+
+    cgl.useProgram(prog);
+    const buf = cgl.createBuffer();
+    cgl.bindBuffer(cgl.ARRAY_BUFFER, buf);
+    cgl.bufferData(cgl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), cgl.STATIC_DRAW);
+    const loc = cgl.getAttribLocation(prog, 'p');
+    cgl.enableVertexAttribArray(loc);
+    cgl.vertexAttribPointer(loc, 2, cgl.FLOAT, false, 0, 0);
+
+    // Isometric rotation
+    const rot = isoMat();
+    cgl.uniform2f(cgl.getUniformLocation(prog,'res'), w, h);
+    cgl.uniformMatrix3fv(cgl.getUniformLocation(prog,'rot'), false, rot);
+    cgl.uniform1f(cgl.getUniformLocation(prog,'zoom'), Math.PI*(g.cell_scale||1)*5.1);
+    cgl.drawArrays(cgl.TRIANGLE_STRIP, 0, 4);
+
+    canvas.classList.add('visible');
+    const ph = container.querySelector('.placeholder');
+    if(ph) ph.style.display = 'none';
+  });
+}
+
+function isoMat() {
+  function rot3(ax,ay,az,angle){
+    const c=Math.cos(angle),s=Math.sin(angle),t=1-c;
+    const l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;
+    return[t*ax*ax+c,t*ax*ay+s*az,t*ax*az-s*ay,t*ax*ay-s*az,t*ay*ay+c,t*ay*az+s*ax,t*ax*az+s*ay,t*ay*az-s*ax,t*az*az+c];
+  }
+  function mul(A,B){const r=new Array(9);for(let c=0;c<3;c++)for(let row=0;row<3;row++)r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];return r;}
+  return mul(rot3(0,1,0,Math.PI/4), rot3(1,0,0,Math.atan(1/Math.sqrt(2))));
+}
+
+// ─── Design selection + detail panel ─────────────────────────────
+function selectDesign(d, cardEl, idx) {
+  document.querySelectorAll('.design-card.selected').forEach(c => c.classList.remove('selected'));
+  cardEl.classList.add('selected');
+  selectedDesign = d;
+
+  // Detail WebGL
+  resizeDetail();
+  buildPreview(d);
+  if(previewAnimId) cancelAnimationFrame(previewAnimId);
+  document.getElementById('detailCanvas').classList.add('visible');
+  document.getElementById('detailPlaceholder').style.display = 'none';
+  previewAnimId = requestAnimationFrame(renderDetailFrame);
+
+  // Detail body
+  const g     = d.geometry || {};
+  const score = d._score ?? 0;
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-preset">${d.preset}</div>
+    <div class="detail-meta">${d.domain} · ${d.material} · ${d.mode}</div>
+    <div class="detail-score-row">
+      <div class="detail-score-num ${scoreBadgeClass(score) === 's-high' ? '' : scoreBadgeClass(score) === 's-mid' ? 'style="color:var(--gold)"' : 'style="color:var(--accent3)"'}"
+        style="color:${score>=70?'var(--accent)':score>=40?'var(--gold)':'var(--accent3)'}">${score}</div>
+      <div class="detail-score-lbl">match score</div>
+    </div>
+    <div class="geo-block">
+      mode <span>${d.mode}</span><br>
+      ${d.pipe_radius ? 'pipe r <span>'+d.pipe_radius.toFixed(3)+'</span><br>' : ''}
+      ${d.phase_shift ? 'shift <span>('+d.phase_shift.x+', '+d.phase_shift.y+', '+d.phase_shift.z+')</span><br>' : ''}
+      cell scale <span>${g.cell_scale??'—'}</span><br>
+      E solid <span>${d.e_solid_gpa??'—'} GPa</span>
+    </div>
+    <div class="dsec">Elastic</div>
+    ${drow('Ex', (d.ex_gpa??0).toFixed(2)+' GPa')}
+    ${drow('Ey', (d.ey_gpa??0).toFixed(2)+' GPa')}
+    ${drow('Ez', (d.ez_gpa??0).toFixed(2)+' GPa')}
+    ${drow('Anisotropy α', (d.anisotropy??0).toFixed(2)+'×', true)}
+    ${drow('Connectivity κ', (d.connect_idx??0).toFixed(2), true)}
+    ${drow('Stiff density', (d.stiffness_density??0).toFixed(1))}
+    ${drow('Load path λ', (d.load_path_eff??0).toFixed(3))}
+    ${drow('Vol. fraction', (d.volume_fraction??0).toFixed(2)+'%')}
+    <div class="dsec">Strain</div>
+    ${drow('Avg microstrain', (d.microstrain_avg??0).toLocaleString()+' με', true)}
+    ${drow('Strain energy U', (d.u_strain??0).toFixed(1)+' kJ/m³')}
+    <div class="dsec">Pore</div>
+    ${drow('Mean pore φ', (d.pore_size??'—')+' µm', true)}
+    ${drow('Throat φt', (d.throat_size??'—')+' µm')}
+    ${drow('Percolation', (d.perc_idx??0).toFixed(2))}
+    <div class="dsec">Thermal</div>
+    ${drow('keff X', (d.keff_x??0).toFixed(3))}
+    ${drow('keff Y', (d.keff_y??0).toFixed(3))}
+    ${drow('keff Z', (d.keff_z??0).toFixed(3))}
+    ${drow('Thermal aniso.', (d.thermal_anisotropy??0).toFixed(2)+'×')}
+  `;
+
+  document.getElementById('dlBtn').disabled      = false;
+  document.getElementById('builderBtn').disabled = false;
+}
+
+function drow(name, val, hi=false) {
+  return `<div class="drow"><span class="drow-name">${name}</span><span class="drow-val${hi?' hi':''}">${val}</span></div>`;
+}
+
+// ─── Recipe export ────────────────────────────────────────────────
+function buildRecipe(d) {
+  const g = d.geometry || {};
+  return {
+    meta: { version:'0.5.0', timestamp:new Date().toISOString(), preset:d.preset, source:'ScaffoldVault' },
+    surface: { type:'terms', preset:d.preset, label:d.preset, terms:d.surface_terms||[] },
+    geometry: {
+      offset: g.offset??0, cell_scale:g.cell_scale??1, mode:d.mode||'solid',
+      wall_thickness:g.wall_thickness??null,
+      pipe_radius:d.pipe_radius??null, phase_shift:d.phase_shift??null,
+      gradient:{enabled:false}, normal_weights:g.normal_weights??null,
+    },
+    homogenization: {
+      grid:64, E_solid_GPa:d.e_solid_gpa??100, poisson:0.3,
+      volume_fraction:d.volume_fraction??null,
+      Ex_GPa:d.ex_gpa??null, Ey_GPa:d.ey_gpa??null, Ez_GPa:d.ez_gpa??null,
+      anisotropy:d.anisotropy??null, method:'FFT-CG',
+    }
+  };
+}
+
+function downloadRecipe() {
+  if(!selectedDesign) return;
+  dl(selectedDesign);
+}
+
+function quickDownload(idx) {
+  const d = filteredResults[idx];
+  if(d) dl(d);
+}
+
+function dl(d) {
+  const blob = new Blob([JSON.stringify(buildRecipe(d), null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `sv_${d.preset}_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openInBuilder() {
+  window.open('https://mshomper.github.io/tpms-builder', '_blank');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WebGL preview — renderer ported directly from TPMS Builder v0.5.5
+// ═══════════════════════════════════════════════════════════════
 const detailCanvas = document.getElementById('detailCanvas');
 const gl = detailCanvas.getContext('webgl');
 let previewProg = null, previewQuadBuf = null;
 let previewRot  = [1,0,0,0,1,0,0,0,1];
 
-function mat3Mul(A,B){
-  const r=new Array(9);
-  for(let c=0;c<3;c++) for(let row=0;row<3;row++)
-    r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];
-  return r;
-}
-function rotAxisAngle(ax,ay,az,angle){
-  const c=Math.cos(angle),s=Math.sin(angle),t=1-c;
-  const l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;
-  return[t*ax*ax+c,t*ax*ay+s*az,t*ax*az-s*ay,
-         t*ax*ay-s*az,t*ay*ay+c,t*ay*az+s*ax,
-         t*ax*az+s*ay,t*ay*az-s*ax,t*az*az+c];
-}
-previewRot = mat3Mul(
-  rotAxisAngle(0,1,0, Math.PI/4),
-  rotAxisAngle(1,0,0, Math.atan(1/Math.sqrt(2)))
-);
+function mat3Mul(A,B){const r=new Array(9);for(let c=0;c<3;c++)for(let row=0;row<3;row++)r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];return r;}
+function rotAxisAngle(ax,ay,az,angle){const c=Math.cos(angle),s=Math.sin(angle),t=1-c;const l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;return[t*ax*ax+c,t*ax*ay+s*az,t*ax*az-s*ay,t*ax*ay-s*az,t*ay*ay+c,t*ay*az+s*ax,t*ax*az+s*ay,t*ay*az-s*ax,t*az*az+c];}
+previewRot=mat3Mul(rotAxisAngle(0,1,0,Math.PI/4),rotAxisAngle(1,0,0,Math.atan(1/Math.sqrt(2))));
 
 function toFloat(v){const s=parseFloat(parseFloat(v).toFixed(6)).toString();return s.includes('.')?s:s+'.0';}
-function glslTrig(t,fx,fy,fz){
-  if(t==='sin(x)')return'sin('+fx+'*gx)';if(t==='cos(x)')return'cos('+fx+'*gx)';
-  if(t==='sin(y)')return'sin('+fy+'*gy)';if(t==='cos(y)')return'cos('+fy+'*gy)';
-  if(t==='sin(z)')return'sin('+fz+'*gz)';if(t==='cos(z)')return'cos('+fz+'*gz)';
-  return'1.0';
-}
+function glslTrig(t,fx,fy,fz){if(t==='sin(x)')return'sin('+fx+'*gx)';if(t==='cos(x)')return'cos('+fx+'*gx)';if(t==='sin(y)')return'sin('+fy+'*gy)';if(t==='cos(y)')return'cos('+fy+'*gy)';if(t==='sin(z)')return'sin('+fz+'*gz)';if(t==='cos(z)')return'cos('+fz+'*gz)';return'1.0';}
 
-// GLSL strings for double-frequency presets that can't be expressed as factor products.
-// Keyed by all known name variants from the Builder and sweep exports.
-const GLSL_PRESETS = {
+const GLSL_PRESETS={
   'lidinoid':       '1.1*(sin(2.*gx)*cos(gy)*sin(gz)+sin(gx)*sin(2.*gy)*cos(gz)+cos(gx)*sin(gy)*sin(2.*gz))-0.2*(cos(2.*gx)*cos(2.*gy)+cos(2.*gy)*cos(2.*gz)+cos(2.*gz)*cos(2.*gx))-0.4*(cos(2.*gx)+cos(2.*gy)+cos(2.*gz))',
   'fks':            'cos(2.*gx)*sin(gy)*cos(gz)+cos(2.*gy)*sin(gz)*cos(gx)+cos(2.*gz)*sin(gx)*cos(gy)',
   'Fischer-Koch S': 'cos(2.*gx)*sin(gy)*cos(gz)+cos(2.*gy)*sin(gz)*cos(gx)+cos(2.*gz)*sin(gx)*cos(gy)',
@@ -969,161 +953,45 @@ const GLSL_PRESETS = {
   'pHarmonic':      'cos(gx)+cos(gy)+cos(gz)+0.25*(cos(2.*gx)+cos(2.*gy)+cos(2.*gz))',
 };
 
-function buildFrag(terms, preset, shellMode, piMode, offsetVal, wallVal, pipeRVal, cellMult, phaseShift) {
-  const active  = (terms||[]).filter(t => t.on && t.factors && t.factors.length);
-  const rawGlsl = GLSL_PRESETS[preset] || null;
-  const H       = toFloat(Math.PI * (cellMult||1));
-  const TWO_PI  = 2 * Math.PI;
-
-  function fieldBody(px, py, pz) {
-    const coords = 'float gx='+px+',gy='+py+',gz='+pz+';';
-    if(rawGlsl) return coords+' v='+rawGlsl+';';
-    return coords+'\n'+active.map(t=>{
-      const parts=t.factors.map(f=>'('+glslTrig(f.trig,toFloat(f.fx),toFloat(f.fy),toFloat(f.fz))+')');
-      return'  v+='+toFloat(t.coef)+'*'+parts.join('*')+';';
-    }).join('\n');
-  }
-
-  let baseFunc, implicitExpr;
-  const featureSize = piMode ? (pipeRVal||0.1) : shellMode ? (wallVal||0.3) : Math.PI*(cellMult||1)*0.25;
-
-  if(piMode) {
-    const dxS = toFloat((phaseShift?.x||0)*TWO_PI);
-    const dyS = toFloat((phaseShift?.y||0)*TWO_PI);
-    const dzS = toFloat((phaseShift?.z||0)*TWO_PI);
-    const pRS = toFloat(pipeRVal||0.1);
-    baseFunc =
-      'float evalA(vec3 p,float H){float v=0.0;'+fieldBody('p.x','p.y','p.z')+' return v;}'+
-      'float evalB(vec3 p,float H){float v=0.0;'+fieldBody('p.x+'+dxS,'p.y+'+dyS,'p.z+'+dzS)+' return v;}'+
-      'float base(vec3 p,float H){return evalA(p,H);}';
-    implicitExpr = 'max(abs(evalA(p,H)),abs(evalB(p,H)))-'+pRS;
-  } else {
-    const offS  = toFloat(offsetVal||0);
-    const wallS = toFloat(wallVal||0.3);
-    baseFunc =
-      'float base(vec3 p,float H){float v=0.0;'+fieldBody('p.x','p.y','p.z')+' return v;}';
-    implicitExpr = shellMode
-      ? 'abs(base(p,H)-('+offS+'))-'+wallS
-      : 'base(p,H)-('+offS+')';
-  }
-
-  const fsS = toFloat(featureSize);
-
-  return [
-    'precision highp float;',
-    'uniform vec2 res;uniform mat3 rot;uniform float zoom;',
-    baseFunc,
-    'float implicit(vec3 p,float H){return '+implicitExpr+';}',
-    'float boxSDF(vec3 p,float H){vec3 d=abs(p)-H;return length(max(d,0.0))+min(max(d.x,max(d.y,d.z)),0.0);}',
-    'float sceneSDF(vec3 p,float H){return max(implicit(p,H),boxSDF(p,H));}',
-    'vec3 nrm(vec3 p,float H,float e){return normalize(vec3(sceneSDF(p+vec3(e,0,0),H)-sceneSDF(p-vec3(e,0,0),H),sceneSDF(p+vec3(0,e,0),H)-sceneSDF(p-vec3(0,e,0),H),sceneSDF(p+vec3(0,0,e),H)-sceneSDF(p-vec3(0,0,e),H)));}',
-    'vec3 palette(float t){vec3 a=vec3(0.55,0.57,0.42),b=vec3(0.43,0.42,0.30),c=vec3(1.0,1.0,1.0),d=vec3(0.02,0.0,0.05);return clamp(a+b*cos(6.28318*(c*t+d)),0.0,1.0);}',
-    'void main(){',
-    '  vec2 uv=(gl_FragCoord.xy-res*0.5)/min(res.x,res.y);',
-    '  vec3 ro=rot*vec3(0.0,0.0,zoom);',
-    '  vec3 rd=normalize(rot*vec3(uv.x,uv.y,-1.6));',
-    '  float H='+H+';',
-    '  float r=clamp(length(uv)*1.1,0.0,1.0);',
-    '  vec3 bgCol=mix(vec3(0.07,0.07,0.07),vec3(0.03,0.03,0.03),r*r);',
-    '  vec4 bg=vec4(bgCol,1.0);',
-    '  float featureSize='+fsS+';',
-    '  float camScale=clamp(zoom/16.0,0.15,1.0);',
-    '  float thresh=featureSize*0.008*camScale;',
-    '  float maxStep=featureSize*0.25*camScale;',
-    '  float nrmE=featureSize*0.06*camScale;',
-    '  vec3 iv=vec3(1.0)/rd;',
-    '  vec3 tb=(-vec3(H,H,H)-ro)*iv,tt=(vec3(H,H,H)-ro)*iv;',
-    '  vec3 tmi=min(tb,tt),tma=max(tb,tt);',
-    '  float tEn=max(max(tmi.x,tmi.y),tmi.z);',
-    '  float tEx=min(min(tma.x,tma.y),tma.z);',
-    '  if(tEn>tEx||tEx<0.0){gl_FragColor=bg;return;}',
-    '  float t=max(tEn,0.001);bool hit=false;',
-    '  for(int i=0;i<512;i++){',
-    '    vec3 p=ro+rd*t;float d=sceneSDF(p,H);',
-    '    if(d<thresh){hit=true;break;}',
-    '    if(t>tEx+0.01)break;',
-    '    t+=clamp(d*0.85,thresh*0.5,maxStep);',
-    '  }',
-    '  if(!hit){',
-    '    if(tEn>=0.0){',
-    '      vec3 pc=ro+rd*tEn,ep=abs(pc)/H;',
-    '      vec2 fp;if(ep.x>ep.y&&ep.x>ep.z)fp=ep.yz;else if(ep.y>ep.z)fp=ep.xz;else fp=ep.xy;',
-    '      float ed=min(1.0-fp.x,1.0-fp.y);',
-    '      if(ed<0.04){float w=smoothstep(0.04,0.005,ed);gl_FragColor=mix(bg,vec4(0.78,0.96,0.26,1.0),w*0.4);return;}',
-    '    }',
-    '    gl_FragColor=bg;return;',
-    '  }',
-    '  vec3 pos=ro+rd*t,n=nrm(pos,H,nrmE);',
-    '  if(dot(n,-rd)<0.0)n=-n;',
-    '  float dy=dot(n,vec3(0,1,0)),dz=dot(n,vec3(0,0,1));',
-    '  float hue=dy*dy*0.33+dz*dz*0.67;',
-    '  vec3 iridBase=palette(hue),iridShift=palette(hue+0.5);',
-    '  vec3 l1=normalize(vec3(1,1.8,2)),l2=normalize(vec3(-0.8,-0.3,0.6));',
-    '  float l3fill=max(dot(n,normalize(vec3(-0.5,-1.0,-1.5))),0.0)*0.3;',
-    '  float diff=0.35+max(dot(n,l1),0.0)*0.7+max(dot(n,l2),0.0)*0.25+l3fill;',
-    '  float spec1=pow(max(dot(reflect(-l1,n),-rd),0.0),120.0)*0.7;',
-    '  float spec2=pow(max(dot(reflect(-l1,n),-rd),0.0),20.0)*0.2;',
-    '  float rim=pow(1.0-max(dot(n,-rd),0.0),2.5)*0.8;',
-    '  vec3 green=vec3(0.784,0.961,0.259);',
-    '  vec3 col=iridBase*diff+vec3(1,1,1)*spec1+green*spec2*0.6+green*rim*0.45;',
-    '  col=mix(bgCol,col,exp(-t*0.010));',
-    '  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);',
-    '}'
-  ].join('\n');
+function buildFrag(terms,preset,shellMode,piMode,offsetVal,wallVal,pipeRVal,cellMult,phaseShift){
+  const active=(terms||[]).filter(t=>t.on&&t.factors&&t.factors.length);
+  const rawGlsl=GLSL_PRESETS[preset]||null;
+  const H=toFloat(Math.PI*(cellMult||1));
+  const TWO_PI=2*Math.PI;
+  function fieldBody(px,py,pz){const coords='float gx='+px+',gy='+py+',gz='+pz+';';if(rawGlsl)return coords+' v='+rawGlsl+';';return coords+'\n'+active.map(t=>{const parts=t.factors.map(f=>'('+glslTrig(f.trig,toFloat(f.fx),toFloat(f.fy),toFloat(f.fz))+')');return'  v+='+toFloat(t.coef)+'*'+parts.join('*')+';';}).join('\n');}
+  let baseFunc,implicitExpr;
+  const featureSize=piMode?(pipeRVal||0.1):shellMode?(wallVal||0.3):Math.PI*(cellMult||1)*0.25;
+  if(piMode){const dxS=toFloat((phaseShift?.x||0)*TWO_PI),dyS=toFloat((phaseShift?.y||0)*TWO_PI),dzS=toFloat((phaseShift?.z||0)*TWO_PI),pRS=toFloat(pipeRVal||0.1);baseFunc='float evalA(vec3 p,float H){float v=0.0;'+fieldBody('p.x','p.y','p.z')+' return v;}'+'float evalB(vec3 p,float H){float v=0.0;'+fieldBody('p.x+'+dxS,'p.y+'+dyS,'p.z+'+dzS)+' return v;}'+'float base(vec3 p,float H){return evalA(p,H);}';implicitExpr='max(abs(evalA(p,H)),abs(evalB(p,H)))-'+pRS;}
+  else{const offS=toFloat(offsetVal||0),wallS=toFloat(wallVal||0.3);baseFunc='float base(vec3 p,float H){float v=0.0;'+fieldBody('p.x','p.y','p.z')+' return v;}';implicitExpr=shellMode?'abs(base(p,H)-('+offS+'))-'+wallS:'base(p,H)-('+offS+')';}
+  const fsS=toFloat(featureSize);
+  return['precision highp float;','uniform vec2 res;uniform mat3 rot;uniform float zoom;',baseFunc,'float implicit(vec3 p,float H){return '+implicitExpr+';}','float boxSDF(vec3 p,float H){vec3 d=abs(p)-H;return length(max(d,0.0))+min(max(d.x,max(d.y,d.z)),0.0);}','float sceneSDF(vec3 p,float H){return max(implicit(p,H),boxSDF(p,H));}','vec3 nrm(vec3 p,float H,float e){return normalize(vec3(sceneSDF(p+vec3(e,0,0),H)-sceneSDF(p-vec3(e,0,0),H),sceneSDF(p+vec3(0,e,0),H)-sceneSDF(p-vec3(0,e,0),H),sceneSDF(p+vec3(0,0,e),H)-sceneSDF(p-vec3(0,0,e),H)));}','vec3 palette(float t){vec3 a=vec3(0.55,0.57,0.42),b=vec3(0.43,0.42,0.30),c=vec3(1.0,1.0,1.0),d=vec3(0.02,0.0,0.05);return clamp(a+b*cos(6.28318*(c*t+d)),0.0,1.0);}','void main(){','  vec2 uv=(gl_FragCoord.xy-res*0.5)/min(res.x,res.y);','  vec3 ro=rot*vec3(0.0,0.0,zoom);','  vec3 rd=normalize(rot*vec3(uv.x,uv.y,-1.6));','  float H='+H+';','  float r=clamp(length(uv)*1.1,0.0,1.0);','  vec3 bgCol=mix(vec3(0.07,0.07,0.07),vec3(0.03,0.03,0.03),r*r);','  vec4 bg=vec4(bgCol,1.0);','  float featureSize='+fsS+';','  float camScale=clamp(zoom/16.0,0.15,1.0);','  float thresh=featureSize*0.008*camScale;','  float maxStep=featureSize*0.25*camScale;','  float nrmE=featureSize*0.06*camScale;','  vec3 iv=vec3(1.0)/rd;','  vec3 tb=(-vec3(H,H,H)-ro)*iv,tt=(vec3(H,H,H)-ro)*iv;','  vec3 tmi=min(tb,tt),tma=max(tb,tt);','  float tEn=max(max(tmi.x,tmi.y),tmi.z);','  float tEx=min(min(tma.x,tma.y),tma.z);','  if(tEn>tEx||tEx<0.0){gl_FragColor=bg;return;}','  float t=max(tEn,0.001);bool hit=false;','  for(int i=0;i<512;i++){','    vec3 p=ro+rd*t;float d=sceneSDF(p,H);','    if(d<thresh){hit=true;break;}','    if(t>tEx+0.01)break;','    t+=clamp(d*0.85,thresh*0.5,maxStep);','  }','  if(!hit){','    if(tEn>=0.0){','      vec3 pc=ro+rd*tEn,ep=abs(pc)/H;','      vec2 fp;if(ep.x>ep.y&&ep.x>ep.z)fp=ep.yz;else if(ep.y>ep.z)fp=ep.xz;else fp=ep.xy;','      float ed=min(1.0-fp.x,1.0-fp.y);','      if(ed<0.04){float w=smoothstep(0.04,0.005,ed);gl_FragColor=mix(bg,vec4(0.78,0.96,0.26,1.0),w*0.4);return;}','    }','    gl_FragColor=bg;return;','  }','  vec3 pos=ro+rd*t,n=nrm(pos,H,nrmE);','  if(dot(n,-rd)<0.0)n=-n;','  float dy=dot(n,vec3(0,1,0)),dz=dot(n,vec3(0,0,1));','  float hue=dy*dy*0.33+dz*dz*0.67;','  vec3 iridBase=palette(hue),iridShift=palette(hue+0.5);','  vec3 l1=normalize(vec3(1,1.8,2)),l2=normalize(vec3(-0.8,-0.3,0.6));','  float l3fill=max(dot(n,normalize(vec3(-0.5,-1.0,-1.5))),0.0)*0.3;','  float diff=0.35+max(dot(n,l1),0.0)*0.7+max(dot(n,l2),0.0)*0.25+l3fill;','  float spec1=pow(max(dot(reflect(-l1,n),-rd),0.0),120.0)*0.7;','  float spec2=pow(max(dot(reflect(-l1,n),-rd),0.0),20.0)*0.2;','  float rim=pow(1.0-max(dot(n,-rd),0.0),2.5)*0.8;','  vec3 green=vec3(0.784,0.961,0.259);','  vec3 col=iridBase*diff+vec3(1,1,1)*spec1+green*spec2*0.6+green*rim*0.45;','  col=mix(bgCol,col,exp(-t*0.010));','  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);','}'].join('\n');
 }
 
-function mkShader(type,src){
-  const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
-  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));
-  return s;
-}
-
+function mkShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s;}
 const VERT='attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
 
 function buildPreview(design){
-  if(!gl||!design) return;
-  const g      = design.geometry || {};
-  const terms  = design.surface_terms || [];
-  const preset = design.preset || '';
-  const isPi   = design.mode === 'pi-tpms';
-  const isShell= design.mode === 'shell';
-  const frag   = buildFrag(
-    terms, preset, isShell, isPi,
-    g.offset||0, g.wall_thickness||0.3,
-    design.pipe_radius||g.pipe_radius||0.1,
-    g.cell_scale||1,
-    design.phase_shift||g.phase_shift
-  );
-  const prog = gl.createProgram();
-  gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, VERT));
-  gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, frag));
+  if(!gl||!design)return;
+  const g=design.geometry||{};
+  const isPi=design.mode==='pi-tpms',isShell=design.mode==='shell';
+  const frag=buildFrag(design.surface_terms||[],design.preset||'',isShell,isPi,g.offset||0,g.wall_thickness||0.3,design.pipe_radius||g.pipe_radius||0.1,g.cell_scale||1,design.phase_shift||g.phase_shift);
+  const prog=gl.createProgram();
+  gl.attachShader(prog,mkShader(gl.VERTEX_SHADER,VERT));
+  gl.attachShader(prog,mkShader(gl.FRAGMENT_SHADER,frag));
   gl.linkProgram(prog);
   if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.error(gl.getProgramInfoLog(prog));return;}
-  if(previewProg) gl.deleteProgram(previewProg);
-  previewProg = prog;
-  gl.useProgram(previewProg);
-  if(!previewQuadBuf){
-    previewQuadBuf=gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER,previewQuadBuf);
-    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
-  } else {
-    gl.bindBuffer(gl.ARRAY_BUFFER,previewQuadBuf);
-  }
-  const loc=gl.getAttribLocation(previewProg,'p');
-  gl.enableVertexAttribArray(loc);
-  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  if(previewProg)gl.deleteProgram(previewProg);
+  previewProg=prog;gl.useProgram(previewProg);
+  if(!previewQuadBuf){previewQuadBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,previewQuadBuf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);}
+  else gl.bindBuffer(gl.ARRAY_BUFFER,previewQuadBuf);
+  const loc=gl.getAttribLocation(previewProg,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
 }
 
-function resizeDetail(){
-  const rect = detailCanvas.parentElement.getBoundingClientRect();
-  detailCanvas.width  = rect.width;
-  detailCanvas.height = rect.height;
-  if(gl) gl.viewport(0,0,detailCanvas.width,detailCanvas.height);
-}
-
+let previewAnimId=null;
+function resizeDetail(){const rect=detailCanvas.parentElement.getBoundingClientRect();detailCanvas.width=rect.width;detailCanvas.height=rect.height;if(gl)gl.viewport(0,0,detailCanvas.width,detailCanvas.height);}
 function renderDetailFrame(){
-  if(!gl||!previewProg) return;
-  const wy=0.003, wx=wy/1.6180339887;
+  if(!gl||!previewProg)return;
+  const wy=0.003,wx=wy/1.618;
   previewRot=mat3Mul(rotAxisAngle(0,1,0,wy),previewRot);
   previewRot=mat3Mul(rotAxisAngle(1,0,0,wx),previewRot);
   gl.useProgram(previewProg);
@@ -1134,376 +1002,9 @@ function renderDetailFrame(){
   previewAnimId=requestAnimationFrame(renderDetailFrame);
 }
 
-// ─── Database ─────────────────────────────────────────────────────
-async function loadDatabase(){
-  try {
-    // Fetch all designs (page in chunks to handle >1000)
-    let all = [], from = 0, chunk = 1000;
-    while(true){
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/designs?select=*&order=created_at.desc&offset=${from}&limit=${chunk}`,
-        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Range: `${from}-${from+chunk-1}` } }
-      );
-      if(!res.ok) throw new Error('DB fetch failed: '+res.status);
-      const rows = await res.json();
-      all = all.concat(rows);
-      if(rows.length < chunk) break;
-      from += chunk;
-    }
-    allDesigns = all;
-
-    // Update topbar stats
-    const presets = new Set(all.map(d=>d.preset));
-    document.getElementById('dbCount').textContent   = all.length.toLocaleString();
-    document.getElementById('dbPresets').textContent = presets.size;
-
-    // Populate preset dropdown
-    const sel = document.getElementById('presetSel');
-    sel.innerHTML = '<option value="">Any surface</option>';
-    [...presets].sort().forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
-      sel.appendChild(opt);
-    });
-
-  } catch(e){
-    console.error('ScaffoldVault DB error:', e);
-    document.getElementById('dbCount').textContent = 'error';
-  }
-}
-
-// ─── Domain + requirements UI ────────────────────────────────────
-function setDomain(domain, btn){
-  activeDomain = domain;
-  document.querySelectorAll('.domain-pill').forEach(b => b.classList.toggle('active', b===btn));
-  renderRequirementsPanel();
-}
-
-function renderRequirementsPanel(){
-  const cfg  = DOMAIN_CONFIG[activeDomain] || DOMAIN_CONFIG.all;
-  const panel = document.getElementById('requirementsPanel');
-  panel.innerHTML = '';
-  activeRequirements = {};
-
-  cfg.requirements.forEach(req => {
-    activeRequirements[req.key] = { target: null, weight: req.weight };
-
-    const div = document.createElement('div');
-    div.className = 'slider-row';
-    div.innerHTML = `
-      <div class="slider-label">
-        <span class="slider-name">${req.label}</span>
-        <span class="slider-hint">${req.unit}</span>
-      </div>
-      <div class="range-inputs">
-        <input type="number" id="req_min_${req.key}" placeholder="min"
-          step="${req.step}" min="${req.min}" max="${req.max}"
-          oninput="onReqChange('${req.key}')">
-        <span class="sep">—</span>
-        <input type="number" id="req_max_${req.key}" placeholder="max"
-          step="${req.step}" min="${req.min}" max="${req.max}"
-          oninput="onReqChange('${req.key}')">
-      </div>
-      <div class="weight-row">
-        <span class="weight-label">importance</span>
-        <input type="range" id="req_w_${req.key}" min="0.1" max="3" step="0.1" value="${req.weight}"
-          oninput="onWeightChange('${req.key}',this.value)">
-        <span class="weight-val" id="req_wv_${req.key}">${req.weight}×</span>
-      </div>
-    `;
-    panel.appendChild(div);
-  });
-}
-
-function onReqChange(key){
-  const minEl = document.getElementById('req_min_'+key);
-  const maxEl = document.getElementById('req_max_'+key);
-  const mn    = minEl.value !== '' ? parseFloat(minEl.value) : null;
-  const mx    = maxEl.value !== '' ? parseFloat(maxEl.value) : null;
-  if(!activeRequirements[key]) activeRequirements[key] = { target: null, weight: 1 };
-  // Target = midpoint if both set, else whichever is set
-  activeRequirements[key].target = mn !== null && mx !== null ? (mn+mx)/2
-    : mn !== null ? mn : mx !== null ? mx : null;
-  activeRequirements[key].min = mn;
-  activeRequirements[key].max = mx;
-}
-
-function onWeightChange(key, val){
-  if(activeRequirements[key]) activeRequirements[key].weight = parseFloat(val);
-  document.getElementById('req_wv_'+key).textContent = parseFloat(val).toFixed(1)+'×';
-}
-
-// ─── Search + scoring ────────────────────────────────────────────
-function runSearch(){
-  const presetFilter = document.getElementById('presetSel').value;
-  const modeFilter   = document.getElementById('modeSel').value;
-
-  // Apply hard filters
-  let pool = allDesigns;
-  if(activeDomain !== 'all') pool = pool.filter(d => d.domain === activeDomain);
-  if(presetFilter)           pool = pool.filter(d => d.preset === presetFilter);
-  if(modeFilter)             pool  = pool.filter(d => d.mode  === modeFilter);
-
-  // Score each design against requirements
-  const activeReqs = Object.entries(activeRequirements)
-    .filter(([,r]) => r.target !== null);
-
-  pool.forEach(d => {
-    if(activeReqs.length === 0){ d._score = 100; return; }
-
-    let totalWeight = 0, totalPenalty = 0;
-    activeReqs.forEach(([key, req]) => {
-      const val = d[key] ?? d['metrics']?.[key] ?? null;
-      if(val === null) return;
-
-      const target = req.target;
-      const range  = Math.abs(target) || 1;
-      let penalty  = Math.abs(val - target) / range;
-
-      // Hard min/max violations get extra penalty
-      if(req.min !== null && val < req.min) penalty += 2;
-      if(req.max !== null && val > req.max) penalty += 2;
-
-      totalPenalty += penalty * req.weight;
-      totalWeight  += req.weight;
-    });
-
-    const normPenalty = totalWeight > 0 ? totalPenalty / totalWeight : 0;
-    d._score = Math.max(0, Math.round(100 * Math.exp(-normPenalty * 1.5)));
-  });
-
-  // Sort
-  pool.sort((a,b) => b._score - a._score);
-  filteredResults = pool;
-  renderCards();
-}
-
-function onSortChange(){
-  const key = document.getElementById('sortSel').value;
-  if(key === 'score'){
-    filteredResults.sort((a,b) => b._score - a._score);
-  } else {
-    filteredResults.sort((a,b) => (b[key]??0) - (a[key]??0));
-  }
-  renderCards();
-}
-
-function onFilterChange(){ /* auto-search on filter change if results exist */
-  if(filteredResults.length > 0) runSearch();
-}
-
-function clearFilters(){
-  activeDomain = 'all';
-  document.querySelectorAll('.domain-pill').forEach(b => b.classList.toggle('active', b.dataset.domain==='all'));
-  document.getElementById('presetSel').value = '';
-  document.getElementById('modeSel').value   = '';
-  renderRequirementsPanel();
-  filteredResults = [];
-  renderCards();
-}
-
-// ─── Render cards ────────────────────────────────────────────────
-function renderCards(){
-  const wrap = document.getElementById('cardsWrap');
-  document.getElementById('resultsCount').textContent =
-    filteredResults.length > 0 ? filteredResults.length+' designs' : '—';
-
-  if(filteredResults.length === 0){
-    wrap.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">⬡</div>
-      <div class="empty-title">${allDesigns.length > 0 ? 'No matches found' : 'Loading database…'}</div>
-      <div class="empty-sub">${allDesigns.length > 0 ? 'Try adjusting your requirements or domain filter' : 'Please wait'}</div>
-    </div>`;
-    return;
-  }
-
-  wrap.innerHTML = '';
-  filteredResults.slice(0, 60).forEach((d, i) => {
-    const modeTag = d.mode === 'pi-tpms' ? 'pi' : d.mode === 'shell' ? 'shell' : 'solid';
-    const card = document.createElement('div');
-    card.className = 'design-card';
-    card.style.animationDelay = (i * 20) + 'ms';
-    card.innerHTML = `
-      ${d._score !== undefined ? `<div class="card-score">${d._score}</div>` : ''}
-      <div class="card-top">
-        <div class="card-preset">${d.preset}</div>
-        <div class="card-rank">${d.domain} · ${d.material}</div>
-      </div>
-      <div class="card-preview">
-        <div class="preview-placeholder">⬡</div>
-      </div>
-      <div class="card-metrics">
-        <div class="card-metric">
-          <div class="card-metric-val">${d.anisotropy?.toFixed(2)??'—'}×</div>
-          <div class="card-metric-label">Anisotropy</div>
-        </div>
-        <div class="card-metric">
-          <div class="card-metric-val">${d.volume_fraction?.toFixed(1)??'—'}%</div>
-          <div class="card-metric-label">Vol. fraction</div>
-        </div>
-        <div class="card-metric">
-          <div class="card-metric-val">${d.connect_idx?.toFixed(2)??'—'}</div>
-          <div class="card-metric-label">Connectivity</div>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div class="card-tags">
-          <span class="tag ${modeTag}">${d.mode}</span>
-          ${d.pipe_radius ? `<span class="tag">r=${d.pipe_radius.toFixed(3)}</span>` : ''}
-        </div>
-        <button class="get-recipe-btn" onclick="event.stopPropagation();quickDownload(${JSON.stringify(i)})">↓ Recipe</button>
-      </div>
-    `;
-    card.addEventListener('click', () => selectDesign(d, card));
-    wrap.appendChild(card);
-  });
-}
-
-// ─── Design selection ─────────────────────────────────────────────
-function selectDesign(d, cardEl){
-  document.querySelectorAll('.design-card.selected').forEach(c => c.classList.remove('selected'));
-  cardEl.classList.add('selected');
-  selectedDesign = d;
-
-  // Detail preview
-  resizeDetail();
-  buildPreview(d);
-  if(previewAnimId) cancelAnimationFrame(previewAnimId);
-  detailCanvas.classList.add('visible');
-  document.getElementById('detailPlaceholder').style.display = 'none';
-  previewAnimId = requestAnimationFrame(renderDetailFrame);
-
-  // Detail metrics
-  const g = d.geometry || {};
-  document.getElementById('detailPreset').textContent = d.preset;
-  document.getElementById('detailMeta').textContent =
-    `${d.domain} · ${d.material} · ${d.mode}`;
-  document.getElementById('detailScore').textContent =
-    d._score !== undefined ? d._score : '—';
-  document.getElementById('detailGeo').innerHTML =
-    `mode <span>${d.mode}</span><br>` +
-    (d.pipe_radius ? `pipe r <span>${d.pipe_radius.toFixed(3)}</span><br>` : '') +
-    (d.phase_shift ? `shift <span>(${d.phase_shift.x}, ${d.phase_shift.y}, ${d.phase_shift.z})</span><br>` : '') +
-    `cell scale <span>${g.cell_scale??'—'}</span><br>` +
-    `E solid <span>${d.e_solid_gpa} GPa</span>`;
-
-  renderDetailMetrics(d);
-
-  document.getElementById('downloadBtn').disabled = false;
-  document.getElementById('builderBtn').disabled  = false;
-}
-
-function renderDetailMetrics(d){
-  const el = document.getElementById('detailMetrics');
-  const row = (name, val, unit='', hi=false) =>
-    `<div class="metric-row">
-      <span class="metric-name">${name}</span>
-      <span class="metric-value${hi?' highlight':''}">${val}${unit}</span>
-    </div>`;
-
-  el.innerHTML = `
-    <div class="detail-section-title">Elastic</div>
-    ${row('Ex', (d.ex_gpa??0).toFixed(2), ' GPa')}
-    ${row('Ey', (d.ey_gpa??0).toFixed(2), ' GPa')}
-    ${row('Ez', (d.ez_gpa??0).toFixed(2), ' GPa')}
-    ${row('Anisotropy α', (d.anisotropy??0).toFixed(2), '×', true)}
-    ${row('Stiff axis', d.stiff_axis??'—')}
-    ${row('Connectivity κ', (d.connect_idx??0).toFixed(2), '', true)}
-    ${row('Stiffness / ρ', (d.stiffness_density??0).toFixed(1))}
-    ${row('Load path eff. λ', (d.load_path_eff??0).toFixed(3))}
-    ${row('Ortho contrast Ω', (d.ortho_contrast??0).toFixed(3))}
-    ${row('Volume fraction', (d.volume_fraction??0).toFixed(2), '%')}
-
-    <div class="detail-section-title">Strain</div>
-    ${row('Avg microstrain', d.microstrain_avg?.toLocaleString()??'—', ' με', true)}
-    ${row('Strain energy U', (d.u_strain??0).toFixed(1), ' kJ/m³')}
-
-    <div class="detail-section-title">Pore</div>
-    ${row('Mean pore size φ', d.pore_size??'—', ' µm', true)}
-    ${row('Throat diam. φt', d.throat_size??'—', ' µm')}
-    ${row('Void percolation', (d.perc_idx??0).toFixed(2))}
-
-    <div class="detail-section-title">Thermal</div>
-    ${row('keff X', (d.keff_x??0).toFixed(3))}
-    ${row('keff Y', (d.keff_y??0).toFixed(3))}
-    ${row('keff Z', (d.keff_z??0).toFixed(3))}
-    ${row('Thermal aniso. kα', (d.thermal_anisotropy??0).toFixed(2), '×')}
-  `;
-}
-
-// ─── Recipe export ────────────────────────────────────────────────
-function buildRecipeJSON(d){
-  const g = d.geometry || {};
-  return {
-    meta: {
-      version:   '0.5.0',
-      timestamp: new Date().toISOString(),
-      preset:    d.preset,
-      source:    'ScaffoldVault',
-    },
-    surface: {
-      type:  'terms',
-      preset: d.preset,
-      label:  d.preset,
-      terms:  d.surface_terms || [],
-    },
-    geometry: {
-      offset:        g.offset        ?? 0,
-      cell_scale:    g.cell_scale    ?? 1,
-      mode:          d.mode          || 'solid',
-      wall_thickness: g.wall_thickness ?? null,
-      pipe_radius:   d.pipe_radius   ?? null,
-      phase_shift:   d.phase_shift   ?? null,
-      gradient:      { enabled: false },
-      normal_weights: g.normal_weights ?? null,
-    },
-    homogenization: {
-      grid:           64,
-      E_solid_GPa:    d.e_solid_gpa  ?? 100,
-      poisson:        0.3,
-      volume_fraction: d.volume_fraction ?? null,
-      Ex_GPa:         d.ex_gpa       ?? null,
-      Ey_GPa:         d.ey_gpa       ?? null,
-      Ez_GPa:         d.ez_gpa       ?? null,
-      anisotropy:     d.anisotropy   ?? null,
-      method:         'FFT-CG',
-    }
-  };
-}
-
-function downloadRecipe(){
-  if(!selectedDesign) return;
-  const recipe = buildRecipeJSON(selectedDesign);
-  const blob   = new Blob([JSON.stringify(recipe, null, 2)], {type:'application/json'});
-  const url    = URL.createObjectURL(blob);
-  const a      = document.createElement('a');
-  a.href       = url;
-  a.download   = `scaffoldvault_${selectedDesign.preset}_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function quickDownload(idx){
-  const d = filteredResults[idx];
-  if(!d) return;
-  const recipe = buildRecipeJSON(d);
-  const blob   = new Blob([JSON.stringify(recipe, null, 2)], {type:'application/json'});
-  const url    = URL.createObjectURL(blob);
-  const a      = document.createElement('a');
-  a.href       = url;
-  a.download   = `scaffoldvault_${d.preset}_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function openInBuilder(){
-  window.open('https://mshomper.github.io/tpms-builder', '_blank');
-}
-
-// ─── Init ─────────────────────────────────────────────────────────
-window.addEventListener('resize', () => { resizeDetail(); });
+window.addEventListener('resize',()=>{resizeDetail();});
 resizeDetail();
-renderRequirementsPanel();
+renderReqPanel();
 loadDatabase();
 </script>
 </body>

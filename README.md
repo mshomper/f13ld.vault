@@ -22,7 +22,7 @@ The goal is simple: an engineer who needs a bone scaffold, a heat exchanger, or 
 4. Click **Find Structures** — results are ranked by match score
 5. Click any result to inspect the full metric set and preview the surface geometry
 6. Click **Get Recipe JSON** to download the design file
-7. Load the recipe into the companion tools at [F13LD](f13ld.app) and export to 3MF
+7. Load the recipe into the companion tools at [F13LD](https://f13ld.app) and export to 3MF
 
 ---
 

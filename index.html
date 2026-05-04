@@ -97,6 +97,19 @@
 .fh-left .hamburger{display:none;background:transparent;border:0.5px solid #1a2a1a;border-radius:5px;padding:5px 7px;cursor:pointer;flex-direction:column;gap:3px;margin-right:4px}
 .fh-left .hamburger span{display:block;width:16px;height:1.4px;background:#5a7a5a;border-radius:2px}
 
+/* Metrics-key trigger button in header */
+.fh-metrics-key-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:transparent;border:1px solid #0C447C;border-radius:5px;
+  padding:3px 8px 3px 6px;cursor:pointer;
+  color:#0C447C;font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.10em;text-transform:uppercase;
+  transition:background 120ms;
+}
+.fh-metrics-key-btn:hover{background:#E6F1FB}
+.fh-metrics-key-btn svg{flex-shrink:0}
+@media (max-width:760px){ .fh-metrics-key-btn span{display:none;} }
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --bg:#06080d;--surface:#0b0f16;--panel:#0f1520;
@@ -1286,6 +1299,122 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   letter-spacing:0.08em;
 }
 
+/* ── Metrics-key drawer ────────────────────────────────────────────── */
+.metrics-key-backdrop{
+  position:fixed;inset:0;
+  background:rgba(4,6,10,0.55);
+  z-index:200;
+  opacity:0;transition:opacity 180ms ease;
+}
+.metrics-key-backdrop.visible{opacity:1;}
+.metrics-key-drawer{
+  position:fixed;left:0;right:0;bottom:0;
+  height:60vh;max-height:720px;min-height:340px;
+  background:var(--panel);
+  border-top:1px solid var(--border2);
+  box-shadow:0 -8px 40px rgba(0,0,0,0.6);
+  z-index:201;
+  display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform 240ms cubic-bezier(.2,.8,.2,1);
+}
+.metrics-key-drawer.visible{transform:translateY(0);}
+.mkd-header{
+  position:relative;
+  padding:18px 28px 10px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.mkd-title{
+  font-family:'Exo 2',system-ui,sans-serif;
+  font-size:15px;font-weight:700;
+  letter-spacing:0.18em;
+  color:var(--text);
+}
+.mkd-subtitle{
+  font-family:'DM Mono',monospace;
+  font-size:11px;color:var(--muted);
+  letter-spacing:0.05em;margin-top:3px;
+}
+.mkd-close{
+  position:absolute;top:12px;right:14px;
+  width:30px;height:30px;border-radius:5px;
+  background:transparent;border:1px solid var(--border2);
+  color:var(--muted);font-size:20px;line-height:1;
+  cursor:pointer;font-family:inherit;
+  transition:background 120ms,color 120ms;
+}
+.mkd-close:hover{background:var(--border);color:var(--text);}
+.mkd-search-row{padding:10px 28px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.mkd-search{
+  width:100%;padding:8px 12px;
+  background:var(--surface);border:1px solid var(--border2);border-radius:5px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:0.04em;
+}
+.mkd-search::placeholder{color:var(--muted);}
+.mkd-search:focus{outline:none;border-color:var(--accent);}
+.mkd-body{
+  flex:1;overflow-y:auto;
+  padding:14px 28px 30px;
+}
+.mkd-section{margin-bottom:22px;}
+.mkd-section-title{
+  font-family:'DM Mono',monospace;
+  font-size:11px;font-weight:600;letter-spacing:0.16em;
+  text-transform:uppercase;color:var(--accent);
+  padding-bottom:5px;margin-bottom:8px;
+  border-bottom:0.5px solid var(--border2);
+}
+.mkd-row{
+  display:grid;grid-template-columns:120px 1fr;gap:18px;
+  padding:9px 0;
+  border-bottom:0.5px solid rgba(46,72,96,0.18);
+}
+.mkd-row:last-child{border-bottom:none;}
+.mkd-row-label{
+  display:flex;flex-direction:column;gap:3px;
+  font-family:'DM Mono',monospace;
+}
+.mkd-row-code{font-size:13px;font-weight:600;color:var(--text);letter-spacing:0.04em;}
+.mkd-row-name{font-size:10px;color:var(--muted);letter-spacing:0.03em;}
+.mkd-row-unit{font-size:10px;color:var(--gold);letter-spacing:0.03em;font-style:italic;}
+.mkd-row-content{display:flex;flex-direction:column;gap:5px;}
+.mkd-row-def{
+  font-family:'Exo 2',system-ui,sans-serif;
+  font-size:13px;color:var(--text);line-height:1.5;
+}
+.mkd-row-interp{
+  font-family:'DM Mono',monospace;
+  font-size:11px;color:var(--muted);line-height:1.5;letter-spacing:0.02em;
+}
+.mkd-compound-row{
+  display:grid;grid-template-columns:160px 1fr;gap:18px;
+  padding:11px 0;
+  border-bottom:0.5px solid rgba(46,72,96,0.18);
+}
+.mkd-compound-row:last-child{border-bottom:none;}
+.mkd-compound-label{
+  font-family:'DM Mono',monospace;
+  font-size:12px;font-weight:700;color:var(--accent);
+  letter-spacing:0.10em;line-height:1.35;
+}
+.mkd-compound-formula{
+  font-family:'DM Mono',monospace;
+  font-size:11px;color:var(--gold);
+  letter-spacing:0.02em;
+  background:rgba(240,180,41,0.06);padding:4px 8px;border-radius:3px;
+  display:inline-block;margin-bottom:5px;
+}
+.mkd-empty{
+  text-align:center;padding:28px 0;
+  font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);
+}
+@media (max-width:680px){
+  .metrics-key-drawer{height:75vh;}
+  .mkd-row,.mkd-compound-row{grid-template-columns:1fr;gap:6px;}
+  .mkd-row-label{flex-direction:row;align-items:baseline;gap:8px;flex-wrap:wrap;}
+}
+
 
 @media(max-width:768px){
   .fh-left .hamburger{display:flex;}
@@ -1350,6 +1479,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
       </svg>
       <span class="fh-vault-label">vault</span>
     </div>
+    <button type="button" class="fh-metrics-key-btn" id="metricsKeyBtn" title="Metrics glossary" aria-label="Open metrics glossary">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+        <circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="7" y="10" text-anchor="middle" fill="currentColor" font-family="DM Mono,monospace" font-size="9" font-weight="700">?</text>
+      </svg>
+      <span>key</span>
+    </button>
     <span class="fh-version">v0.2.0</span>
     <div class="fh-icon">
       <svg width="18" height="18" viewBox="0 0 40 40">
@@ -1583,6 +1719,22 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 </div><!-- /main-column -->
 </div><!-- /main-row -->
 </div><!-- /app -->
+
+<!-- ─── Metrics glossary drawer ───────────────────────────────────────── -->
+<div class="metrics-key-backdrop" id="metricsKeyBackdrop" hidden></div>
+<aside class="metrics-key-drawer" id="metricsKeyDrawer" hidden aria-hidden="true" role="dialog" aria-label="Metrics glossary">
+  <div class="mkd-header">
+    <div class="mkd-title">METRICS KEY</div>
+    <div class="mkd-subtitle">What every column and compound on the vault means</div>
+    <button type="button" class="mkd-close" id="metricsKeyClose" aria-label="Close metrics glossary">×</button>
+  </div>
+  <div class="mkd-search-row">
+    <input type="text" id="metricsKeySearch" class="mkd-search" placeholder="Search metric name, code, or definition…" autocomplete="off" />
+  </div>
+  <div class="mkd-body" id="metricsKeyBody">
+    <!-- Populated on first open by buildMetricsKeyContent() -->
+  </div>
+</aside>
 
 <script>
 const SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
@@ -1854,6 +2006,152 @@ const DOMAIN_Z_COMPOUND = {
       return [km, ka];
     }
   },
+};
+
+// ─── Plain-language metric glossary ──────────────────────────────────────
+// Surfaced in the metrics-key drawer. Definitions written for users who
+// understand orthopedic/aerospace/materials engineering at a working level
+// but aren't researchers in metamaterial homogenization. Use sentences,
+// not equations. `interp` is the "how to read this value" hint.
+const METRIC_GLOSSARY = {
+  // ─── Geometry & connectivity ───
+  volume_fraction:        { def: 'Fraction of the unit cell occupied by solid material.',
+                            interp: 'Higher = denser/heavier. Lower = lighter and more porous.' },
+  connect_idx:            { def: 'Whether the solid phase forms a continuous load path through the cell. Mean of three boolean axis-percolation tests.',
+                            interp: 'κ=1.0 means load can transmit through every axis. κ=0 means the solid is isolated islands.' },
+  perc_idx:               { def: 'Whether the void (pore) phase forms a continuous channel through the cell. Mean of three axis-percolation tests.',
+                            interp: 'κ=1.0 means fluid/gas can flow through every axis. κ=0 means the pores are dead-end pockets.' },
+  anisotropy:             { def: 'Ratio of stiffest direction to least-stiff direction.',
+                            interp: '1.0× = perfectly isotropic. Higher = more directionally biased.' },
+  axial_dominance:        { def: 'How dominant the stiffest single axis is over the sum of the other two.',
+                            interp: 'Higher = pronounced single-axis design (good for spars, ribs, columns).' },
+  ortho_contrast:         { def: 'Coefficient of variation of stiffness across X/Y/Z axes.',
+                            interp: 'Low = balanced response in all directions. High = strongly asymmetric.' },
+  aniso_efficiency:       { def: 'Anisotropy ratio normalized by density — directional bias per unit material.',
+                            interp: 'Catches designs that achieve high anisotropy without using excess material.' },
+  surface_complexity:     { def: 'Surface area per cell volume, raw (uncapped). Vault percentile-ranks for display.',
+                            interp: 'High = topologically intricate (TPMS sheets, fine grains). Low = simple smooth boundary.' },
+
+  // ─── Stiffness (normalized to solid Young\'s modulus) ───
+  ex_norm:                { def: 'Effective stiffness along X as a fraction of solid material stiffness.',
+                            interp: 'Recover dimensional GPa by multiplying by E_solid (e.g., 110 GPa for Ti-6Al-4V).' },
+  ey_norm:                { def: 'Effective stiffness along Y as a fraction of solid material stiffness.',
+                            interp: 'Recover dimensional GPa by multiplying by E_solid.' },
+  ez_norm:                { def: 'Effective stiffness along Z as a fraction of solid material stiffness.',
+                            interp: 'Recover dimensional GPa by multiplying by E_solid.' },
+  stiffness_density_norm: { def: 'Mean effective stiffness divided by relative density. Material-agnostic measure of "stiffness per unit mass."',
+                            interp: 'The canonical "is this an efficient stiff structure" metric. Higher is better for nearly all structural applications.' },
+
+  // ─── Thermal (normalized to solid thermal conductivity) ───
+  keff_x_norm:            { def: 'Effective thermal conductivity along X as a fraction of solid material conductivity.',
+                            interp: 'Recover dimensional W/m·K by multiplying by k_solid.' },
+  keff_y_norm:            { def: 'Effective thermal conductivity along Y as a fraction of solid material conductivity.',
+                            interp: 'Recover dimensional W/m·K by multiplying by k_solid.' },
+  keff_z_norm:            { def: 'Effective thermal conductivity along Z as a fraction of solid material conductivity.',
+                            interp: 'Recover dimensional W/m·K by multiplying by k_solid.' },
+  keff_max_norm:          { def: 'Best-axis thermal conductivity, regardless of which physical axis is best.',
+                            interp: 'Heat-sink designs care about this — the "primary heat-transport direction" performance.' },
+  keff_avg_norm:          { def: 'Mean thermal conductivity averaged across X/Y/Z.',
+                            interp: 'Useful when heat must transport in unknown directions (e.g., omnidirectional cooling).' },
+  thermal_anisotropy:     { def: 'Ratio of best-axis to worst-axis thermal conductivity.',
+                            interp: '1.0× = isotropic conduction. Higher = directionally biased conduction (heat pipes, fins).' },
+
+  // ─── Compliance (per-stress strain response) ───
+  microstrain_x_per_gpa:  { def: 'Microstrain produced along X per GPa of applied stress.',
+                            interp: 'Multiply by your reference stress to get actual strain. Bone-ingrowth target: ~1500–3000 με at physiologic load.' },
+  microstrain_y_per_gpa:  { def: 'Microstrain produced along Y per GPa of applied stress.',
+                            interp: 'Multiply by reference stress to get actual strain.' },
+  microstrain_z_per_gpa:  { def: 'Microstrain produced along Z per GPa of applied stress.',
+                            interp: 'Multiply by reference stress to get actual strain.' },
+  microstrain_avg_per_gpa:{ def: 'Average microstrain across X/Y/Z per GPa of applied stress.',
+                            interp: 'NULL if the design exceeded its yield strain at the reference load (linear_cap_active=true).' },
+  u_compliance:           { def: 'Strain energy per unit volume per applied stress squared. Inverse of stiffness density in energy units.',
+                            interp: 'Lower = stiffer overall. NULL when the linear elasticity assumption breaks (yielded designs).' },
+
+  // ─── Pore structure (cell-decoupled) ───
+  pore_size_norm:         { def: 'Mean pore diameter as a fraction of cell size.',
+                            interp: 'Multiply by cell_size_mm × 1000 to recover μm.' },
+  pore_size_p10_norm:     { def: '10th percentile of the pore size distribution, as a fraction of cell size.',
+                            interp: 'The smallest pores that still get cells through. Bone-ingrowth needs this > ~100 μm.' },
+  pore_size_p50_norm:     { def: 'Median pore size, as a fraction of cell size.',
+                            interp: 'The "typical" pore. For bone ingrowth, 350 μm is the canonical sweet spot.' },
+  pore_size_p90_norm:     { def: '90th percentile of the pore size distribution, as a fraction of cell size.',
+                            interp: 'The largest pores. Bone-ingrowth target: < ~600 μm so cells don\'t lose mineralization scaffolding.' },
+  pore_size_cv:           { def: 'Coefficient of variation of pore sizes across the unit cell.',
+                            interp: 'Low = uniform pore size (TPMS-like). High = mixed-scale pores (random foams, grain structures).' },
+  throat_size_norm:       { def: 'Throat (narrowest channel) diameter as a fraction of cell size.',
+                            interp: 'The rate-limiting bottleneck for fluid/cell transport between pores.' },
+  throat_ratio:           { def: 'Throat-to-cell ratio. Raw value, no VF gating (replaces v0.12 throat_efficiency).',
+                            interp: 'High = open pathways. Low = pinched pore network. Important for bone ingrowth and flow.' },
+
+  // ─── Curvature ───
+  h_mean:                 { def: 'Signed mean curvature of the solid surface. Positive = convex outward, negative = concave inward.',
+                            interp: 'Near zero = minimal-surface-like (TPMS gyroid). Strongly positive = sphere-like cellular foam.' },
+  h_mean_abs:             { def: 'Magnitude of mean curvature, ignoring sign.',
+                            interp: 'How "curved" the surface is overall, without caring about which way it bows.' },
+  h_std:                  { def: 'Standard deviation of mean curvature across the surface.',
+                            interp: 'Pairs with h_mean_abs to compute custom uniformity formulas.' },
+  k_gauss_mean:           { def: 'Mean Gaussian curvature of the solid surface.',
+                            interp: 'Negative = saddle-dominant (TPMS). Zero = developable. Positive = sphere-like.' },
+  curvature_uniformity:   { def: 'How consistently curved the surface is. Smooth formula 1/(1+σ/⟨|H|⟩), bounded (0,1].',
+                            interp: 'Near 1.0 = ideal minimal surfaces (gyroid, Schwarz P). Lower = curvature varies across the surface.' },
+  mih:                    { def: 'Mean integrated curvature — total bending energy of the surface, scaled by area.',
+                            interp: 'Useful for identifying highly-folded structures vs simple flat-ish boundaries.' },
+
+  // ─── Topology ───
+  genus_per_cell:         { def: 'Number of independent loops/handles in the structure, per cm³ of cell volume.',
+                            interp: 'Higher = more interconnected (lots of channels and crossings). Zero = simply-connected (solid blob with no holes).' },
+
+  // ─── Transport ───
+  tortuosity_min:         { def: 'Tortuosity along the most-permeable axis. Ratio of actual path length to straight-line distance.',
+                            interp: '1.0 = perfectly straight channels. Higher = more winding paths, slower transport.' },
+  tortuosity_avg:         { def: 'Tortuosity averaged across X/Y/Z.',
+                            interp: 'Overall transport difficulty regardless of direction.' },
+  d_eff_max_norm:         { def: 'Effective diffusivity along the best-transport axis, normalized to free-space diffusion (Bruggeman estimate).',
+                            interp: 'How well solute or fluid moves through the best channel. Phase-2 will replace with FFT-CG solve.' },
+  d_eff_avg_norm:         { def: 'Effective diffusivity averaged across X/Y/Z, normalized to free-space diffusion.',
+                            interp: 'Overall transport quality regardless of direction.' },
+};
+
+// Z compounds — each is a domain-specific composite. Listed separately so the
+// glossary drawer can feature them at the top.
+const Z_COMPOUND_GLOSSARY = {
+  all: {
+    label: 'BALANCED EFFICIENCY',
+    formula: '√(stiffness_density × (1 − ortho_contrast_rank))',
+    def: 'Designs that are both stiff AND directionally balanced. The default Z compound.',
+    interp: 'High Z = good stiffness paired with consistent response across all axes. Low Z = either weak or strongly asymmetric.'
+  },
+  biomedical: {
+    label: 'BONE-INGROWTH VIABILITY',
+    formula: 'pore_window(P50, μ=350μm) × strain_window(μstr, μ=100k/GPa) × throat_ratio_rank',
+    def: 'Designs likely to support bone ingrowth: pores in the right size range, mechanostat-aligned strain, open ingrowth pathways.',
+    interp: 'Rooted in Frost mechanostat theory — bone forms in the 1500–3000 με window under physiologic load. High Z = candidate orthopedic scaffold.'
+  },
+  aerospace: {
+    label: 'DIRECTIONAL STIFFNESS',
+    formula: '√(stiffness_density × axial_dominance_rank)',
+    def: 'Stiff designs with strong principal-axis alignment. Aerospace structures (spars, ribs) want directional efficiency.',
+    interp: 'High Z = strong load path along the dominant axis with minimal wasted stiffness off-axis.'
+  },
+  automotive: {
+    label: 'OMNIDIRECTIONAL STIFFNESS',
+    formula: '√(stiffness_density × (1 − ortho_contrast_rank))',
+    def: 'Same formula as the default — stiff and balanced. Real crashworthiness needs plastic-deformation metrics not in v0.13 yet.',
+    interp: 'Best linear-elastic proxy for crash response until plastic metrics ship. Treat as "balanced stiffness" honestly.'
+  },
+  oilgas: {
+    label: 'FLOW THROUGHPUT',
+    formula: '∛(perc_idx × d_eff_max × (1 − tortuosity_min_rank))',
+    def: 'Designs optimized for fluid/gas transport: connected void path, high diffusivity, low tortuosity.',
+    interp: 'High Z = open percolating channels with straight paths. Filtration, separation, catalyst supports.'
+  },
+  thermal: {
+    label: 'DIRECTIONAL HEAT TRANSPORT',
+    formula: '√(keff_max × (1 − 1/thermal_anisotropy))',
+    def: 'Designs with strong best-axis conductivity AND directional bias. Heat sinks and heat pipes want one strong axis.',
+    interp: 'High Z = pronounced thermal anisotropy with high absolute conductivity. Low Z = isotropic or low-conductivity designs.'
+  }
 };
 
 // Surface family → color
@@ -5088,6 +5386,10 @@ function handleHeroPointer(event, isClick){
   if(intersects.length === 0){
     tip.classList.remove('visible');
     canvas.style.cursor = '';
+    // Click on blank cube area = deselect. Hover-miss does not deselect.
+    if(isClick && selectedDesign){
+      selectDesign(null);
+    }
     return;
   }
 
@@ -5099,6 +5401,9 @@ function handleHeroPointer(event, isClick){
   if(!found){
     tip.classList.remove('visible');
     canvas.style.cursor = '';
+    if(isClick && selectedDesign){
+      selectDesign(null);
+    }
     return;
   }
 
@@ -5431,6 +5736,159 @@ function animateHero(){
   heroState.renderer.render(heroState.scene, heroState.camera);
   positionHeroAxisLabels();
 }
+
+// ─── Metrics-key drawer ────────────────────────────────────────────────
+// Plain-language glossary of every metric in ALL_METRICS plus the six Z
+// compounds. Slides up from the bottom; populated on first open. Searchable.
+let _metricsKeyBuilt = false;
+
+function buildMetricsKeyContent(){
+  const body = document.getElementById('metricsKeyBody');
+  if(!body) return;
+
+  // Group ALL_METRICS by their `group` field (Geometry, Stiffness, etc.)
+  const grouped = {};
+  ALL_METRICS.forEach(m => {
+    if(!grouped[m.group]) grouped[m.group] = [];
+    grouped[m.group].push(m);
+  });
+  const groupOrder = ['Geometry','Stiffness','Thermal','Compliance','Pore','Curvature','Topology','Transport'];
+
+  let html = '';
+
+  // Top section: Z compounds (most domain-specific, most cryptic abbreviations)
+  html += '<div class="mkd-section" data-section="compounds">';
+  html += '<div class="mkd-section-title">Z compounds — Z axis on the cube</div>';
+  Object.entries(Z_COMPOUND_GLOSSARY).forEach(([domain, c]) => {
+    html += `<div class="mkd-compound-row" data-search="${escapeAttr((domain + ' ' + c.label + ' ' + c.def + ' ' + c.formula + ' ' + c.interp).toLowerCase())}">
+      <div class="mkd-compound-label">${escapeHtml(c.label)}</div>
+      <div class="mkd-row-content">
+        <div class="mkd-compound-formula">${escapeHtml(c.formula)}</div>
+        <div class="mkd-row-def">${escapeHtml(c.def)}</div>
+        <div class="mkd-row-interp">${escapeHtml(c.interp)}</div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Per-group metric sections
+  groupOrder.forEach(group => {
+    const metrics = grouped[group];
+    if(!metrics) return;
+    html += `<div class="mkd-section" data-section="${escapeAttr(group.toLowerCase())}">`;
+    html += `<div class="mkd-section-title">${escapeHtml(group)}</div>`;
+    metrics.forEach(m => {
+      const g = METRIC_GLOSSARY[m.key] || {def: '— no definition yet —', interp: ''};
+      const code = RADAR_SHORT[m.key] || m.key;
+      const unit = m.unit ? `<div class="mkd-row-unit">${escapeHtml(m.unit)}</div>` : '';
+      const searchBlob = (m.key + ' ' + code + ' ' + m.label + ' ' + g.def + ' ' + g.interp).toLowerCase();
+      html += `<div class="mkd-row" data-search="${escapeAttr(searchBlob)}">
+        <div class="mkd-row-label">
+          <div class="mkd-row-code">${escapeHtml(code)}</div>
+          <div class="mkd-row-name">${escapeHtml(m.label)}</div>
+          ${unit}
+        </div>
+        <div class="mkd-row-content">
+          <div class="mkd-row-def">${escapeHtml(g.def)}</div>
+          ${g.interp ? `<div class="mkd-row-interp">${escapeHtml(g.interp)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  body.innerHTML = html;
+  _metricsKeyBuilt = true;
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+function escapeAttr(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function openMetricsKey(){
+  const drawer = document.getElementById('metricsKeyDrawer');
+  const backdrop = document.getElementById('metricsKeyBackdrop');
+  if(!drawer || !backdrop) return;
+  if(!_metricsKeyBuilt) buildMetricsKeyContent();
+  drawer.hidden = false;
+  backdrop.hidden = false;
+  // Force a reflow so the transition runs
+  drawer.offsetHeight;
+  drawer.classList.add('visible');
+  backdrop.classList.add('visible');
+  drawer.setAttribute('aria-hidden', 'false');
+  // Focus the search field for fast filtering
+  setTimeout(() => {
+    const search = document.getElementById('metricsKeySearch');
+    if(search) search.focus();
+  }, 100);
+}
+
+function closeMetricsKey(){
+  const drawer = document.getElementById('metricsKeyDrawer');
+  const backdrop = document.getElementById('metricsKeyBackdrop');
+  if(!drawer || !backdrop) return;
+  drawer.classList.remove('visible');
+  backdrop.classList.remove('visible');
+  drawer.setAttribute('aria-hidden', 'true');
+  // Hide after transition completes
+  setTimeout(() => {
+    drawer.hidden = true;
+    backdrop.hidden = true;
+  }, 250);
+}
+
+function filterMetricsKey(query){
+  const body = document.getElementById('metricsKeyBody');
+  if(!body) return;
+  const q = (query || '').trim().toLowerCase();
+  const sections = body.querySelectorAll('.mkd-section');
+  let totalVisible = 0;
+  sections.forEach(section => {
+    let sectionVisible = 0;
+    section.querySelectorAll('.mkd-row, .mkd-compound-row').forEach(row => {
+      const blob = row.getAttribute('data-search') || '';
+      const match = !q || blob.includes(q);
+      row.style.display = match ? '' : 'none';
+      if(match) sectionVisible++;
+    });
+    section.style.display = sectionVisible > 0 ? '' : 'none';
+    totalVisible += sectionVisible;
+  });
+  // Empty-state placeholder
+  let empty = body.querySelector('.mkd-empty');
+  if(totalVisible === 0){
+    if(!empty){
+      empty = document.createElement('div');
+      empty.className = 'mkd-empty';
+      empty.textContent = 'No metrics match.';
+      body.appendChild(empty);
+    }
+    empty.style.display = '';
+  } else if(empty){
+    empty.style.display = 'none';
+  }
+}
+
+(function wireMetricsKey(){
+  const btn = document.getElementById('metricsKeyBtn');
+  const closeBtn = document.getElementById('metricsKeyClose');
+  const backdrop = document.getElementById('metricsKeyBackdrop');
+  const search = document.getElementById('metricsKeySearch');
+  if(btn) btn.addEventListener('click', openMetricsKey);
+  if(closeBtn) closeBtn.addEventListener('click', closeMetricsKey);
+  if(backdrop) backdrop.addEventListener('click', closeMetricsKey);
+  if(search) search.addEventListener('input', e => filterMetricsKey(e.target.value));
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){
+      const drawer = document.getElementById('metricsKeyDrawer');
+      if(drawer && drawer.classList.contains('visible')) closeMetricsKey();
+    }
+  });
+})();
 
 loadDatabase();
 </script>

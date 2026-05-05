@@ -1486,7 +1486,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
       </svg>
       <span>key</span>
     </button>
-    <span class="fh-version">v0.2.0</span>
+    <span class="fh-version">v0.3.3</span>
     <div class="fh-icon">
       <svg width="18" height="18" viewBox="0 0 40 40">
         <ellipse cx="20" cy="11" rx="13" ry="4.5" stroke="#0C447C" stroke-width="1.8" fill="none"/>
@@ -1757,7 +1757,7 @@ const ALL_METRICS = [
   { group:'Geometry',   key:'connect_idx',             label:'Solid connectivity κ',      unit:''   },
   { group:'Geometry',   key:'perc_idx',                label:'Void percolation',          unit:''   },
   { group:'Geometry',   key:'anisotropy',              label:'Anisotropy ratio',          unit:'×'  },
-  { group:'Geometry',   key:'axial_dominance',         label:'Axial dominance Ξ',         unit:''   },
+  { group:'Geometry',   key:'directionality',          label:'Directionality Ψ',          unit:''   },
   { group:'Geometry',   key:'ortho_contrast',          label:'Ortho contrast Ω',          unit:''   },
   { group:'Geometry',   key:'aniso_efficiency',        label:'Aniso efficiency α/ρ',      unit:''   },
   { group:'Geometry',   key:'surface_complexity',      label:'Surface complexity',        unit:'',  displayMode:'rank' },
@@ -1819,14 +1819,18 @@ ALL_METRICS.forEach(m => METRIC_MAP[m.key] = m);
 // a domain, the radar's default axes and the card metrics swap to that domain's set.
 // All metrics are normalized v0.12 columns — no material/load/cell coupling.
 // v4: load_path_eff and throat_efficiency dropped in sweep v0.13. Aerospace
-// now uses axial_dominance (orthogonal to stiffness_density), automotive likewise
-// for its secondary directional metric, oilgas uses throat_ratio.
-// Biomedical adds throat_ratio (compound input) to its radar.
+// previously used axial_dominance (orthogonal to stiffness_density); automotive
+// likewise for its secondary directional metric.
+// v5 (sweep v0.14.0): axial_dominance dropped, replaced by directionality
+// (max/sum over all axes including E=0 — defined for 1D-fiber designs that
+// the axial_dominance NaN pathology used to silently exclude). Aerospace
+// migrated to directionality per Part 2 of the v0.14 roadmap; automotive
+// follows the same swap for its directional metric.
 const DOMAIN_DEFAULTS = {
   all:        ['stiffness_density_norm','anisotropy','volume_fraction','pore_size_p50_norm','curvature_uniformity'],
   biomedical: ['pore_size_p10_norm','pore_size_p90_norm','connect_idx','throat_ratio','curvature_uniformity'],
-  aerospace:  ['stiffness_density_norm','anisotropy','axial_dominance','curvature_uniformity','volume_fraction'],
-  automotive: ['stiffness_density_norm','ortho_contrast','volume_fraction','anisotropy','axial_dominance'],
+  aerospace:  ['stiffness_density_norm','anisotropy','directionality','curvature_uniformity','volume_fraction'],
+  automotive: ['stiffness_density_norm','ortho_contrast','volume_fraction','anisotropy','directionality'],
   oilgas:     ['perc_idx','d_eff_max_norm','tortuosity_min','volume_fraction','throat_ratio'],
   thermal:    ['thermal_anisotropy','keff_max_norm','d_eff_max_norm','volume_fraction','connect_idx'],
 };
@@ -1923,22 +1927,26 @@ const DOMAIN_Z_COMPOUND = {
   },
   aerospace: {
     label: 'DIRECTIONAL STIFFNESS',
-    formula: '√(E/ρ × axial dominance)',
-    needs: ['axial_dominance'],
+    formula: '√(E/ρ × directionality)',
+    needs: ['directionality'],
     compute(d, popStats){
       const sd = d.stiffness_density_norm;
-      const ax = popStats.axial_dominance?.get(d);
-      if(sd == null || ax == null) return null;
-      // Aerospace structures want directional stiffness aligned with load — high
-      // axial_dominance = single dominant axis (good for spars, ribs). Combined
-      // with stiffness_density gives "stiff AND principal-axis-aligned."
-      return Math.sqrt(sd * ax);
+      const di = popStats.directionality?.get(d);
+      if(sd == null || di == null) return null;
+      // v5: directionality = max/sum over all axes including E=0 (replaces
+      // axial_dominance, which was max/(sum-max) and went NaN for 1D fibers).
+      // High directionality = single axis carries most of the stiffness, which
+      // is the right answer for spars/ribs. Combined with stiffness_density
+      // gives "stiff AND principal-axis-aligned." 1D fiber designs that have
+      // null anisotropy still rank correctly here — directionality is always
+      // defined and reaches 1.0 for them.
+      return Math.sqrt(sd * di);
     },
     vector(d, popStats){
       const sd = d.stiffness_density_norm;
-      const ax = popStats.axial_dominance?.get(d);
-      if(sd == null || ax == null) return null;
-      return [sd, ax];
+      const di = popStats.directionality?.get(d);
+      if(sd == null || di == null) return null;
+      return [sd, di];
     }
   },
   automotive: {
@@ -2023,8 +2031,8 @@ const METRIC_GLOSSARY = {
                             interp: 'κ=1.0 means fluid/gas can flow through every axis. κ=0 means the pores are dead-end pockets.' },
   anisotropy:             { def: 'Ratio of stiffest direction to least-stiff direction.',
                             interp: '1.0× = perfectly isotropic. Higher = more directionally biased.' },
-  axial_dominance:        { def: 'How dominant the stiffest single axis is over the sum of the other two.',
-                            interp: 'Higher = pronounced single-axis design (good for spars, ribs, columns).' },
+  directionality:         { def: 'Fraction of total stiffness carried on the strongest axis (max/sum across X, Y, Z).',
+                            interp: '0.333 = perfectly isotropic. 1.0 = all stiffness on one axis (1D fiber). Always defined, even when one or two axes have zero stiffness — replaces v0.13 axial_dominance which went NaN for 1D designs.' },
   ortho_contrast:         { def: 'Coefficient of variation of stiffness across X/Y/Z axes.',
                             interp: 'Low = balanced response in all directions. High = strongly asymmetric.' },
   aniso_efficiency:       { def: 'Anisotropy ratio normalized by density — directional bias per unit material.',
@@ -2130,7 +2138,7 @@ const Z_COMPOUND_GLOSSARY = {
   },
   aerospace: {
     label: 'DIRECTIONAL STIFFNESS',
-    formula: '√(stiffness_density × axial_dominance_rank)',
+    formula: '√(stiffness_density × directionality_rank)',
     def: 'Stiff designs with strong principal-axis alignment. Aerospace structures (spars, ribs) want directional efficiency.',
     interp: 'High Z = strong load path along the dominant axis with minimal wasted stiffness off-axis.'
   },
@@ -2255,11 +2263,20 @@ async function loadDatabase(){
     // values (or otherwise didn't converge) — there's no useful signal to plot.
     // linear_cap_active rows are KEPT (their compliance metrics are NULL but
     // they may still be useful in non-compliance domains).
+    //
+    // v5: solver_validity='invalid' rows are excluded from compound rankings
+    // alongside degenerate rows — both represent designs with no load-bearing
+    // axes. 'partial' designs (1-2 axes percolate) ARE kept; their connected-
+    // axis stiffness is honest, and directionality reaches 1.0 for 1D-fiber
+    // candidates that the aerospace compound explicitly wants to surface.
+    // Rows missing solver_validity (v0.13 ingest) pass through as-is — pre-v5
+    // sweeps didn't have per-axis gating, so all their designs are 'valid' by
+    // the older definition.
     const totalLoaded = all.length;
-    all = all.filter(d => d.degenerate !== true);
-    const degenerateCount = totalLoaded - all.length;
-    if(degenerateCount > 0){
-      console.info('[F13LD.vault] Excluded ' + degenerateCount + ' degenerate row(s) from explorer');
+    all = all.filter(d => d.degenerate !== true && d.solver_validity !== 'invalid');
+    const excludedCount = totalLoaded - all.length;
+    if(excludedCount > 0){
+      console.info('[F13LD.vault] Excluded ' + excludedCount + ' degenerate or invalid-solver row(s) from explorer');
     }
     allDesigns=all;
 
@@ -3200,7 +3217,7 @@ function pickRadarAxes(){
 const RADAR_SHORT = {
   // Geometry & connectivity. v4: load_path_eff dropped, surface_complexity is uncapped raw.
   volume_fraction:'VF', connect_idx:'κ solid', perc_idx:'κ void',
-  anisotropy:'aniso α', axial_dominance:'axial Ξ', ortho_contrast:'ortho Ω',
+  anisotropy:'aniso α', directionality:'direct. Ψ', ortho_contrast:'ortho Ω',
   aniso_efficiency:'α/ρ', surface_complexity:'surf cx',
 
   // Stiffness (Es-decoupled)
@@ -3672,12 +3689,14 @@ function renderDetailInspect(d){
 // Compliance rows (μstrain, U_compliance) are NULL when linear_cap_active=true;
 // fmtCompareDelta handles missing values.
 const COMPARE_METRICS = [
-  // Geometry. v4: load_path_eff dropped; axial_dominance promoted (aerospace compound input).
+  // Geometry. v4: load_path_eff dropped. v5: axial_dominance dropped,
+  // directionality added (aerospace compound input). anisotropy is now
+  // nullable when fewer than 2 axes percolate.
   { key:'volume_fraction',         label:'Volume fraction',     fmt:(v)=>v!=null?v.toFixed(0)+'%':'—' },
   { key:'connect_idx',             label:'Solid κ',             fmt:(v)=>v?.toFixed?.(2) },
   { key:'perc_idx',                label:'Void κ',              fmt:(v)=>v?.toFixed?.(2) },
   { key:'anisotropy',              label:'Anisotropy α',        fmt:(v)=>v!=null?v.toFixed(2)+'×':'—' },
-  { key:'axial_dominance',         label:'Axial Ξ',             fmt:(v)=>v?.toFixed?.(3) },
+  { key:'directionality',          label:'Directional. Ψ',      fmt:(v)=>v!=null?v.toFixed(3):'—' },
   { key:'ortho_contrast',          label:'Ortho Ω',             fmt:(v)=>v?.toFixed?.(3) },
   // Stiffness (Es-decoupled)
   { key:'stiffness_density_norm',  label:'E/ρ (norm)',          fmt:(v)=>v?.toFixed?.(3) },
@@ -4351,12 +4370,20 @@ function computeHeroCoords(designs){
   // Equivalent in spirit to the v2 formula but stays in the normalized regime
   // so designs from different materials are directly comparable. Per the v0.12
   // schema, dimensional values aren't stored on the base table.
+  // perfRaw is now an L2 norm of the per-axis stiffness vector divided by VF:
+  //   perfRaw = sqrt(Ex_norm² + Ey_norm² + Ez_norm²) / (volume_fraction / 100)
+  // L2 captures the full magnitude of the design's stiffness response across
+  // all 3 axes — a 1D fiber and a fully-isotropic design with the same peak
+  // axis no longer score identically. Geometric scaling: isotropic gets √3×
+  // the score of an equivalent 1D fiber, plate gets √2×. Disconnected axes
+  // contribute 0 to the sum (don't penalize partial designs further; their
+  // connected axis still dominates the magnitude).
   designs.forEach(d=>{
     const cls=classifyConnectivity(d);
     const E=[d.ex_norm||0, d.ey_norm||0, d.ez_norm||0];
-    const Emax=Math.max(...E);
+    const Emag=Math.sqrt(E[0]*E[0] + E[1]*E[1] + E[2]*E[2]);
     const VF=d.volume_fraction||0;
-    const perfRaw = VF>0 ? Emax/(VF/100) : 0;
+    const perfRaw = VF>0 ? Emag/(VF/100) : 0;
     const Econn = E.filter((v,i)=>cls.conn[i] && v>0);
     let anisoRaw = 1;
     if(Econn.length>=2) anisoRaw = Math.max(...Econn)/Math.min(...Econn);
@@ -4377,21 +4404,51 @@ function computeHeroCoords(designs){
     d._hero.color    = null;
   });
 
-  // ── Performance: linear, normalized to current population min..max ──
-  const perfs = designs.map(d=>d._hero.perfRaw).filter(v=>isFinite(v));
-  const perfMin = perfs.length ? Math.min(...perfs) : 0;
-  const perfMax = perfs.length ? Math.max(...perfs) : 1;
-  const perfSpan = (perfMax > perfMin) ? (perfMax - perfMin) : 1;
+  // ── v5: Percentile-trimmed normalization (1st-99th) for both axes ──
+  // v0.14.1 introduced partial-validity designs that report constrained
+  // modulus on their connected axis(es). At very low VF, this can produce
+  // outlier perfRaw values that compress the bulk distribution toward the
+  // floor under naive min/max scaling. Same risk applies to anisoRaw —
+  // outlier high-aniso designs squash the rest near the floor.
+  // Robust trim to 1st-99th percentile keeps the bulk visible; outliers
+  // clip cleanly to [0, 1] via the Math.max/min guard below.
+  function percentileVal(sorted, p) {
+    if (!sorted.length) return null;
+    const idx = (sorted.length - 1) * p;
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (idx - lo) * (sorted[hi] - sorted[lo]);
+  }
 
-  // ── Anisotropy: linear, normalized to current population min..max ──
-  const anisos = designs.map(d=>d._hero.anisoRaw).filter(v=>isFinite(v));
-  const anisoMin = anisos.length ? Math.min(...anisos) : 1.0;
-  const anisoMax = anisos.length ? Math.max(...anisos) : 1.0;
+  // ── Performance: PERCENTILE-RANK across population ──
+  // Uses the same indexed-sort pattern as the Z-axis below (line ~4504) —
+  // proven-working, no Map/float-key concerns.
+  // Rationale: perfRaw = max E / VF is a long-tailed ratio across diverse
+  // topologies (different VF^n scaling exponents). Linear normalization,
+  // even percentile-trimmed, leaves the bulk compressed against the floor.
+  // Rank-based assignment guarantees uniform 0..1 spread on the cube
+  // regardless of distribution shape — same reason the Z-axis uses it.
+  const perfIndexed = designs.map((d, idx) => ({d, idx}));
+  perfIndexed.sort((a, b) => {
+    const ar = a.d._hero.perfRaw, br = b.d._hero.perfRaw;
+    if(ar !== br) return ar - br;
+    return a.idx - b.idx;  // stable tiebreak
+  });
+  const Np = Math.max(1, perfIndexed.length - 1);
+  perfIndexed.forEach((entry, i) => {
+    entry.d._hero.perfNorm = i / Np;
+  });
+
+  // ── Anisotropy: linear, percentile-trimmed normalization (unchanged) ──
+  const anisosSorted = designs.map(d=>d._hero.anisoRaw)
+                              .filter(v=>isFinite(v))
+                              .sort((a,b)=>a-b);
+  const anisoMin = anisosSorted.length ? percentileVal(anisosSorted, 0.01) : 1.0;
+  const anisoMax = anisosSorted.length ? percentileVal(anisosSorted, 0.99) : 1.0;
   const anisoSpan = (anisoMax > anisoMin) ? (anisoMax - anisoMin) : 1;
 
   designs.forEach(d=>{
     const h=d._hero;
-    h.perfNorm  = Math.max(0, Math.min(1, (h.perfRaw  - perfMin)  / perfSpan));
     h.anisoNorm = Math.max(0, Math.min(1, (h.anisoRaw - anisoMin) / anisoSpan));
   });
 
@@ -4408,7 +4465,7 @@ function computeHeroCoords(designs){
   // Collect all metrics needed by either compute() or vector() — the union of
   // their inputs, since both run from the same popStats object.
   const popStats = {};
-  const vectorMetrics = ['ortho_contrast', 'axial_dominance', 'tortuosity_min',
+  const vectorMetrics = ['ortho_contrast', 'directionality', 'tortuosity_min',
                          'throat_ratio', 'pore_size_p50_norm',
                          'microstrain_avg_per_gpa', 'thermal_anisotropy'];
   const allNeeds = new Set([...(zSpec.needs || []), ...vectorMetrics]);
@@ -4517,7 +4574,7 @@ function computeHeroCoords(designs){
   const byClass = {sphere:0, disc:0, rod:0, diamond:0};
   designs.forEach(d=>byClass[d._hero.classKey]++);
   heroState.classCounts = byClass;
-  heroState.bounds = {perfMin, perfMax, anisoMin, anisoMax};
+  heroState.bounds = {anisoMin, anisoMax};
 }
 
 function setupOrbitControls(canvas, camera){
@@ -4835,7 +4892,7 @@ function positionHeroAxisLabels(){
   const zSpec = DOMAIN_Z_COMPOUND[activeDomain] || DOMAIN_Z_COMPOUND.all;
   if(!wrap._built || wrap._builtForDomain !== activeDomain){
     wrap.innerHTML =
-      '<div class="hero-axis-label" id="haxX" style="color:#5DCAA5;border-color:rgba(93,202,165,0.45)">PERFORMANCE<span class="formula">max E / VF</span></div>' +
+      '<div class="hero-axis-label" id="haxX" style="color:#5DCAA5;border-color:rgba(93,202,165,0.45)">PERFORMANCE<span class="formula">‖E‖ / VF</span></div>' +
       '<div class="hero-axis-label" id="haxY" style="color:#85B7EB;border-color:rgba(133,183,235,0.45)">ANISOTROPY<span class="formula">log₁₀(max/min)</span></div>' +
       '<div class="hero-axis-label" id="haxZ" style="color:#EF9F27;border-color:rgba(239,159,39,0.45)" title="' + zSpec.formula + '">' + zSpec.label + '<span class="formula">' + zSpec.formula + '</span></div>';
     wrap._built = true;

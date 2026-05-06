@@ -114,32 +114,17 @@
 :root{
   --bg:#06080d;--surface:#0b0f16;--panel:#0f1520;
   --border:#172030;--border2:#1e2d40;
-  --accent:#00e5c0;--accent2:#0088ff;--accent3:#ff5f3e;
-  --gold:#f0b429;--text:#c8dce8;--muted:#3d5a6e;
-  --muted2:#1e3040;--success:#00c97a;
-  /* Surface family colors */
-  --c-gyroid:#00e5c0;--c-schwarz:#0088ff;--c-lidinoid:#9b6fff;
-  --c-fks:#f0b429;--c-other:#ff5f3e;
-  /* Mode colors */
-  --c-pi:#00e5c0;--c-shell:#0088ff;--c-solid:#f0b429;
+  --accent:#c8f542;--accent2:#0088ff;--accent3:#ff5f3e;
+  --gold:#f0b429;--text:#c8dce8;--muted:#7a98ae;
+  --muted2:#3a556b;--success:#00c97a;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,229,192,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,192,.018) 1px,transparent 1px);background-size:40px 40px;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(200,245,66,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(200,245,66,.018) 1px,transparent 1px);background-size:40px 40px;}
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.4;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");}
 
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
-/* ── Topbar ── */
-.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 20px;height:56px;border-bottom:1px solid var(--border);background:rgba(11,15,22,.96);backdrop-filter:blur(12px);z-index:100;}
-.brand-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--accent);letter-spacing:-.02em;}
-.brand-tag{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--muted);letter-spacing:.18em;padding:2px 6px;border:1px solid var(--border2);border-radius:3px;}
-.db-stat{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:6px;}
-.db-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2.5s ease infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
-.topbar-link{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted);text-decoration:none;padding:4px 9px;border:1px solid var(--border);border-radius:4px;transition:all .2s;white-space:nowrap;}
-.topbar-link:hover{color:var(--accent);border-color:rgba(0,229,192,.3);}
 .hamburger{display:none;background:transparent;border:1px solid var(--border2);border-radius:5px;padding:6px 8px;cursor:pointer;flex-direction:column;gap:4px;}
 .hamburger span{display:block;width:18px;height:1.5px;background:var(--muted);border-radius:2px;}
 
@@ -166,12 +151,159 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .body-row{flex:1 1 0;min-height:200px;display:flex;overflow:hidden;position:relative;}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:49;}
 
-/* ── Sidebar — full height, scrolling filter column ── */
+/* ── Build target panel — global inputs that resolve normalized metrics ── */
+.bt-section-label{
+  display:flex;align-items:center;gap:8px;
+  padding:0 16px 4px;margin-top:11px;
+}
+.bt-section-label > span:first-child{flex:1}
+.bt-active-badge{
+  display:inline-block;
+  background:var(--accent);
+  color:var(--bg);
+  font-family:'DM Mono',monospace;
+  font-size:9px;font-weight:600;
+  padding:1px 6px;border-radius:9px;
+  letter-spacing:0;
+  min-width:14px;text-align:center;
+}
+.bt-toggle-btn{
+  background:transparent;border:none;
+  color:var(--muted);cursor:pointer;
+  padding:0 4px;font-size:11px;line-height:1;
+  display:inline-flex;align-items:center;
+}
+.bt-toggle-btn .bt-arrow{
+  display:inline-block;
+  transition:transform .15s ease;
+}
+.bt-toggle-btn[aria-expanded="false"] .bt-arrow{ transform:rotate(-90deg); }
+.build-target{
+  padding:0 14px 10px;
+  display:flex;flex-direction:column;gap:6px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:6px;
+  overflow:hidden;
+  transition:max-height .2s ease, opacity .15s ease, padding .2s ease;
+}
+.build-target.collapsed{
+  max-height:0;opacity:0;padding-top:0;padding-bottom:0;margin-bottom:0;border-bottom:none;
+}
+.bt-row{
+  display:flex;align-items:center;gap:8px;
+}
+.bt-row.bt-indent{padding-left:8px;}
+.bt-label{
+  font-family:'DM Mono',monospace;
+  font-size:10.5px;
+  color:var(--muted);
+  letter-spacing:0.04em;
+  flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.bt-input-wrap{
+  display:flex;align-items:center;gap:0;
+  background:var(--panel);
+  border:1px solid var(--border2);
+  border-radius:5px;
+  padding:0 4px 0 8px;
+  width:122px;flex-shrink:0;
+  transition:border-color .15s;
+}
+.bt-input-wrap:focus-within{border-color:var(--accent);}
+.bt-input-wrap.has-value{border-color:rgba(200,245,66,0.4);}
+.bt-input{
+  flex:1;min-width:0;
+  background:transparent;border:none;outline:none;
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  padding:6px 0;
+  -moz-appearance:textfield;
+}
+.bt-input::-webkit-outer-spin-button,
+.bt-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.bt-input::placeholder{color:var(--muted2);}
+.bt-unit{
+  font-family:'DM Mono',monospace;
+  font-size:9.5px;
+  color:var(--muted2);
+  letter-spacing:0.02em;
+  white-space:nowrap;
+  margin-right:4px;
+}
+.bt-clear{
+  background:transparent;border:none;
+  color:var(--muted2);cursor:pointer;
+  padding:2px 4px;font-size:13px;line-height:1;
+  border-radius:3px;
+  visibility:hidden;
+}
+.bt-input-wrap.has-value .bt-clear{visibility:visible;}
+.bt-clear:hover{color:var(--accent3);background:rgba(255,95,62,0.08);}
+.bt-select{
+  background:var(--panel);
+  border:1px solid var(--border2);
+  border-radius:5px;
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  padding:6px 8px;
+  width:122px;flex-shrink:0;
+  cursor:pointer;
+  outline:none;
+  transition:border-color .15s;
+}
+.bt-select:focus{border-color:var(--accent);}
+.bt-select:not([data-value="custom"]){border-color:rgba(200,245,66,0.4);}
+.bt-reset-all{
+  margin-top:6px;
+  background:transparent;
+  border:1px solid var(--border2);
+  border-radius:5px;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.06em;
+  padding:5px 8px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.bt-reset-all:hover:not(:disabled){border-color:var(--accent3);color:var(--accent3);}
+.bt-reset-all:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* Hint that appears when the user has filled one of {σ_ref, E_s} but not the
+   other — strain calcs need both, so without this they'd wonder why their
+   compliance metrics aren't going bold. Subtle gold so it reads as info, not error. */
+.bt-hint{
+  font-family:'DM Mono',monospace;
+  font-size:9.5px;line-height:1.4;
+  color:var(--gold);
+  background:rgba(240,180,41,0.06);
+  border:1px solid rgba(240,180,41,0.2);
+  border-radius:4px;
+  padding:5px 8px;
+  margin-top:2px;
+}
+.bt-hint em{
+  font-style:normal;
+  color:var(--text);
+  font-weight:600;
+}
+
+/* Resolved-metric label indicator: when a metric's value is currently
+   transformed by Build target inputs, its label renders bold so the user
+   knows what's "live" vs. still in normalized form. Minimal visual change. */
+.metric-resolved{
+  font-weight:600;
+  color:var(--text);
+}
+
+
 .sidebar{width:300px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);overflow-y:auto;display:flex;flex-direction:column;padding:10px 0 30px;transition:transform .25s ease;z-index:50;}
 .sidebar::-webkit-scrollbar{width:3px;}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border2);}
-.sb-filters{display:contents;}  /* legacy wrapper, transparent */
-.section-label{font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 16px 4px;margin-top:11px;}
+.section-label{font-family:'DM Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 16px 4px;margin-top:11px;}
 .section-label:first-child{margin-top:0;}
 
 /* ── Categorical chip rows (always visible at top) ── */
@@ -185,7 +317,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   border-radius:13px;
   color:var(--muted);
   font-family:'DM Mono',monospace;
-  font-size:9.5px;
+  font-size:10.5px;
   letter-spacing:0.04em;
   cursor:pointer;
   transition:all 0.15s;
@@ -196,7 +328,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   color:var(--accent);
 }
 .chip.active{
-  background:rgba(0,229,192,0.08);
+  background:rgba(200,245,66,0.08);
   border-color:var(--accent);
   color:var(--accent);
 }
@@ -211,7 +343,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   padding:0 5px;
   background:rgba(0,0,0,0.3);
   border-radius:7px;
-  font-size:9px;
+  font-size:10px;
   opacity:0.8;
 }
 
@@ -267,7 +399,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .filter-autocomplete::-webkit-scrollbar-thumb{background:var(--border2);}
 .fac-group-label{
   font-family:'DM Mono',monospace;
-  font-size:9px; letter-spacing:0.16em;
+  font-size:10px; letter-spacing:0.16em;
   text-transform:uppercase;
   color:var(--muted2);
   padding:9px 12px 4px;
@@ -278,12 +410,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   display:flex; align-items:center; justify-content:space-between;
   gap:10px;
   font-family:'DM Mono',monospace;
-  font-size:10.5px;
+  font-size:11.5px;
   color:var(--text);
   transition:background 0.1s;
 }
 .fac-item:hover, .fac-item.highlighted{
-  background:rgba(0,229,192,0.07);
+  background:rgba(200,245,66,0.07);
   color:var(--accent);
 }
 .fac-item.disabled{
@@ -293,7 +425,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .fac-item.disabled:hover{background:transparent;color:var(--muted2);}
 .fac-item-meta{
-  font-size:9px;
+  font-size:10px;
   color:var(--muted2);
   flex-shrink:0;
 }
@@ -301,7 +433,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   padding:14px 12px;
   color:var(--muted2);
   font-family:'DM Mono',monospace;
-  font-size:10px;
+  font-size:11px;
   text-align:center;
 }
 
@@ -309,7 +441,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .recent-filters{padding:0 14px;margin-bottom:6px;}
 .recent-filter-label{
   font-family:'DM Mono',monospace;
-  font-size:9px;letter-spacing:0.14em;text-transform:uppercase;
+  font-size:10px;letter-spacing:0.14em;text-transform:uppercase;
   color:var(--muted2);
   margin-bottom:6px;
 }
@@ -322,7 +454,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   border-radius:12px;
   color:var(--muted);
   font-family:'DM Mono',monospace;
-  font-size:10px;
+  font-size:11px;
   cursor:pointer;
   transition:all 0.15s;
 }
@@ -348,11 +480,11 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .filter-pill-name{
   font-family:'DM Mono',monospace;
-  font-size:11px;
+  font-size:12px;
   color:var(--text);
   letter-spacing:0.04em;
 }
-.filter-pill-name .unit{color:var(--muted2);font-size:9.5px;margin-left:4px;}
+.filter-pill-name .unit{color:var(--muted2);font-size:10.5px;margin-left:4px;}
 .filter-pill-remove{
   background:transparent;border:none;
   color:var(--muted);font-size:14px;line-height:1;padding:2px 4px;
@@ -362,7 +494,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .filter-pill-values{
   display:flex; align-items:center; justify-content:space-between;
   font-family:'DM Mono',monospace;
-  font-size:9.5px;color:var(--muted);
+  font-size:10.5px;color:var(--muted);
   margin-bottom:6px;
 }
 .filter-pill-values .val-active{color:var(--accent);}
@@ -412,7 +544,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .histo-tick-row{
   display:flex; justify-content:space-between;
   font-family:'DM Mono',monospace;
-  font-size:8.5px; color:var(--muted2);
+  font-size:9.5px; color:var(--muted2);
   padding:0 1px;
   margin-top:1px;
 }
@@ -430,7 +562,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   border-radius:6px;
   color:var(--muted);
   font-family:'DM Mono',monospace;
-  font-size:10px;
+  font-size:11px;
   cursor:pointer;
   transition:all 0.15s;
 }
@@ -448,7 +580,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .live-stats{
   padding:7px 14px;
   font-family:'DM Mono',monospace;
-  font-size:9.5px;
+  font-size:10.5px;
   color:var(--muted);
   letter-spacing:0.04em;
   border-bottom:1px solid var(--border);
@@ -457,7 +589,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .live-stats .count{
   color:var(--accent);
-  font-size:13px;
+  font-size:14px;
   font-weight:500;
 }
 .live-stats .of{color:var(--muted2);}
@@ -481,7 +613,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   border-radius: 5px;
   color: var(--text);
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.04em;
   cursor: pointer;
   text-align: left;
@@ -507,7 +639,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .domain-popover-item{
   padding: 7px 11px;
   font-family: 'DM Mono', monospace;
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--text);
   cursor: pointer;
   display: flex;
@@ -517,11 +649,11 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .domain-popover-item:last-child { border-bottom: none; }
 .domain-popover-item:hover,
-.domain-popover-item.is-current { background: rgba(0,229,192,0.06); color: var(--accent); }
+.domain-popover-item.is-current { background: rgba(200,245,66,0.06); color: var(--accent); }
 .domain-popover-item .di-name { font-weight: 500; }
-.domain-popover-item .di-axes { font-size: 8.5px; color: var(--muted); letter-spacing: 0.02em; }
+.domain-popover-item .di-axes { font-size: 9.5px; color: var(--muted); letter-spacing: 0.02em; }
 .domain-popover-item:hover .di-axes,
-.domain-popover-item.is-current .di-axes { color: rgba(0,229,192,0.7); }
+.domain-popover-item.is-current .di-axes { color: rgba(200,245,66,0.7); }
 
 /* ── Main ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
@@ -533,42 +665,152 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .cards-area{flex:1;overflow-y:auto;padding:10px;min-width:0;}
 .cards-area::-webkit-scrollbar{width:3px;}
 .cards-area::-webkit-scrollbar-thumb{background:var(--border2);}
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;align-content:start;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;align-content:start;}
 
-/* ── Card ── */
-.design-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;position:relative;transition:border-color .2s,transform .15s;animation:fadeUp .22s ease both;}
-.design-card:hover{border-color:var(--accent);transform:translateY(-1px);}
-.design-card.selected{border-color:var(--accent);background:rgba(0,229,192,.04);}
-
-.score-badge{position:absolute;top:7px;right:7px;min-width:30px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-family:'DM Mono',monospace;font-size:10.5px;font-weight:500;padding:0 5px;z-index:2;}
-.score-badge.s-high{background:rgba(0,201,122,.18);color:#00c97a;border:1px solid rgba(0,201,122,.3);}
-.score-badge.s-mid{background:rgba(240,180,41,.15);color:#f0b429;border:1px solid rgba(240,180,41,.3);}
-.score-badge.s-low{background:rgba(255,95,62,.12);color:#ff5f3e;border:1px solid rgba(255,95,62,.25);}
-
-.card-body{padding:28px 10px 8px;}
-.card-metrics-dynamic{display:grid;gap:3px;}
-.card-metric{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);}
-.card-metric-lbl{font-size:9.5px;color:var(--muted);}
-.card-metric-val{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--text);}
-
-.card-footer{display:flex;align-items:center;gap:5px;padding:6px 10px 8px;flex-wrap:wrap;}
-.mode-tag{font-family:'DM Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;border:1px solid;flex-shrink:0;}
-.surface-tag{font-family:'DM Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;border:1px solid;flex:1;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
-/* Family pill — TPMS / Noise / Grain. Replaces the TPMS-only mode-tag. */
-.family-pill{
-  font-family:'Exo 2',system-ui,sans-serif;
-  font-size:8.5px;font-weight:700;letter-spacing:0.08em;
-  text-transform:uppercase;
-  padding:2px 7px;border-radius:3px;
-  flex-shrink:0;
+/* ── Card ──
+   Family color is the primary visual identity (left-edge strip), matching
+   the hero plot's family palette so cards tie directly to their points. */
+.design-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-left:3px solid var(--card-fam, var(--border2));
+  border-radius:6px;
+  overflow:hidden;
+  cursor:pointer;
+  position:relative;
+  transition:border-color .2s,transform .15s,background .15s;
+  animation:fadeUp .22s ease both;
 }
-.family-pill.tpms { background:#E1F5EE;color:#085041; }
-.family-pill.noise{ background:#FAECE7;color:#712B13; }
-.family-pill.grain{ background:#EDECE8;color:#3D3A30; }
+.design-card:hover{
+  border-top-color:var(--card-fam, var(--accent));
+  border-right-color:var(--card-fam, var(--accent));
+  border-bottom-color:var(--card-fam, var(--accent));
+  transform:translateY(-1px);
+}
+.design-card.selected{
+  border-top-color:var(--card-fam, var(--accent));
+  border-right-color:var(--card-fam, var(--accent));
+  border-bottom-color:var(--card-fam, var(--accent));
+  background:rgba(200,245,66,.04);
+}
+/* Family-color CSS variable is set per-card via inline style.
+   Defaults match the hero plot's CAT_PALETTES.family palette. */
+.design-card.fam-tpms  { --card-fam:#5DCAA5; }
+.design-card.fam-noise { --card-fam:#EB7050; }
+.design-card.fam-grain { --card-fam:#a8a59a; }
 
-.recipe-btn{font-family:'DM Mono',monospace;font-size:8.5px;padding:3px 8px;background:transparent;border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;cursor:pointer;transition:background .15s;flex-shrink:0;}
-.recipe-btn:hover{background:rgba(255,255,255,.08);}
+/* Card identity strip — family + preset as a single text line at the top */
+.card-ident{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 10px 6px;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.card-ident-fam{
+  font-family:'Exo 2',system-ui,sans-serif;
+  font-size:9px;font-weight:700;letter-spacing:0.10em;
+  text-transform:uppercase;
+  color:var(--card-fam, var(--text));
+}
+.card-ident-sep{
+  color:var(--muted2);font-size:9px;
+}
+.card-ident-preset{
+  font-family:'DM Mono',monospace;
+  font-size:9.5px;
+  color:var(--muted);
+  letter-spacing:0.02em;
+  flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+.card-body{padding:6px 10px 4px;}
+.card-metrics-dynamic{display:grid;gap:5px;}
+.card-metric{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:baseline;
+  gap:6px;
+  padding:1px 0;
+}
+.card-metric-lbl{font-size:9.5px;color:var(--muted);}
+.card-metric-val{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--text);text-align:right;}
+/* Sparkline row — thin track with dot showing percentile-rank in the population.
+   Spans both columns under each metric. Track = full available width.
+   Filled-in portion (left of dot) = soft fill in the family color.
+   Dot = solid family-color circle. */
+.card-spark{
+  grid-column:1 / -1;
+  position:relative;
+  height:6px;
+  margin-top:1px;
+  margin-bottom:1px;
+}
+.card-spark-track{
+  position:absolute;
+  left:0;right:0;top:50%;transform:translateY(-50%);
+  height:1.5px;
+  background:rgba(122,152,174,0.18);
+  border-radius:1px;
+  overflow:hidden;
+}
+.card-spark-fill{
+  position:absolute;
+  left:0;top:0;bottom:0;
+  background:var(--card-fam, var(--muted));
+  opacity:0.45;
+  border-radius:1px;
+}
+.card-spark-dot{
+  position:absolute;
+  top:50%;
+  width:6px;height:6px;
+  background:var(--card-fam, var(--accent));
+  border:1px solid var(--bg);
+  border-radius:50%;
+  transform:translate(-50%, -50%);
+  box-shadow:0 0 0 0.5px var(--card-fam, var(--accent));
+}
+.card-spark-empty{
+  position:absolute;
+  left:0;right:0;top:50%;transform:translateY(-50%);
+  height:1.5px;
+  background:rgba(122,152,174,0.10);
+  border-radius:1px;
+}
+
+.card-footer{display:flex;align-items:center;gap:5px;padding:5px 10px 7px;}
+.recipe-btn{font-family:'DM Mono',monospace;font-size:8.5px;padding:3px 8px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:3px;color:var(--text);cursor:pointer;transition:background .15s,border-color .15s;flex-shrink:0;margin-left:auto;}
+.recipe-btn:hover{background:rgba(255,255,255,.06);border-color:var(--card-fam, rgba(255,255,255,.3));}
+
+/* "Show 50 more" pill — spans the full cards-grid width as its own row.
+   Only emitted when filteredResults exceeds the current pagination cap. */
+.show-more-row{
+  grid-column:1 / -1;
+  display:flex;align-items:center;justify-content:center;
+  padding:14px 0 6px;
+}
+.show-more-btn{
+  background:transparent;
+  border:1px solid var(--border2);
+  border-radius:14px;
+  padding:7px 18px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  letter-spacing:0.06em;
+  color:var(--muted);
+  cursor:pointer;
+  transition:border-color .15s, color .15s, background .15s;
+}
+.show-more-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:rgba(200,245,66,0.04);
+}
+.show-more-count{
+  color:var(--muted2);
+  margin-left:5px;
+  font-size:10px;
+}
 
 /* Empty */
 .empty-state{padding:48px 20px;text-align:center;grid-column:1/-1;}
@@ -585,9 +827,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .detail-body::-webkit-scrollbar-thumb{background:var(--border2);}
 .detail-preset{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:2px;}
 .detail-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:8px;}
-.detail-score-row{display:flex;align-items:baseline;gap:6px;margin-bottom:10px;}
-.detail-score-num{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;}
-.detail-score-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
 .dsec{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin:10px 0 4px;}
 .drow{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);}
 .drow-name{font-size:10px;color:var(--muted);}
@@ -597,7 +836,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .geo-block span{color:var(--text);}
 
 /* ── Detail-panel radar (replaces the metric-row wall as the primary readability surface) ── */
-.detail-radar-wrap{margin:6px 0 14px;display:flex;justify-content:center;}
 .detail-radar-svg{display:block;width:100%;max-width:240px;height:auto;overflow:visible;}
 
 /* ── Collapsed metrics (raw values still available on demand under the radar) ── */
@@ -622,9 +860,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .btn-primary{padding:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;color:#06080d;font-family:'DM Mono',monospace;font-size:10.5px;font-weight:600;cursor:pointer;transition:opacity .2s;text-align:center;}
 .btn-primary:hover{opacity:.88;}
 .btn-primary:disabled{opacity:.3;cursor:not-allowed;}
-.btn-secondary{padding:8px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;text-align:center;}
-.btn-secondary:hover{border-color:var(--accent2);color:var(--accent2);}
-.btn-secondary:disabled{opacity:.3;cursor:not-allowed;}
 
 /* ── Radar selection pane (lives in the right rail, last hero-chart slot) ── */
 /* Contents: pin chips strip, ◆-preset header (click toggles pin), meta line, radar SVG, Open-in-Mesh. */
@@ -727,7 +962,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .dp-tab.disabled{color:var(--muted2);cursor:not-allowed;}
 .dp-tab-badge{
   display:inline-block;margin-left:5px;padding:1px 5px;
-  background:rgba(0,229,192,0.15);border-radius:8px;
+  background:rgba(200,245,66,0.15);border-radius:8px;
   color:var(--accent);font-size:8px;letter-spacing:0;
 }
 
@@ -891,8 +1126,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   color:var(--text);cursor:pointer;
   display:flex;justify-content:space-between;align-items:center;gap:8px;
 }
-.ax-picker-item:hover,.ax-picker-item.highlighted{background:rgba(0,229,192,0.08);color:var(--accent);}
-.ax-picker-item.is-current{background:rgba(0,229,192,0.04);}
+.ax-picker-item:hover,.ax-picker-item.highlighted{background:rgba(200,245,66,0.08);color:var(--accent);}
+.ax-picker-item.is-current{background:rgba(200,245,66,0.04);}
 .ax-picker-item .ax-picker-unit{color:var(--muted2);font-size:8.5px;letter-spacing:0;}
 .ax-picker-item .ax-picker-tag{color:var(--muted2);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;}
 .ax-picker-item.is-current .ax-picker-tag{color:var(--accent);}
@@ -919,17 +1154,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .hero-bar-row{
   cursor: pointer;
   transition: opacity 0.12s;
-}
-.hero-bar-row:hover .hero-bar-fill{
-  filter: brightness(1.3);
-}
-.hero-chart-empty{
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted2);
-  letter-spacing: 0.06em;
-  padding: 12px 0;
-  text-align: center;
 }
 .hero-canvas{
   position:absolute;inset:0;
@@ -1022,7 +1246,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .perc-axis:hover{ border-color: var(--accent2); color: var(--accent2); }
 .perc-axis.is-on{
-  background: rgba(0,229,192,0.12);
+  background: rgba(200,245,66,0.12);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -1145,7 +1369,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .hero-alive-toggle:hover{
   color:var(--accent);
-  border-color:rgba(0,229,192,0.4);
+  border-color:rgba(200,245,66,0.4);
 }
 .hero-alive-toggle .alive-dot{
   width:7px;height:7px;border-radius:50%;
@@ -1155,13 +1379,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 }
 .hero-alive-toggle.alive .alive-dot{
   background:var(--accent);
-  box-shadow:0 0 0 0 rgba(0,229,192,0.5);
+  box-shadow:0 0 0 0 rgba(200,245,66,0.5);
   animation:alivePulse 2s ease-out infinite;
 }
 @keyframes alivePulse{
-  0%   { box-shadow:0 0 0 0   rgba(0,229,192,0.55); }
-  70%  { box-shadow:0 0 0 6px rgba(0,229,192,0);    }
-  100% { box-shadow:0 0 0 0   rgba(0,229,192,0);    }
+  0%   { box-shadow:0 0 0 0   rgba(200,245,66,0.55); }
+  70%  { box-shadow:0 0 0 6px rgba(200,245,66,0);    }
+  100% { box-shadow:0 0 0 0   rgba(200,245,66,0);    }
 }
 .hero-title{
   font-family:'Exo 2',system-ui,sans-serif;
@@ -1184,22 +1408,46 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   font-family:'DM Mono',monospace;
   font-size:11px;letter-spacing:0.04em;
   color:var(--text);
-  max-width:220px;
+  max-width:240px;
 }
 .hero-legend-title{
   font-size:10px;color:var(--muted);letter-spacing:0.12em;
-  text-transform:uppercase;margin-bottom:6px;
+  text-transform:uppercase;margin-bottom:8px;
 }
 .hero-legend-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;line-height:1.4}
 .hero-legend-row:last-child{margin-bottom:0}
+/* Connectivity legend uses a 3-column grid: [glyph cell | κ value | description].
+   Glyph cell is fixed-width and centers its child so all rows align,
+   regardless of the glyph's own width (sphere/disc/rod/diamond differ). */
+.hero-legend-conn-row{
+  display:grid;
+  grid-template-columns:18px 46px 1fr;
+  gap:10px;
+  align-items:center;
+  margin-bottom:8px;
+  line-height:1.3;
+}
+.hero-legend-conn-row:last-child{margin-bottom:0}
+.hero-legend-glyph-cell{
+  display:flex;align-items:center;justify-content:center;
+  width:18px;height:14px;
+}
+.hero-legend-kappa{
+  color:var(--text);
+  white-space:nowrap;
+}
+.hero-legend-desc{
+  color:var(--muted);
+  white-space:nowrap;
+}
 .hero-glyph{
-  display:inline-block;width:16px;height:16px;flex-shrink:0;
+  display:inline-block;flex-shrink:0;
   position:relative;
 }
-.hero-glyph.sphere{background:#a0c0d8;border-radius:50%}
-.hero-glyph.disc{background:#a0c0d8;border-radius:50%;height:6px;margin-top:5px}
-.hero-glyph.rod{background:#a0c0d8;width:4px;margin-left:6px;border-radius:1px}
-.hero-glyph.diamond{background:#a0c0d8;width:11px;height:11px;transform:rotate(45deg);margin:2.5px}
+.hero-glyph.sphere{background:#a0c0d8;border-radius:50%;width:11px;height:11px}
+.hero-glyph.disc{background:#a0c0d8;border-radius:50%;width:13px;height:5px}
+.hero-glyph.rod{background:#a0c0d8;width:3px;height:13px;border-radius:1px}
+.hero-glyph.diamond{background:#a0c0d8;width:9px;height:9px;transform:rotate(45deg)}
 .hero-color-strip{
   width:160px;height:10px;border-radius:2px;
   background:linear-gradient(90deg,
@@ -1248,7 +1496,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   display:flex;align-items:center;justify-content:space-between;
   transition:background 0.1s;
 }
-.hero-cm-item:hover{ background:rgba(0,229,192,0.07); color:var(--accent); }
+.hero-cm-item:hover{ background:rgba(200,245,66,0.07); color:var(--accent); }
 .hero-cm-item.active{ color:var(--accent); }
 .hero-cm-item.active::after{ content:'●'; color:var(--accent); margin-left:8px; }
 .hero-cm-item-meta{
@@ -1280,7 +1528,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   pointer-events:none;
   z-index:60;
   min-width:160px;
-  box-shadow:0 4px 16px rgba(0,229,192,0.15);
+  box-shadow:0 4px 16px rgba(200,245,66,0.15);
   display:none;
 }
 .hero-tooltip.visible{display:block}
@@ -1428,7 +1676,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   .content-split{flex-direction:column;}
   .detail-panel{width:100%;border-left:none;border-top:1px solid var(--border);flex-shrink:0;}
   .detail-btns{flex-direction:row;}
-  .btn-primary,.btn-secondary{flex:1;}
+  .btn-primary{flex:1;}
   .cards-grid{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:400px){
@@ -1509,13 +1757,85 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 <div class="main-row">
 
 <aside class="sidebar" id="sidebar">
-  <div class="sb-filters" id="sbFilters">
 
-  <div class="live-stats" id="liveStats">
+  <div class="live-stats">
     <span class="count" id="lsCount">—</span>
     <span class="of">of</span>
     <span id="lsTotal">—</span>
     <span style="margin-left:auto;font-size:9px" id="lsHint">browsing all</span>
+  </div>
+
+  <!-- Build target — global inputs that resolve normalized metrics to absolute
+       units (μm pore sizes, GPa stiffness, etc.). Empty inputs → display stays
+       normalized. Lives above Domain because it's the most "global" pivot:
+       even Domain assumes nothing about your build. -->
+  <div class="section-label bt-section-label">
+    <span>Build target</span>
+    <span class="bt-active-badge" id="btActiveBadge" style="display:none"></span>
+    <button class="bt-toggle-btn" id="btToggleBtn" type="button" aria-expanded="true" title="Collapse">
+      <span class="bt-arrow">▾</span>
+    </button>
+  </div>
+  <div class="build-target" id="buildTarget">
+
+    <div class="bt-row">
+      <label class="bt-label" for="btCellSize">Cell size</label>
+      <div class="bt-input-wrap">
+        <input type="number" class="bt-input" id="btCellSize" min="0" step="0.1" placeholder="—" inputmode="decimal"/>
+        <span class="bt-unit">mm</span>
+        <button class="bt-clear" data-clear="cell_size_mm" title="Clear">×</button>
+      </div>
+    </div>
+
+    <div class="bt-row">
+      <label class="bt-label" for="btMaterial">Material</label>
+      <select class="bt-select" id="btMaterial"></select>
+    </div>
+
+    <div class="bt-row bt-indent">
+      <label class="bt-label" for="btModulus">Modulus E</label>
+      <div class="bt-input-wrap">
+        <input type="number" class="bt-input" id="btModulus" min="0" step="0.1" placeholder="—" inputmode="decimal"/>
+        <span class="bt-unit">GPa</span>
+        <button class="bt-clear" data-clear="modulus_gpa" title="Clear">×</button>
+      </div>
+    </div>
+
+    <div class="bt-row bt-indent">
+      <label class="bt-label" for="btDensity">Density ρ</label>
+      <div class="bt-input-wrap">
+        <input type="number" class="bt-input" id="btDensity" min="0" step="0.01" placeholder="—" inputmode="decimal"/>
+        <span class="bt-unit">g/cm³</span>
+        <button class="bt-clear" data-clear="density_gcc" title="Clear">×</button>
+      </div>
+    </div>
+
+    <div class="bt-row bt-indent">
+      <label class="bt-label" for="btThermalK">Thermal k</label>
+      <div class="bt-input-wrap">
+        <input type="number" class="bt-input" id="btThermalK" min="0" step="0.1" placeholder="—" inputmode="decimal"/>
+        <span class="bt-unit">W/m·K</span>
+        <button class="bt-clear" data-clear="thermal_k_wmk" title="Clear">×</button>
+      </div>
+    </div>
+
+    <div class="bt-row">
+      <label class="bt-label" for="btRefStress">Reference σ</label>
+      <div class="bt-input-wrap">
+        <input type="number" class="bt-input" id="btRefStress" min="0" step="1" placeholder="—" inputmode="decimal"/>
+        <span class="bt-unit">MPa</span>
+        <button class="bt-clear" data-clear="ref_stress_mpa" title="Clear">×</button>
+      </div>
+    </div>
+
+    <!-- Strain calc requires BOTH σ_ref AND E_s — physics is ε = σ/(E_s × E_norm).
+         Hint appears only when exactly one is filled so the user knows what's
+         missing before wondering why their strain numbers haven't changed. -->
+    <div class="bt-hint" id="btStrainHint" style="display:none">
+      Strain calculations need both <em>Modulus E</em> and <em>Reference σ</em>
+    </div>
+
+    <button class="bt-reset-all" id="btResetAll" type="button" title="Clear all inputs">Reset all</button>
   </div>
 
   <!-- Domain selector — preset that swaps the radar's default axes, the cards' shown
@@ -1561,8 +1881,6 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
     <button class="reset-btn" id="resetBtn" onclick="resetAllFilters()" disabled>✕ Clear all filters</button>
   </div>
 
-  </div><!-- /.sb-filters -->
-
 </aside>
 
 <div class="main-column">
@@ -1606,7 +1924,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 
       <!-- Keyboard / mouse shortcut hints — sits below the percolation cluster
            so the same overlay tile collects the "things to know" UI. -->
-      <div class="hero-shortcuts" id="heroShortcuts">
+      <div class="hero-shortcuts">
         <div class="hsc-title">Shortcuts</div>
         <div class="hsc-row"><span class="hsc-key">drag</span><span class="hsc-act">rotate cube</span></div>
         <div class="hsc-row"><span class="hsc-key">⇧+drag</span><span class="hsc-act">pan</span></div>
@@ -1621,10 +1939,26 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
     <div class="hero-overlay-tr">
       <div class="hero-legend">
         <div class="hero-legend-title">Connectivity</div>
-        <div class="hero-legend-row"><span class="hero-glyph sphere"></span> κ=1.0 — fully connected</div>
-        <div class="hero-legend-row"><span class="hero-glyph disc"></span> κ=⅔ — two-axis (planar)</div>
-        <div class="hero-legend-row"><span class="hero-glyph rod"></span> κ=⅓ — single-axis (rod)</div>
-        <div class="hero-legend-row"><span class="hero-glyph diamond"></span> κ=0 — isolated</div>
+        <div class="hero-legend-conn-row">
+          <span class="hero-legend-glyph-cell"><span class="hero-glyph sphere"></span></span>
+          <span class="hero-legend-kappa">κ = 1.0</span>
+          <span class="hero-legend-desc">fully connected</span>
+        </div>
+        <div class="hero-legend-conn-row">
+          <span class="hero-legend-glyph-cell"><span class="hero-glyph disc"></span></span>
+          <span class="hero-legend-kappa">κ = ⅔</span>
+          <span class="hero-legend-desc">two-axis (planar)</span>
+        </div>
+        <div class="hero-legend-conn-row">
+          <span class="hero-legend-glyph-cell"><span class="hero-glyph rod"></span></span>
+          <span class="hero-legend-kappa">κ = ⅓</span>
+          <span class="hero-legend-desc">single-axis (rod)</span>
+        </div>
+        <div class="hero-legend-conn-row">
+          <span class="hero-legend-glyph-cell"><span class="hero-glyph diamond"></span></span>
+          <span class="hero-legend-kappa">κ = 0</span>
+          <span class="hero-legend-desc">isolated</span>
+        </div>
       </div>
     </div>
     <div class="hero-overlay-bl">
@@ -1634,7 +1968,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
       </div>
     </div>
     <div class="hero-overlay-br">
-      <div class="hero-legend hero-color-legend" id="heroColorLegend">
+      <div class="hero-legend hero-color-legend">
         <div class="hero-legend-row" style="margin-bottom:8px;cursor:pointer" id="heroColorModeBtn">
           <span style="color:var(--muted2);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;margin-right:6px">color by</span>
           <span id="heroColorModeName" style="color:var(--text);font-weight:500">Volume fraction</span>
@@ -1658,13 +1992,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
     </div>
     <div class="hero-chart hero-chart-hist">
       <div class="hero-chart-title">Performance distribution</div>
-      <svg class="hero-chart-svg" id="heroHistSvg" viewBox="0 0 290 130" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg class="hero-chart-svg" id="heroHistSvg" viewBox="0 0 400 119" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <!-- Radar selection pane — pin chips, ◆-preset header, meta, radar SVG, Open in Mesh.
          Replaces the old connectivity-classes bar chart (the count breakdown text already
          lives under the Design Space title). -->
     <div class="hero-chart hero-chart-radar">
-      <div class="ho-selpane" id="hoSelpane">
+      <div class="ho-selpane">
         <div class="ho-pins" id="hoPins" style="display:none">
           <div class="ho-pins-list" id="hoPinsList"></div>
         </div>
@@ -1699,7 +2033,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
     </div>
 
     <div class="detail-panel">
-      <div class="dp-tabs" id="dpTabs">
+      <div class="dp-tabs">
         <button class="dp-tab active" data-mode="inspect" onclick="setDetailMode('inspect')">Inspect</button>
         <button class="dp-tab disabled" data-mode="compare" id="dpTabCompare" onclick="setDetailMode('compare')">Compare<span class="dp-tab-badge" id="dpTabCount" style="display:none">0</span></button>
       </div>
@@ -1763,33 +2097,33 @@ const ALL_METRICS = [
   { group:'Geometry',   key:'surface_complexity',      label:'Surface complexity',        unit:'',  displayMode:'rank' },
 
   // Stiffness — Es-decoupled (norm = fraction of solid Young's modulus)
-  { group:'Stiffness',  key:'ex_norm',                 label:'Stiffness Ex / Es',         unit:''   },
-  { group:'Stiffness',  key:'ey_norm',                 label:'Stiffness Ey / Es',         unit:''   },
-  { group:'Stiffness',  key:'ez_norm',                 label:'Stiffness Ez / Es',         unit:''   },
-  { group:'Stiffness',  key:'stiffness_density_norm',  label:'Stiffness density E/ρ',     unit:''   },
+  { group:'Stiffness',  key:'ex_norm',                 label:'Stiffness Ex / Es',         labelAbs:'Stiffness Ex',     unit:'',  norm_kind:'modulus_es'        },
+  { group:'Stiffness',  key:'ey_norm',                 label:'Stiffness Ey / Es',         labelAbs:'Stiffness Ey',     unit:'',  norm_kind:'modulus_es'        },
+  { group:'Stiffness',  key:'ez_norm',                 label:'Stiffness Ez / Es',         labelAbs:'Stiffness Ez',     unit:'',  norm_kind:'modulus_es'        },
+  { group:'Stiffness',  key:'stiffness_density_norm',  label:'Stiffness density E/ρ',     labelAbs:'Specific stiffness',unit:'', norm_kind:'stiffness_density'},
 
   // Thermal — ks-decoupled. v4 adds keff_max/avg_norm rollups.
-  { group:'Thermal',    key:'keff_x_norm',             label:'Thermal cond. kx / ks',     unit:''   },
-  { group:'Thermal',    key:'keff_y_norm',             label:'Thermal cond. ky / ks',     unit:''   },
-  { group:'Thermal',    key:'keff_z_norm',             label:'Thermal cond. kz / ks',     unit:''   },
-  { group:'Thermal',    key:'keff_max_norm',           label:'Thermal cond. (best axis)', unit:''   },
-  { group:'Thermal',    key:'keff_avg_norm',           label:'Thermal cond. (avg) / ks',  unit:''   },
+  { group:'Thermal',    key:'keff_x_norm',             label:'Thermal cond. kx / ks',     labelAbs:'Thermal kx',       unit:'',  norm_kind:'thermal_ks'        },
+  { group:'Thermal',    key:'keff_y_norm',             label:'Thermal cond. ky / ks',     labelAbs:'Thermal ky',       unit:'',  norm_kind:'thermal_ks'        },
+  { group:'Thermal',    key:'keff_z_norm',             label:'Thermal cond. kz / ks',     labelAbs:'Thermal kz',       unit:'',  norm_kind:'thermal_ks'        },
+  { group:'Thermal',    key:'keff_max_norm',           label:'Thermal cond. (best axis)', labelAbs:'Thermal (best)',   unit:'',  norm_kind:'thermal_ks'        },
+  { group:'Thermal',    key:'keff_avg_norm',           label:'Thermal cond. (avg) / ks',  labelAbs:'Thermal (avg)',    unit:'',  norm_kind:'thermal_ks'        },
   { group:'Thermal',    key:'thermal_anisotropy',      label:'Thermal anisotropy kα',     unit:'×'  },
 
   // Compliance — load-decoupled (NULL when linear_cap_active=true; treated as 0 in radar)
-  { group:'Compliance', key:'microstrain_x_per_gpa',   label:'μstrain X / GPa',           unit:'με/GPa'   },
-  { group:'Compliance', key:'microstrain_y_per_gpa',   label:'μstrain Y / GPa',           unit:'με/GPa'   },
-  { group:'Compliance', key:'microstrain_z_per_gpa',   label:'μstrain Z / GPa',           unit:'με/GPa'   },
-  { group:'Compliance', key:'microstrain_avg_per_gpa', label:'μstrain avg / GPa',         unit:'με/GPa'   },
-  { group:'Compliance', key:'u_compliance',            label:'Compliance U/σ²',           unit:'1/GPa'    },
+  { group:'Compliance', key:'microstrain_x_per_gpa',   label:'μstrain X / GPa',           labelAbs:'μstrain X',        unit:'με/GPa', norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'microstrain_y_per_gpa',   label:'μstrain Y / GPa',           labelAbs:'μstrain Y',        unit:'με/GPa', norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'microstrain_z_per_gpa',   label:'μstrain Z / GPa',           labelAbs:'μstrain Z',        unit:'με/GPa', norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'microstrain_avg_per_gpa', label:'μstrain avg / GPa',         labelAbs:'μstrain (avg)',    unit:'με/GPa', norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'u_compliance',            label:'Compliance U/σ²',           labelAbs:'Strain energy U',  unit:'1/GPa',  norm_kind:'compliance_per_stress2'},
 
   // Pore structure — cell-decoupled. v4: throat_efficiency dropped, throat_ratio added.
-  { group:'Pore',       key:'pore_size_norm',          label:'Mean pore φ / cell',        unit:''   },
-  { group:'Pore',       key:'pore_size_p10_norm',      label:'Pore P10 / cell',           unit:''   },
-  { group:'Pore',       key:'pore_size_p50_norm',      label:'Pore P50 / cell',           unit:''   },
-  { group:'Pore',       key:'pore_size_p90_norm',      label:'Pore P90 / cell',           unit:''   },
+  { group:'Pore',       key:'pore_size_norm',          label:'Mean pore φ / cell',        labelAbs:'Mean pore φ',      unit:'',  norm_kind:'cell_length' },
+  { group:'Pore',       key:'pore_size_p10_norm',      label:'Pore P10 / cell',           labelAbs:'Pore P10',         unit:'',  norm_kind:'cell_length' },
+  { group:'Pore',       key:'pore_size_p50_norm',      label:'Pore P50 / cell',           labelAbs:'Pore P50',         unit:'',  norm_kind:'cell_length' },
+  { group:'Pore',       key:'pore_size_p90_norm',      label:'Pore P90 / cell',           labelAbs:'Pore P90',         unit:'',  norm_kind:'cell_length' },
   { group:'Pore',       key:'pore_size_cv',            label:'Pore size CV',              unit:''   },
-  { group:'Pore',       key:'throat_size_norm',        label:'Throat / cell',             unit:''   },
+  { group:'Pore',       key:'throat_size_norm',        label:'Throat / cell',             labelAbs:'Throat size',      unit:'',  norm_kind:'cell_length' },
   { group:'Pore',       key:'throat_ratio',            label:'Throat ratio',              unit:''   },
 
   // Curvature. v4: h_mean is now SIGNED (>0 convex-outward); h_mean_abs / h_std are new raw fields.
@@ -1813,6 +2147,156 @@ const ALL_METRICS = [
 
 const METRIC_MAP = {};
 ALL_METRICS.forEach(m => METRIC_MAP[m.key] = m);
+
+// ═══════════════════════════════════════════════════════════════════════
+// GLOBAL INPUTS — "Build target" panel
+// ═══════════════════════════════════════════════════════════════════════
+// All metrics in the vault are stored normalized (cell-decoupled, Es-decoupled,
+// ks-decoupled, load-decoupled). When the user fills in cell_size / material /
+// reference stress in the Build target panel, normalized metrics are resolved
+// to absolute units at display time. Empty inputs → fall back to normalized.
+//
+// Each metric carries a `norm_kind` tag in ALL_METRICS that says how to resolve:
+//   'cell_length'           → multiply by cell_size_mm × 1000 → μm
+//   'modulus_es'            → multiply by modulus_gpa → GPa
+//   'stiffness_density'     → multiply by modulus_gpa / density_gcc → GPa·cm³/g
+//   'thermal_ks'            → multiply by thermal_k_wmk → W/m·K
+//   'compliance_per_stress' → multiply by ref_stress_mpa / 1000 → unitless μstrain
+//   'compliance_per_stress2'→ multiply by (ref_stress_mpa / 1000)² → strain energy density
+//   'none' (default)        → no transformation, stays normalized
+
+// Material library — values for the SOLID phase the scaffold is made of.
+// Sources cited in the conversation that introduced this panel.
+const MATERIAL_PRESETS = {
+  ti6al4v:   { label:'Ti-6Al-4V',     group:'Titanium',    E:110, rho:4.43, k:7.0 },
+  ss316l:    { label:'316L SS',       group:'Stainless',   E:195, rho:8.00, k:14  },
+  ss174ph:   { label:'17-4PH SS',     group:'Stainless',   E:197, rho:7.80, k:18  },
+  h13:       { label:'H13 Tool Steel',group:'Tool steel',  E:210, rho:7.80, k:28.6},
+  al6061:    { label:'Al 6061',       group:'Aluminum',    E:69,  rho:2.70, k:167 },
+  alsi10mg:  { label:'AlSi10Mg',      group:'Aluminum',    E:70,  rho:2.67, k:130 },
+  in718:     { label:'Inconel 718',   group:'Nickel',      E:200, rho:8.19, k:11.4},
+  peek:      { label:'PEEK',          group:'Polymer',     E:3.6, rho:1.32, k:0.25},
+  pekk:      { label:'PEKK',          group:'Polymer',     E:4.5, rho:1.30, k:0.22},
+};
+
+// Mutable user inputs. null = empty = "use normalized display for that family".
+const GLOBAL_INPUTS_STORAGE_KEY = 'f13ld.vault.globalInputs.v1';
+let globalInputs = {
+  cell_size_mm:   null,   // unlocks cell_length metrics → μm
+  material_id:    'custom', // dropdown selection; 'custom' = manual E/rho/k below
+  modulus_gpa:    null,   // unlocks modulus_es, stiffness_density (with rho)
+  density_gcc:    null,   // unlocks stiffness_density (with E)
+  thermal_k_wmk:  null,   // unlocks thermal_ks metrics
+  ref_stress_mpa: null,   // unlocks compliance_per_stress metrics
+};
+
+// Restore from localStorage on load (tolerant to schema drift).
+try {
+  const saved = JSON.parse(localStorage.getItem(GLOBAL_INPUTS_STORAGE_KEY) || 'null');
+  if(saved && typeof saved === 'object'){
+    Object.keys(globalInputs).forEach(k => {
+      if(k in saved) globalInputs[k] = saved[k];
+    });
+  }
+} catch(_e){ /* corrupt localStorage — ignore */ }
+
+function persistGlobalInputs(){
+  try { localStorage.setItem(GLOBAL_INPUTS_STORAGE_KEY, JSON.stringify(globalInputs)); }
+  catch(_e){ /* quota / privacy mode — non-fatal */ }
+}
+
+// ─── Resolution ──────────────────────────────────────────────────────────
+// Returns {value, unit, isResolved, rawValue} for a normalized metric value.
+// `value` is a formatted string ready for display. `isResolved` is true when
+// the global inputs filled in are sufficient to convert this metric.
+function resolveValue(rawNorm, key){
+  const meta = METRIC_MAP[key];
+  const fallback = {
+    value: rawNorm == null ? '—' : fmtV(rawNorm, key),
+    unit: meta?.unit || '',
+    isResolved: false,
+    rawValue: rawNorm,
+  };
+  if(rawNorm == null || !isFinite(rawNorm) || !meta) return fallback;
+  const nk = meta.norm_kind;
+  if(!nk || nk === 'none') return fallback;
+
+  switch(nk){
+    case 'cell_length': {
+      const cs = globalInputs.cell_size_mm;
+      if(cs == null || !isFinite(cs) || cs <= 0) return fallback;
+      const um = rawNorm * cs * 1000;
+      return { value: um.toFixed(0), unit: 'μm', isResolved: true, rawValue: rawNorm };
+    }
+    case 'modulus_es': {
+      const Es = globalInputs.modulus_gpa;
+      if(Es == null || !isFinite(Es) || Es <= 0) return fallback;
+      const E = rawNorm * Es;
+      return { value: E < 1 ? E.toFixed(3) : E.toFixed(2), unit: 'GPa', isResolved: true, rawValue: rawNorm };
+    }
+    case 'stiffness_density': {
+      const Es = globalInputs.modulus_gpa, rs = globalInputs.density_gcc;
+      if(Es == null || rs == null || !isFinite(Es) || !isFinite(rs) || rs <= 0) return fallback;
+      const sd = rawNorm * Es / rs;
+      return { value: sd.toFixed(2), unit: 'GPa·cm³/g', isResolved: true, rawValue: rawNorm };
+    }
+    case 'thermal_ks': {
+      const ks = globalInputs.thermal_k_wmk;
+      if(ks == null || !isFinite(ks) || ks <= 0) return fallback;
+      const k = rawNorm * ks;
+      return { value: k < 1 ? k.toFixed(3) : k.toFixed(2), unit: 'W/m·K', isResolved: true, rawValue: rawNorm };
+    }
+    case 'compliance_per_stress': {
+      // Stored value is μstrain per MPa applied at a baseline E_s = 1 GPa
+      // (FFT-CG solver runs non-dimensional; the field name "per_gpa" is a
+      // misnomer — empirical calibration confirms per-MPa). Real strain for
+      // the user's chosen material requires dividing by E_s in GPa:
+      //   ε_real = stored × σ_MPa / E_s_GPa
+      // Needs BOTH inputs — partial fill leaves the metric normalized.
+      const sigMpa = globalInputs.ref_stress_mpa;
+      const Es     = globalInputs.modulus_gpa;
+      if(sigMpa == null || Es == null || !isFinite(sigMpa) || !isFinite(Es) || sigMpa <= 0 || Es <= 0) return fallback;
+      const ustrain = rawNorm * sigMpa / Es;
+      return { value: ustrain.toFixed(0), unit: 'μstrain', isResolved: true, rawValue: rawNorm };
+    }
+    case 'compliance_per_stress2': {
+      // u_compliance = U/σ² stored at the same per-MPa baseline as above (the
+      // "1/GPa" unit label inherits the same misnomer). Real strain energy
+      // density U = σ²/(2·E_eff); recovering it from stored requires both
+      // σ and E_s, with σ entering squared:
+      //   U_real_MPa = stored × σ_MPa² / E_s_GPa
+      // Convert MPa→kJ/m³: 1 MPa = 1 MJ/m³ = 1000 kJ/m³.
+      const sigMpa = globalInputs.ref_stress_mpa;
+      const Es     = globalInputs.modulus_gpa;
+      if(sigMpa == null || Es == null || !isFinite(sigMpa) || !isFinite(Es) || sigMpa <= 0 || Es <= 0) return fallback;
+      const uMpa  = rawNorm * sigMpa * sigMpa / Es;        // MPa
+      const uKjm3 = uMpa * 1000;                            // kJ/m³
+      return { value: uKjm3 < 1 ? uKjm3.toFixed(3) : uKjm3.toFixed(1), unit: 'kJ/m³', isResolved: true, rawValue: rawNorm };
+    }
+    default:
+      return fallback;
+  }
+}
+
+// Display label for a metric — uses `labelAbs` override when the metric is resolved
+// to an absolute quantity (drops the "/ cell", "/ Es" suffixes that are misleading
+// once the value is no longer a ratio). Falls back to the original `label`.
+function resolveLabel(key, isResolved){
+  const meta = METRIC_MAP[key];
+  if(!meta) return key;
+  if(isResolved && meta.labelAbs) return meta.labelAbs;
+  return meta.label;
+}
+
+// True when ANY input is set. Used to disable the global "reset" affordance
+// when nothing is to reset, and to gate the active-count badge.
+function hasAnyGlobalInput(){
+  return globalInputs.cell_size_mm   != null
+      || globalInputs.modulus_gpa    != null
+      || globalInputs.density_gcc    != null
+      || globalInputs.thermal_k_wmk  != null
+      || globalInputs.ref_stress_mpa != null;
+}
 
 // ─── Domain default criteria ──────────────────────────────────────
 // These metric sets drive the radar AND the card metric rows. When the user picks
@@ -2170,32 +2654,6 @@ const Z_COMPOUND_GLOSSARY = {
   }
 };
 
-// Surface family → color
-const SURFACE_COLORS = {
-  'gyroid':        {color:'var(--c-gyroid)',  border:'rgba(0,229,192,.3)'},
-  'gyroidHarmonic':{color:'var(--c-gyroid)',  border:'rgba(0,229,192,.3)'},
-  'schwarzP':      {color:'var(--c-schwarz)', border:'rgba(0,136,255,.3)'},
-  'schwarzD':      {color:'var(--c-schwarz)', border:'rgba(0,136,255,.3)'},
-  'primitiveC':    {color:'var(--c-schwarz)', border:'rgba(0,136,255,.3)'},
-  'pHarmonic':     {color:'var(--c-schwarz)', border:'rgba(0,136,255,.3)'},
-  'neovius':       {color:'var(--c-schwarz)', border:'rgba(0,136,255,.3)'},
-  'iwp':           {color:'var(--c-schwarz)', border:'rgba(0,136,255,.3)'},
-  'lidinoid':      {color:'var(--c-lidinoid)','border':'rgba(155,111,255,.3)'},
-  'frd':           {color:'var(--c-lidinoid)','border':'rgba(155,111,255,.3)'},
-  'F-RD':          {color:'var(--c-lidinoid)','border':'rgba(155,111,255,.3)'},
-  'fks':           {color:'var(--c-fks)',     border:'rgba(240,180,41,.3)'},
-  'Fischer-Koch S':{color:'var(--c-fks)',     border:'rgba(240,180,41,.3)'},
-  'octo':          {color:'var(--c-fks)',     border:'rgba(240,180,41,.3)'},
-  'splitP':        {color:'var(--c-other)',   border:'rgba(255,95,62,.3)'},
-  'Split-P':       {color:'var(--c-other)',   border:'rgba(255,95,62,.3)'},
-};
-
-const MODE_STYLE = {
-  'pi-tpms': {color:'var(--c-pi)',    border:'rgba(0,229,192,.3)' },
-  'shell':   {color:'var(--c-shell)', border:'rgba(0,136,255,.3)' },
-  'solid':   {color:'var(--c-solid)', border:'rgba(240,180,41,.3)'},
-};
-
 // What to display as the "preset / type" label per family. Grain doesn't carry
 // a preset name; its field.type ('hyperuniform' / 'spinodoid') is the closest.
 function displayPreset(d){
@@ -2310,7 +2768,6 @@ async function loadDatabase(){
     document.getElementById('dbFamilies').textContent=families.size;
     document.getElementById('dbStatus').className='fh-status connected';
 
-    buildPicker();
     applyDomainDefaults('all');
 
     try {
@@ -2461,17 +2918,29 @@ function renderRangeFilters(){
     const stats = dbStats[rf.key];
     if(!stats) return;
 
+    // Resolve the four reference values used in the pill: current min/max + global min/max.
+    // We only need one resolveValue call per value to get the unit; assume all four
+    // share the same isResolved state since they're all the same metric key.
+    const rMin    = resolveValue(rf.min,    rf.key);
+    const rMax    = resolveValue(rf.max,    rf.key);
+    const rGlobMn = resolveValue(stats.min, rf.key);
+    const rGlobMx = resolveValue(stats.max, rf.key);
+    const isResolved = rMin.isResolved;
+    const lblText = resolveLabel(rf.key, isResolved);
+    const lblClass = isResolved ? 'filter-pill-name metric-resolved' : 'filter-pill-name';
+    const unitTxt = isResolved ? rMin.unit : (m.unit || '');
+
     const pill = document.createElement('div');
     pill.className = 'filter-pill';
     pill.dataset.idx = idx;
     pill.innerHTML = `
       <div class="filter-pill-head">
-        <span class="filter-pill-name">${m.label}${m.unit?` <span class="unit">${m.unit}</span>`:''}</span>
+        <span class="${lblClass}">${lblText}${unitTxt?` <span class="unit">${unitTxt}</span>`:''}</span>
         <button class="filter-pill-remove" data-idx="${idx}" title="Remove">×</button>
       </div>
       <div class="filter-pill-values">
-        <span class="val-active">${fmtV(rf.min,rf.key)} – ${fmtV(rf.max,rf.key)}</span>
-        <span class="val-of">of ${fmtV(stats.min,rf.key)} – ${fmtV(stats.max,rf.key)}</span>
+        <span class="val-active">${rMin.value} – ${rMax.value}</span>
+        <span class="val-of">of ${rGlobMn.value} – ${rGlobMx.value}</span>
       </div>
       <div class="histo-track" data-idx="${idx}">
         <div class="histo-bg"></div>
@@ -2479,8 +2948,8 @@ function renderRangeFilters(){
         <div class="histo-handle handle-max" data-which="max"></div>
       </div>
       <div class="histo-tick-row">
-        <span>${fmtV(stats.min,rf.key)}</span>
-        <span>${fmtV(stats.max,rf.key)}</span>
+        <span>${rGlobMn.value}</span>
+        <span>${rGlobMx.value}</span>
       </div>
     `;
     wrap.appendChild(pill);
@@ -2559,6 +3028,7 @@ function wireSlider(idx){
 
   function startDrag(which, e){
     dragWhich = which;
+    _filterDragging = true;
     e.preventDefault();
     e.stopPropagation();
     onMove(e);
@@ -2581,7 +3051,11 @@ function wireSlider(idx){
         drawHistogram(idx);
         // Update the readout above the slider
         const valEl = pill.querySelector('.val-active');
-        if(valEl) valEl.textContent = `${fmtV(rf.min,rf.key)} – ${fmtV(rf.max,rf.key)}`;
+        if(valEl){
+          const rMin = resolveValue(rf.min, rf.key);
+          const rMax = resolveValue(rf.max, rf.key);
+          valEl.textContent = `${rMin.value} – ${rMax.value}`;
+        }
         applyFiltersLive();
       });
     }
@@ -2594,6 +3068,10 @@ function wireSlider(idx){
     document.removeEventListener('mouseup', endDrag);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('touchend', endDrag);
+    // Drag complete — clear the flag and run one full update so the cards,
+    // chip counts, and other pills' histograms catch up to the final value.
+    _filterDragging = false;
+    applyFiltersLive();
   }
 
   pill.querySelector('.handle-min').addEventListener('mousedown', e => startDrag('min', e));
@@ -2897,30 +3375,58 @@ function countMatchingExcluding(dimKey, val){
 }
 
 // Live filter pipeline — fires on every chip toggle, slider drag, etc.
+//
+// Two-tier update: while a slider is being dragged (_filterDragging === true),
+// only the cheap stuff updates per frame — the count badge, the live-stats
+// number, and the hero plot's per-point filter styling. The expensive stuff
+// (full card re-render, chip-count recompute, all-histograms redraw) is
+// deferred until the drag ends. The drag's own pill gets its histogram
+// updated in onMove() either way, so the user still sees their slider move.
 let _filterFrame = null;
+let _filterDragging = false;
 function applyFiltersLive(){
   if(_filterFrame) return;
   _filterFrame = requestAnimationFrame(() => {
     _filterFrame = null;
     const passing = filterDesigns();
+    // Sort cards by performance — perfNorm is the unitless stiffness-density
+    // proxy already computed for the hero plot (max E / VF, percentile-normalized).
+    // Higher = better, so sort descending. Falls back to perfRaw, then 0 for any
+    // design that hasn't had its _hero metadata computed yet.
+    passing.sort((a, b) => {
+      const ap = (a._hero && a._hero.perfNorm != null) ? a._hero.perfNorm
+               : (a._hero && a._hero.perfRaw != null) ? a._hero.perfRaw : 0;
+      const bp = (b._hero && b._hero.perfNorm != null) ? b._hero.perfNorm
+               : (b._hero && b._hero.perfRaw != null) ? b._hero.perfRaw : 0;
+      return bp - ap;
+    });
     filteredResults = passing;   // no 25-cap; show everything that passes
+    // Reset the card pagination on every filter change — top of new result
+    // set is what the user wants to see first. Show-more pill re-appears
+    // automatically if the new result set exceeds the cap.
+    _shownCardLimit = CARD_PAGE_SIZE;
 
-    // Live counts: stats panel
+    // ── Cheap updates (always run) ─────────────────────────────────
     document.getElementById('lsCount').textContent = passing.length.toLocaleString();
     document.getElementById('lsTotal').textContent = allDesigns.length.toLocaleString();
     document.getElementById('lsHint').textContent =
       hasAnyFilter() ? 'matching filters' : 'browsing all';
-
-    renderCards();
     if(typeof updateHeroFilter === 'function') updateHeroFilter();
-
-    // Chip counts depend on the current filter set; refresh
-    refreshChipCounts();
-
-    // Histograms in OTHER pills depend on this filter; refresh
-    rangeFilters.forEach((_, i) => drawHistogram(i));
-
     document.getElementById('resetBtn').disabled = !hasAnyFilter();
+
+    // ── Expensive updates (skipped mid-drag, run once on dragend) ─────
+    if(!_filterDragging){
+      renderCards();
+      refreshChipCounts();
+      // Histograms in OTHER pills depend on this filter; refresh.
+      // The active pill's own histogram is already redrawn in onMove().
+      rangeFilters.forEach((_, i) => drawHistogram(i));
+    } else {
+      // Update only the results-count header so the user sees the live total
+      // (cards stay in their pre-drag state until release).
+      const rc = document.getElementById('resultsCount');
+      if(rc) rc.textContent = passing.length>0 ? passing.length+' shown' : '—';
+    }
   });
 }
 
@@ -2950,9 +3456,6 @@ function resetAllFilters(){
   renderRecentFilters();
   applyFiltersLive();
 }
-
-// Compatibility shims: the old filter API is still called from other places
-function setDomain(){ /* obsolete */ }
 
 // ─── Domain selector — global pivot for radar/cards/scatter defaults ──────
 // Picking a domain swaps RADAR_DEFAULT_AXES, sets the scatter X/Y to that domain's
@@ -3089,25 +3592,29 @@ function syncPercButtonsToState(){
     btn.classList.toggle('is-on', on);
   });
 }
-function buildPicker(){ /* obsolete; autocomplete is the replacement */ }
-function runSearch(){ applyFiltersLive(); }
-function onFilterChange(){ applyFiltersLive(); }
-function clearFilters(){ resetAllFilters(); }
-
-// The old scoring is no longer central — filters are now strict pass/fail.
-// scoreDesign is kept so the cards' optional score badge still works if any
-// caller still references it, but it returns 100 (pass) for every design that
-// makes it through filterDesigns().
-function scoreDesign(d){ return 100; }
-function sbClass(s){return s>=70?'s-high':s>=40?'s-mid':'s-low';}
 
 // ─── Cards ────────────────────────────────────────────────────────
+// Pagination: render at most _shownCardLimit cards, with a "+ N more" pill
+// at the bottom. Resets to CARD_PAGE_SIZE on any filter change. Avoids the
+// O(N) DOM thrash of rendering 1000s of cards on every settled filter update.
+const CARD_PAGE_SIZE = 50;
+let _shownCardLimit = CARD_PAGE_SIZE;
+
+function showMoreCards(){
+  _shownCardLimit += CARD_PAGE_SIZE;
+  renderCards();
+}
+
 function renderCards(){
   const grid=document.getElementById('cardsGrid');
-  document.getElementById('resultsCount').textContent=
-    filteredResults.length>0?filteredResults.length+' shown':'—';
+  const total = filteredResults.length;
+  const shown = Math.min(_shownCardLimit, total);
+  // Header count: "shown of total" when capped, just "shown" when complete
+  document.getElementById('resultsCount').textContent =
+    total>0 ? (shown<total ? `${shown} of ${total.toLocaleString()} shown` : `${total.toLocaleString()} shown`)
+            : '—';
 
-  if(!filteredResults.length){
+  if(!total){
     grid.innerHTML=`<div class="empty-state">
       <div class="empty-icon">⬡</div>
       <div class="empty-title">${allDesigns.length?'No matches':'Loading…'}</div>
@@ -3126,39 +3633,85 @@ function renderCards(){
     ? activeKeys.slice(0, 4)
     : RADAR_DEFAULT_AXES.slice(0, 4);
 
-  filteredResults.forEach((d,i)=>{
+  // Only render up to the current pagination cap.
+  const visible = filteredResults.slice(0, shown);
+  visible.forEach((d,i)=>{
     const family=d.family||(d.recipe&&d.recipe.family)||'tpms';
     const preset=displayPreset(d);
-    const ss=SURFACE_COLORS[preset]||{color:'var(--muted)',border:'var(--border2)'};
 
     const metricsHTML=displayKeys.map(key=>{
       const m=METRIC_MAP[key];if(!m) return'';
       const val=d[key];
-      const fmted=val==null?'—':fmtV(val,key);
+      // Resolve normalized value to absolute units when Build target inputs allow
+      const r = resolveValue(val, key);
+      const lblText = resolveLabel(key, r.isResolved);
+      const lblClass = 'card-metric-lbl' + (r.isResolved ? ' metric-resolved' : '');
+      const valSuffix = (r.unit && val != null) ? ' '+r.unit : '';
+      // Sparkline = position-on-distribution indicator. Uses percentileRank()
+      // which returns a fraction in [0,1] indicating where this design sits
+      // in the population for this metric (cached sorted arrays, O(log n)).
+      // Note: percentile is on raw normalized value — distribution shape is
+      // identical whether displayed normalized or absolute.
+      const pct = percentileRank(val, key);
+      let sparkHTML;
+      if(pct == null){
+        sparkHTML = '<div class="card-spark"><div class="card-spark-empty"></div></div>';
+      } else {
+        const pctClamped = Math.max(0, Math.min(1, pct));
+        const leftPct = (pctClamped * 100).toFixed(1);
+        sparkHTML =
+          '<div class="card-spark" title="population percentile: '+
+          (pctClamped*100).toFixed(0)+'%">'+
+            '<div class="card-spark-track">'+
+              '<div class="card-spark-fill" style="width:'+leftPct+'%"></div>'+
+            '</div>'+
+            '<div class="card-spark-dot" style="left:'+leftPct+'%"></div>'+
+          '</div>';
+      }
       return `<div class="card-metric">
-        <span class="card-metric-lbl">${m.label}</span>
-        <span class="card-metric-val">${fmted}${m.unit&&val!=null?' '+m.unit:''}</span>
+        <span class="${lblClass}">${lblText}</span>
+        <span class="card-metric-val">${r.value}${valSuffix}</span>
+        ${sparkHTML}
       </div>`;
     }).join('');
 
     const card=document.createElement('div');
-    card.className='design-card';
+    card.className=`design-card fam-${family}`;
     card.style.animationDelay=(i*16)+'ms';
     card.dataset.designIdx = String(i);
 
     card.innerHTML=`
-      <div class="card-body" style="padding:10px">
+      <div class="card-ident">
+        <span class="card-ident-fam">${family}</span>
+        <span class="card-ident-sep">·</span>
+        <span class="card-ident-preset">${preset}</span>
+      </div>
+      <div class="card-body">
         <div class="card-metrics-dynamic">${metricsHTML}</div>
       </div>
       <div class="card-footer">
-        <span class="family-pill ${family}">${family}</span>
-        <span class="surface-tag" style="color:${ss.color};border-color:${ss.border}">${preset}</span>
         <button class="recipe-btn" onclick="event.stopPropagation();quickDl(${i})">Recipe</button>
       </div>
     `;
     card.addEventListener('click',()=>selectDesign(d,card));
     grid.appendChild(card);
   });
+
+  // Show-more pill — spans all grid columns, appears only when there are
+  // more results than the current cap. Increments the cap by CARD_PAGE_SIZE
+  // and re-renders (no re-filter).
+  if(shown < total){
+    const remaining = total - shown;
+    const nextBatch = Math.min(CARD_PAGE_SIZE, remaining);
+    const more = document.createElement('div');
+    more.className = 'show-more-row';
+    more.innerHTML = `
+      <button class="show-more-btn" onclick="showMoreCards()">
+        Show ${nextBatch} more <span class="show-more-count">(${remaining.toLocaleString()} remaining)</span>
+      </button>
+    `;
+    grid.appendChild(more);
+  }
 }
 
 // ─── Detail-panel radar — percentile-rank signature across active filter dims ──
@@ -3392,6 +3945,8 @@ function renderDetailRadar(d, pinOverlays){
   });
 
   // Axis tip labels: short metric name + value · Pn
+  // When Build target inputs are filled, the value resolves to absolute units
+  // (e.g. μm, GPa) and the short metric name renders bold to flag it as "live".
   axes.forEach((key, i) => {
     const m = METRIC_MAP[key]; if(!m) return;
     const v = d[key];
@@ -3403,13 +3958,21 @@ function renderDetailRadar(d, pinOverlays){
     if(Math.cos(ax) > 0.25) anchor = 'start';
     else if(Math.cos(ax) < -0.25) anchor = 'end';
     const shortLbl = RADAR_SHORT[key] || key;
-    const valTxt = fmtRadarValue(v, key);
-    const pTxt = p!=null ? `· P${Math.min(99, Math.round(p*100))}` : '';
+    const r = resolveValue(v, key);
+    // When resolved, show absolute value + unit; when not, fall back to fmtRadarValue
+    const valTxt = r.isResolved
+      ? (r.value + (r.unit ? ' ' + r.unit : ''))
+      : fmtRadarValue(v, key);
+    const pTxt = p!=null ? `· P${String(Math.min(99, Math.round(p*100))).padStart(2, '0')}` : '';
     // Two stacked text lines; spacing scaled for the larger v4 font sizes.
     let dy1 = -4, dy2 = 12;
     if(Math.sin(ax) < -0.7){ dy1 = -13; dy2 = 3; } // top: shift both up
     else if(Math.sin(ax) > 0.7){ dy1 = 5; dy2 = 21; } // bottom: shift both down
-    parts.push(`<text x="${lx.toFixed(1)}" y="${(ly+dy1).toFixed(1)}" text-anchor="${anchor}" fill="var(--text)" opacity="0.78" font-family="DM Mono,monospace" font-size="12" font-weight="600" letter-spacing="0.04em">${shortLbl}</text>`);
+    // Bold the metric name when resolved — the existing font-weight is 600
+    // already; bumping to 700 + brighter fill provides the "live" tell.
+    const lblWeight = r.isResolved ? '700' : '600';
+    const lblOpacity = r.isResolved ? '1' : '0.78';
+    parts.push(`<text x="${lx.toFixed(1)}" y="${(ly+dy1).toFixed(1)}" text-anchor="${anchor}" fill="var(--text)" opacity="${lblOpacity}" font-family="DM Mono,monospace" font-size="12" font-weight="${lblWeight}" letter-spacing="0.04em">${shortLbl}</text>`);
     parts.push(`<text x="${lx.toFixed(1)}" y="${(ly+dy2).toFixed(1)}" text-anchor="${anchor}" fill="var(--accent)" font-family="DM Mono,monospace" font-size="14" font-weight="600">${valTxt} ${pTxt}</text>`);
   });
 
@@ -3642,8 +4205,14 @@ function renderDetailInspect(d){
     .map(g => {
       const rows = grouped[g].map(m => {
         const v = d[m.key];
-        const txt = (v==null) ? '—' : (fmtV(v, m.key) + (m.unit ? ' ' + m.unit : ''));
-        return dr(m.label, txt);
+        const r = resolveValue(v, m.key);
+        const lbl = resolveLabel(m.key, r.isResolved);
+        const txt = (v == null) ? '—' : (r.value + (r.unit ? ' ' + r.unit : ''));
+        // Wrap label in a span tagged for the bold "live" indicator when resolved
+        const lblHtml = r.isResolved
+          ? `<span class="metric-resolved">${lbl}</span>`
+          : lbl;
+        return dr(lblHtml, txt);
       }).join('');
       return `<div class="dsec">${g}</div>${rows}`;
     }).join('');
@@ -4000,7 +4569,7 @@ const CAT_PALETTES = {
     'solid':   '#EF9F27',
     'sheet':   '#85B7EB',
     'network': '#EB6F85',
-    'half':    '#7AC4D8'    // grain default in current data
+    'half':    '#F0D944'    // grain default in current data
   },
   stiff_axis: {
     X: '#EB6B6B',
@@ -4714,24 +5283,11 @@ function instanceMatrixFor(d){
 }
 
 // ─── Alive-mode helpers ────────────────────────────────────────────────
-// Recompose a design's instance matrix using a position offset (breathing)
-// and a uniform scale (twinkle/selection pulse). Cheap — single Matrix4
-// compose per call. Orientation comes from the cached h.quat.
+// Scratch Matrix4/Vector3 reused by updateAlive() per-instance compose
+// (breathing offset + uniform scale). Avoids GC churn in the animation loop.
 const _aliveScratchMat = new THREE.Matrix4();
 const _aliveScratchVec = new THREE.Vector3();
 const _aliveScratchScl = new THREE.Vector3(1,1,1);
-function recomposeMatrix(d, posOffset, uniformScale){
-  const h = d._hero;
-  _aliveScratchVec.set(
-    h.pos.x + (posOffset ? posOffset.x : 0),
-    h.pos.y + (posOffset ? posOffset.y : 0),
-    h.pos.z + (posOffset ? posOffset.z : 0)
-  );
-  const s = uniformScale != null ? uniformScale : 1;
-  _aliveScratchScl.set(s, s, s);
-  _aliveScratchMat.compose(_aliveScratchVec, h.quat || new THREE.Quaternion(), _aliveScratchScl);
-  return _aliveScratchMat;
-}
 
 function initHeroPlot(){
   if(heroState.inited) return;
@@ -5299,7 +5855,8 @@ function buildHeroHistogram(){
   const svg = document.getElementById('heroHistSvg');
   if(!svg || !allDesigns.length) return;
   // Compact dimensions — viewBox aspect controls rendered height in the rail.
-  const W = 400, H = 95;
+  // H bumped Nov 2025: 95 → 119 (+25%) for better readability of stacked bars.
+  const W = 400, H = 119;
   const PAD = { l: 26, r: 8, t: 6, b: 22 };
   const N_BINS = 12;
 
@@ -5365,46 +5922,7 @@ function buildHeroHistogram(){
   svg.innerHTML = parts.join('');
 }
 
-// ─── Connectivity class breakdown (horizontal bars) ─────────────────────
-function buildHeroClassBars(){
-  const svg = document.getElementById('heroBarsSvg');
-  if(!svg || !allDesigns.length) return;
-  const W = 400, H = 152;
-  const PAD = { l: 96, r: 50, t: 8, b: 8 };
-
-  const counts = heroState.classCounts || {sphere:0, disc:0, rod:0, diamond:0};
-  const order = ['sphere', 'disc', 'rod', 'diamond'];
-  const labelKappa = {sphere:'κ=1.0', disc:'κ=⅔', rod:'κ=⅓', diamond:'κ=0'};
-  const total = Object.values(counts).reduce((a,b)=>a+b, 0);
-  const maxCount = Math.max(1, ...Object.values(counts));
-  const rowH = (H - PAD.t - PAD.b) / order.length;
-
-  let parts = [];
-  order.forEach((cls, i) => {
-    const y = PAD.t + i*rowH + rowH/2;
-    const c = counts[cls];
-    const w = (c / maxCount) * (W - PAD.l - PAD.r);
-    // Glyph label (κ value) + class name
-    parts.push(`<text x="8" y="${y+4}" fill="#7a9aa6" font-family="DM Mono,monospace" font-size="11" letter-spacing="0.06em">${labelKappa[cls]}</text>`);
-    parts.push(`<text x="52" y="${y+4}" fill="${CLASS_HEX[cls]}" font-family="DM Mono,monospace" font-size="11" letter-spacing="0.06em">${cls}</text>`);
-    // Bar background (subtle track)
-    parts.push(`<rect x="${PAD.l}" y="${y-7.5}" width="${W-PAD.l-PAD.r}" height="15" fill="#0d1318" rx="2"/>`);
-    // Bar fill
-    if(c > 0){
-      parts.push(`<rect class="hero-bar-fill" x="${PAD.l}" y="${y-7.5}" width="${w}" height="15" fill="${CLASS_HEX[cls]}" opacity="0.8" rx="2"/>`);
-    }
-    // Count label at the right
-    parts.push(`<text x="${W-6}" y="${y+4}" text-anchor="end" fill="#d6e8d4" font-family="DM Mono,monospace" font-size="12">${c}</text>`);
-  });
-
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = parts.join('');
-}
-
 // ─── Build / refresh / cross-highlight ─────────────────────────────────
-// Class-bars chart was removed (the count breakdown text under "Design Space" covers it,
-// and the bar-chart slot now hosts the radar selection pane). buildHeroClassBars() is
-// still defined but no longer called.
 function buildHeroCharts(){
   buildHeroScatter();
   buildHeroHistogram();
@@ -5954,6 +6472,209 @@ function filterMetricsKey(query){
     }
   });
 })();
+
+// ─── Build target panel wiring ─────────────────────────────────────────
+// Populates the material dropdown (grouped by family), restores values from
+// localStorage on first paint, wires input → globalInputs → persist + refresh.
+// Refresh is deferred to applyFiltersLive so it shares the existing render
+// pipeline (cards, radar, filter pills, histograms all update from one path).
+(function wireBuildTarget(){
+  const elCellSize  = document.getElementById('btCellSize');
+  const elMaterial  = document.getElementById('btMaterial');
+  const elModulus   = document.getElementById('btModulus');
+  const elDensity   = document.getElementById('btDensity');
+  const elThermalK  = document.getElementById('btThermalK');
+  const elRefStress = document.getElementById('btRefStress');
+  const elResetAll  = document.getElementById('btResetAll');
+  const elBadge     = document.getElementById('btActiveBadge');
+  const elToggle    = document.getElementById('btToggleBtn');
+  const elPanel     = document.getElementById('buildTarget');
+  if(!elMaterial) return;
+
+  // Build the material dropdown from MATERIAL_PRESETS, grouped by .group
+  function buildMaterialOptions(){
+    elMaterial.innerHTML = '';
+    const customOpt = document.createElement('option');
+    customOpt.value = 'custom';
+    customOpt.textContent = 'Custom';
+    elMaterial.appendChild(customOpt);
+
+    // Group presets by their .group field
+    const grouped = {};
+    Object.entries(MATERIAL_PRESETS).forEach(([id, m]) => {
+      if(!grouped[m.group]) grouped[m.group] = [];
+      grouped[m.group].push({id, m});
+    });
+    // Render in a stable order
+    const groupOrder = ['Titanium','Stainless','Tool steel','Aluminum','Nickel','Polymer'];
+    groupOrder.forEach(g => {
+      if(!grouped[g]) return;
+      const og = document.createElement('optgroup');
+      og.label = g;
+      grouped[g].forEach(({id, m}) => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = m.label;
+        og.appendChild(opt);
+      });
+      elMaterial.appendChild(og);
+    });
+  }
+  buildMaterialOptions();
+
+  // Sync DOM inputs from globalInputs (initial paint + after preset autofill)
+  function syncInputsFromState(){
+    const setVal = (el, v) => { el.value = (v == null) ? '' : String(v); };
+    setVal(elCellSize,  globalInputs.cell_size_mm);
+    setVal(elModulus,   globalInputs.modulus_gpa);
+    setVal(elDensity,   globalInputs.density_gcc);
+    setVal(elThermalK,  globalInputs.thermal_k_wmk);
+    setVal(elRefStress, globalInputs.ref_stress_mpa);
+    elMaterial.value = globalInputs.material_id || 'custom';
+    elMaterial.setAttribute('data-value', elMaterial.value);
+    // Mark each input wrap with .has-value when its input is filled, so the
+    // border tints and the × button shows.
+    [elCellSize, elModulus, elDensity, elThermalK, elRefStress].forEach(el => {
+      const wrap = el.closest('.bt-input-wrap');
+      if(wrap) wrap.classList.toggle('has-value', el.value !== '');
+    });
+    // Active badge shows the count of filled inputs
+    let count = 0;
+    if(globalInputs.cell_size_mm   != null) count++;
+    if(globalInputs.modulus_gpa    != null) count++;
+    if(globalInputs.density_gcc    != null) count++;
+    if(globalInputs.thermal_k_wmk  != null) count++;
+    if(globalInputs.ref_stress_mpa != null) count++;
+    if(count > 0){
+      elBadge.textContent = String(count);
+      elBadge.style.display = '';
+    } else {
+      elBadge.style.display = 'none';
+    }
+    if(elResetAll) elResetAll.disabled = !hasAnyGlobalInput();
+
+    // Strain-calc hint: show only when exactly one of {ref_stress, modulus} is
+    // filled. Both filled → metric resolves silently. Neither filled → no
+    // expectation set yet. The XOR case is the confusing one.
+    const hint = document.getElementById('btStrainHint');
+    if(hint){
+      const hasSig = globalInputs.ref_stress_mpa != null;
+      const hasE   = globalInputs.modulus_gpa    != null;
+      hint.style.display = (hasSig !== hasE) ? '' : 'none';
+    }
+  }
+
+  // Push UI value back to state, persist, refresh
+  function commit(){
+    persistGlobalInputs();
+    syncInputsFromState();
+    // Re-render every display site that consumes resolveValue. applyFiltersLive
+    // handles cards, radar (via selection), histograms, and filter pills.
+    if(typeof refreshAllDisplays === 'function') refreshAllDisplays();
+  }
+
+  // Parse an input string into number-or-null. Empty / NaN / non-positive → null.
+  function parseInput(v){
+    if(v == null || v === '') return null;
+    const n = parseFloat(v);
+    if(!isFinite(n) || n <= 0) return null;
+    return n;
+  }
+
+  // Wire numeric inputs — 'input' event fires on each keystroke (immediate feedback)
+  const numericInputs = [
+    [elCellSize,  'cell_size_mm'],
+    [elModulus,   'modulus_gpa'],
+    [elDensity,   'density_gcc'],
+    [elThermalK,  'thermal_k_wmk'],
+    [elRefStress, 'ref_stress_mpa'],
+  ];
+  numericInputs.forEach(([el, key]) => {
+    el.addEventListener('input', () => {
+      globalInputs[key] = parseInput(el.value);
+      // Editing E, ρ, or k by hand drops the material preset back to "Custom"
+      // since the values no longer match the chosen material.
+      if(['modulus_gpa','density_gcc','thermal_k_wmk'].includes(key)){
+        globalInputs.material_id = 'custom';
+      }
+      commit();
+    });
+  });
+
+  // Material dropdown — select a preset → autofill E/ρ/k
+  elMaterial.addEventListener('change', () => {
+    const id = elMaterial.value;
+    globalInputs.material_id = id;
+    if(id !== 'custom' && MATERIAL_PRESETS[id]){
+      const m = MATERIAL_PRESETS[id];
+      globalInputs.modulus_gpa   = m.E;
+      globalInputs.density_gcc   = m.rho;
+      globalInputs.thermal_k_wmk = m.k;
+    }
+    commit();
+  });
+
+  // Per-input × clear buttons
+  document.querySelectorAll('.bt-clear').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      const key = btn.dataset.clear;
+      if(!(key in globalInputs)) return;
+      globalInputs[key] = null;
+      // Clearing E/ρ/k also drops the preset to Custom (mismatch otherwise)
+      if(['modulus_gpa','density_gcc','thermal_k_wmk'].includes(key)){
+        globalInputs.material_id = 'custom';
+      }
+      commit();
+    });
+  });
+
+  // Reset all → all inputs back to null/custom
+  if(elResetAll){
+    elResetAll.addEventListener('click', () => {
+      globalInputs.cell_size_mm   = null;
+      globalInputs.modulus_gpa    = null;
+      globalInputs.density_gcc    = null;
+      globalInputs.thermal_k_wmk  = null;
+      globalInputs.ref_stress_mpa = null;
+      globalInputs.material_id    = 'custom';
+      commit();
+    });
+  }
+
+  // Collapse / expand toggle (purely visual; doesn't affect resolution)
+  if(elToggle){
+    elToggle.addEventListener('click', () => {
+      const expanded = elToggle.getAttribute('aria-expanded') !== 'false';
+      const next = !expanded;
+      elToggle.setAttribute('aria-expanded', String(next));
+      elPanel.classList.toggle('collapsed', !next);
+    });
+  }
+
+  // Initial paint from restored localStorage state
+  syncInputsFromState();
+})();
+
+// ─── Display refresh hook ──────────────────────────────────────────────
+// Called whenever globalInputs changes. Re-renders every site that consumes
+// resolveValue. Doesn't re-run the filter pipeline (data didn't change), but
+// does refresh cards (which call resolveValue per metric), the radar in the
+// selection pane, the filter pill labels and value readouts, and the
+// histograms (whose tick labels also display in absolute units).
+function refreshAllDisplays(){
+  if(typeof renderCards === 'function')        renderCards();
+  if(typeof refreshChipCounts === 'function')  refreshChipCounts();
+  if(typeof renderRangeFilters === 'function') renderRangeFilters();
+  // Radar in the hero selection pane — only re-render if something is selected
+  if(typeof selectedDesign !== 'undefined' && selectedDesign && typeof renderHoBody === 'function'){
+    renderHoBody();
+  }
+  // If the hero scatter axes happen to be on resolved metrics, redraw the axis
+  // labels so unit text matches. Cheap.
+  if(typeof buildHeroScatter === 'function') buildHeroScatter();
+  if(typeof buildHeroHistogram === 'function') buildHeroHistogram();
+}
 
 loadDatabase();
 </script>

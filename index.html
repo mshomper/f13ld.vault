@@ -698,6 +698,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .design-card.fam-tpms  { --card-fam:#5DCAA5; }
 .design-card.fam-noise { --card-fam:#EB7050; }
 .design-card.fam-grain { --card-fam:#a8a59a; }
+.design-card.fam-beam  { --card-fam:#B8D050; }
 
 /* Card identity strip — family + preset as a single text line at the top */
 .card-ident{
@@ -1182,6 +1183,34 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   color:var(--muted2);font-size:9.5px;letter-spacing:0;
   margin-left:5px;text-transform:none;
 }
+/* Inline chip on the X axis label that toggles the perfRaw definition between
+   |E|/VF (efficiency, active state) and |E| (magnitude, dimmed state). Lives
+   inside the .hero-axis-label box so it inherits positioning from the screen-
+   projected anchor; needs pointer-events:auto to override the container's
+   pointer-events:none (which lets the cube receive mouse events through the
+   label layer). */
+.hero-axis-toggle{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 6px 2px;
+  border-radius:2px;
+  font-size:9px;
+  letter-spacing:0.06em;
+  background:rgba(93,202,165,0.18);
+  border:0.5px solid rgba(93,202,165,0.55);
+  color:#5DCAA5;
+  cursor:pointer;
+  pointer-events:auto;
+  user-select:none;
+  transition:opacity 0.15s, background 0.15s, border-color 0.15s;
+}
+.hero-axis-toggle[data-active="false"]{
+  opacity:0.4;
+  background:transparent;
+  border-color:rgba(120,135,150,0.4);
+  color:var(--muted2);
+}
+.hero-axis-toggle:hover{ filter:brightness(1.25); opacity:1; }
 .hero-overlay-tl{position:absolute;top:12px;left:14px;display:flex;flex-direction:column;gap:6px}
 
 /* Percolation cluster — solid/void axis filter chips below the Design space title. */
@@ -2658,8 +2687,9 @@ const Z_COMPOUND_GLOSSARY = {
 // a preset name; its field.type ('hyperuniform' / 'spinodoid') is the closest.
 function displayPreset(d){
   const r = d.recipe || {};
-  if (r.field?.type)    return r.field.type;          // grain
+  if (r.field?.type)         return r.field.type;          // grain
   if (r.surface?.noise_type) return r.surface.noise_type;  // noise
+  if (r.topology?.name)      return r.topology.name;       // beam
   return d.preset || (r.meta && r.meta.preset) || '—';     // tpms
 }
 
@@ -4176,6 +4206,24 @@ function renderDetailInspect(d){
       (fld.kappa!=null?`κ <span>${(+fld.kappa).toFixed(2)}</span><br>`:'') +
       (fld.frequency!=null?`frequency <span>${(+fld.frequency).toFixed(3)}</span><br>`:'') +
       (g.topology?`topology <span>${g.topology}</span><br>`:'');
+  } else if(family === 'beam'){
+    // Beam recipes: lattice topology + per-design strut count + anisotropic
+    // cell scaling. Per-axis cell scale (scale_xyz) is the informative jitter
+    // dimension since most beam designs are anisotropic; fall back to scalar
+    // cell_scale when older exports lack the vec3. Node treatment (smoothing
+    // + ball radius) shown only when nonzero — defaults are zero for most
+    // beam designs and the clutter isn't worth it otherwise.
+    const topo = recipe.topology || {};
+    const sxyz = g.scale_xyz;
+    const cellStr = (Array.isArray(sxyz) && sxyz.length === 3)
+      ? `(${(+sxyz[0]).toFixed(2)}, ${(+sxyz[1]).toFixed(2)}, ${(+sxyz[2]).toFixed(2)})`
+      : (g.cell_scale != null ? (+g.cell_scale).toFixed(2) : '—');
+    geoLines =
+      `topology <span>${topo.name ?? '—'}</span><br>` +
+      (topo.beam_count != null ? `beam count <span>${topo.beam_count}</span><br>` : '') +
+      `cell <span>${cellStr}</span><br>` +
+      (g.node_smoothing_k ? `node smooth k <span>${(+g.node_smoothing_k).toFixed(3)} mm</span><br>` : '') +
+      (g.node_ball_radius ? `node ball r <span>${(+g.node_ball_radius).toFixed(3)} mm</span><br>` : '');
   }
 
   // Cell size and stress reference are first-class provenance; show under the geo block.
@@ -4345,6 +4393,14 @@ function renderDetailCompare(){
     if(fam === 'grain'){
       const f = r.field || {};
       return `field <span>${f.type??'—'}</span> · κ <span>${(f.kappa!=null?(+f.kappa).toFixed(2):'—')}</span>`;
+    }
+    if(fam === 'beam'){
+      const t = r.topology || {};
+      const sxyz = g.scale_xyz;
+      const cellStr = (Array.isArray(sxyz) && sxyz.length === 3)
+        ? `(${(+sxyz[0]).toFixed(2)}, ${(+sxyz[1]).toFixed(2)}, ${(+sxyz[2]).toFixed(2)})`
+        : (g.cell_scale != null ? (+g.cell_scale).toFixed(2) : '—');
+      return `topology <span>${t.name??'—'}</span> · cell <span>${cellStr}</span>`;
     }
     return '';
   }
@@ -4561,7 +4617,8 @@ const CAT_PALETTES = {
   family: {
     tpms:   '#5DCAA5',
     noise:  '#EB7050',
-    grain:  '#a8a59a'
+    grain:  '#a8a59a',
+    beam:   '#B8D050'
   },
   topology: {
     'pi-tpms': '#A974FF',
@@ -4622,7 +4679,7 @@ const COLOR_MODES = [
   { id:'family', group:'Categorical', label:'Family', type:'categorical',
     palette: CAT_PALETTES.family,
     valueOf: d => d.family ?? (d.recipe && d.recipe.family) ?? null,
-    legendOrder: ['tpms', 'noise', 'grain'] },
+    legendOrder: ['tpms', 'noise', 'grain', 'beam'] },
   { id:'topology', group:'Categorical', label:'Topology', type:'categorical',
     palette: CAT_PALETTES.topology,
     valueOf: d => {
@@ -4960,7 +5017,16 @@ function computeHeroCoords(designs){
     const E=[d.ex_norm||0, d.ey_norm||0, d.ez_norm||0];
     const Emag=Math.sqrt(E[0]*E[0] + E[1]*E[1] + E[2]*E[2]);
     const VF=d.volume_fraction||0;
-    const perfRaw = VF>0 ? Emag/(VF/100) : 0;
+    // perfRaw branches on the X-axis mode toggle:
+    //   efficiency: |E|/VF — current default, stiffness density
+    //   magnitude:  |E|    — raw stiffness, no VF normalization
+    // Toggle is wired in positionHeroAxisLabels via the chip embedded in the
+    // X axis label. Both modes feed the same percentile-rank step below, so
+    // perfNorm always spans [0,1] uniformly; only the underlying ordering
+    // changes.
+    const perfRaw = (heroXMode === 'magnitude')
+      ? Emag
+      : (VF > 0 ? Emag / (VF / 100) : 0);
     const Econn = E.filter((v,i)=>cls.conn[i] && v>0);
     let anisoRaw = 1;
     if(Econn.length>=2) anisoRaw = Math.max(...Econn)/Math.min(...Econn);
@@ -4981,21 +5047,17 @@ function computeHeroCoords(designs){
     d._hero.color    = null;
   });
 
-  // ── v5: Percentile-trimmed normalization (1st-99th) for both axes ──
+  // ── v5: Percentile-RANK normalization for all three cube axes ──────
   // v0.14.1 introduced partial-validity designs that report constrained
   // modulus on their connected axis(es). At very low VF, this can produce
   // outlier perfRaw values that compress the bulk distribution toward the
-  // floor under naive min/max scaling. Same risk applies to anisoRaw —
-  // outlier high-aniso designs squash the rest near the floor.
-  // Robust trim to 1st-99th percentile keeps the bulk visible; outliers
-  // clip cleanly to [0, 1] via the Math.max/min guard below.
-  function percentileVal(sorted, p) {
-    if (!sorted.length) return null;
-    const idx = (sorted.length - 1) * p;
-    const lo = Math.floor(idx), hi = Math.ceil(idx);
-    if (lo === hi) return sorted[lo];
-    return sorted[lo] + (idx - lo) * (sorted[hi] - sorted[lo]);
-  }
+  // floor under naive min/max scaling. The same problem applies even more
+  // strongly to anisoRaw — pre-v0.14.2 the Y axis used linear-percentile-
+  // trim, which clipped the tails but still squashed the bulk when the
+  // distribution itself spans a wide range (e.g. high-anisotropy beam
+  // lattices in the same population as moderate-anisotropy TPMS). Now
+  // all three axes use rank — uniform [0,1] spread regardless of family
+  // mix, distribution skew, or outliers.
 
   // ── Performance: PERCENTILE-RANK across population ──
   // Uses the same indexed-sort pattern as the Z-axis below (line ~4504) —
@@ -5016,17 +5078,24 @@ function computeHeroCoords(designs){
     entry.d._hero.perfNorm = i / Np;
   });
 
-  // ── Anisotropy: linear, percentile-trimmed normalization (unchanged) ──
-  const anisosSorted = designs.map(d=>d._hero.anisoRaw)
-                              .filter(v=>isFinite(v))
-                              .sort((a,b)=>a-b);
-  const anisoMin = anisosSorted.length ? percentileVal(anisosSorted, 0.01) : 1.0;
-  const anisoMax = anisosSorted.length ? percentileVal(anisosSorted, 0.99) : 1.0;
-  const anisoSpan = (anisoMax > anisoMin) ? (anisoMax - anisoMin) : 1;
-
-  designs.forEach(d=>{
-    const h=d._hero;
-    h.anisoNorm = Math.max(0, Math.min(1, (h.anisoRaw - anisoMin) / anisoSpan));
+  // ── Anisotropy: PERCENTILE-RANK across population (v0.14.2) ──
+  // Tiebreaking matters: isotropic designs all sit at exactly anisoRaw = 1.0,
+  // and without a continuous secondary key the cube would show a single
+  // dense Y-band at the floor. Mirror the multi-key sort pattern from the
+  // Z axis below — anisoRaw → perfRaw (continuous, already computed) →
+  // stable index. perfRaw is independent of anisotropy so it spreads
+  // ties cleanly without smuggling correlated info back in.
+  const anisoIndexed = designs.map((d, idx) => ({d, idx}));
+  anisoIndexed.sort((a, b) => {
+    const ar = a.d._hero.anisoRaw, br = b.d._hero.anisoRaw;
+    if(ar !== br) return ar - br;
+    const ap = a.d._hero.perfRaw, bp = b.d._hero.perfRaw;
+    if(ap !== bp) return ap - bp;
+    return a.idx - b.idx;
+  });
+  const Na = Math.max(1, anisoIndexed.length - 1);
+  anisoIndexed.forEach((entry, i) => {
+    entry.d._hero.anisoNorm = i / Na;
   });
 
   // Z axis: domain-aware compound, then PERCENTILE-RANKED across population.
@@ -5151,7 +5220,6 @@ function computeHeroCoords(designs){
   const byClass = {sphere:0, disc:0, rod:0, diamond:0};
   designs.forEach(d=>byClass[d._hero.classKey]++);
   heroState.classCounts = byClass;
-  heroState.bounds = {anisoMin, anisoMax};
 }
 
 function setupOrbitControls(canvas, camera){
@@ -5452,13 +5520,45 @@ function positionHeroAxisLabels(){
   if(!wrap || !heroState.camera || !heroState.canvas) return;
 
   // Build labels on first call OR when the active domain changed (Z is
-  // domain-aware via DOMAIN_Z_COMPOUND).
+  // domain-aware via DOMAIN_Z_COMPOUND) OR when the X mode toggle flipped
+  // (sets _built=false externally, triggering rebuild here).
   const zSpec = DOMAIN_Z_COMPOUND[activeDomain] || DOMAIN_Z_COMPOUND.all;
   if(!wrap._built || wrap._builtForDomain !== activeDomain){
+    // X-axis label text + formula swap based on heroXMode:
+    //   efficiency: PERFORMANCE  ‖E‖ / VF   (chip active, default)
+    //   magnitude:  STIFFNESS    ‖E‖        (chip inactive)
+    const xLabel   = (heroXMode === 'magnitude') ? 'STIFFNESS'   : 'PERFORMANCE';
+    const xFormula = (heroXMode === 'magnitude') ? '‖E‖'         : '‖E‖ / VF';
+    const xActive  = (heroXMode === 'efficiency') ? 'true' : 'false';
     wrap.innerHTML =
-      '<div class="hero-axis-label" id="haxX" style="color:#5DCAA5;border-color:rgba(93,202,165,0.45)">PERFORMANCE<span class="formula">‖E‖ / VF</span></div>' +
+      '<div class="hero-axis-label" id="haxX" style="color:#5DCAA5;border-color:rgba(93,202,165,0.45)">' + xLabel +
+        '<span class="formula">' + xFormula + '</span>' +
+        '<span class="hero-axis-toggle" id="haxXModeToggle" data-active="' + xActive + '" title="Toggle ÷ VF normalization">÷ VF</span>' +
+      '</div>' +
       '<div class="hero-axis-label" id="haxY" style="color:#85B7EB;border-color:rgba(133,183,235,0.45)">ANISOTROPY<span class="formula">log₁₀(max/min)</span></div>' +
       '<div class="hero-axis-label" id="haxZ" style="color:#EF9F27;border-color:rgba(239,159,39,0.45)" title="' + zSpec.formula + '">' + zSpec.label + '<span class="formula">' + zSpec.formula + '</span></div>';
+    // Wire the X-mode toggle chip — fresh DOM after innerHTML reset means
+    // we wire a new handler each rebuild. The handler flips heroXMode, forces
+    // an axis-label rebuild on the next position call, then re-runs the
+    // standard hero-coord recompute pipeline (mirrors setActiveDomain).
+    const toggle = document.getElementById('haxXModeToggle');
+    if(toggle){
+      toggle.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        heroXMode = (heroXMode === 'efficiency') ? 'magnitude' : 'efficiency';
+        wrap._built = false;  // force label rebuild on the next position call
+        if(allDesigns.length){
+          computeHeroCoords(allDesigns);
+          allDesigns.forEach(d => {
+            const h = d._hero;
+            if(!h) return;
+            h.matrix = instanceMatrixFor(d);
+          });
+          if(typeof updateHeroFilter === 'function') updateHeroFilter();
+        }
+        positionHeroAxisLabels();
+      });
+    }
     wrap._built = true;
     wrap._builtForDomain = activeDomain;
   }
@@ -5559,6 +5659,14 @@ function _heroColorRGB(c){
 // — the canonical normalized stiffness × directional behavior face of the design space.
 let scatterMetricX = 'stiffness_density_norm';
 let scatterMetricY = 'anisotropy';
+
+// Hero-cube X-axis mode. 'efficiency' (default) = |E|/VF — stiffness density,
+// rewards mass-efficient designs. 'magnitude' = |E| — raw stiffness, lets
+// bending-dominated topologies (diamond, BCC, trabecular) spread across X
+// based on absolute stiffness rather than collapse to low efficiency. Toggled
+// by the chip embedded in the X axis label; flipping it re-runs computeHero-
+// Coords with the new perfRaw definition and rebakes GPU matrices.
+let heroXMode = 'efficiency';
 
 // Compute (designs → normalized 0..1) for a metric key. Uses the existing
 // percentile cache's min/max from allDesigns. Returns a Map: design → normFrac.

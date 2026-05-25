@@ -464,6 +464,35 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   color:var(--accent);
 }
 
+/* ── Contributor filter (search + selected pills) ── */
+.contributor-pills{
+  padding:6px 14px 0;
+  display:flex; flex-wrap:wrap; gap:4px;
+}
+.contributor-pill{
+  display:inline-flex; align-items:center; gap:2px;
+  padding:4px 4px 4px 10px;
+  background:rgba(200,245,66,0.08);
+  border:1px solid var(--accent);
+  border-radius:13px;
+  color:var(--accent);
+  font-family:'DM Mono',monospace;
+  font-size:10.5px;
+  letter-spacing:0.04em;
+  max-width:100%;
+}
+.contributor-pill-name{
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  max-width:160px;
+}
+.contributor-pill-remove{
+  background:transparent; border:none; color:var(--accent);
+  cursor:pointer; font-size:14px; line-height:1;
+  padding:0 4px; opacity:.7;
+  transition:opacity 0.15s;
+}
+.contributor-pill-remove:hover{opacity:1;}
+
 /* ── Active filter pills (each is a histogram-backed slider) ── */
 .active-filters{padding:0 14px;}
 .filter-pill{
@@ -1886,6 +1915,23 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
   <div class="section-label">Connectivity</div>
   <div class="chip-row" id="chipsKappa"></div>
 
+  <div class="section-label">Solver grid</div>
+  <div class="chip-row" id="chipsGrid"></div>
+
+  <div class="section-label">Contributor</div>
+  <div class="filter-search-wrap contributor-search-wrap">
+    <svg class="filter-search-icon" viewBox="0 0 16 16" fill="none">
+      <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <input type="text" class="filter-search" id="contributorSearch"
+           placeholder="search contributors…"
+           autocomplete="off" spellcheck="false"/>
+    <button class="filter-search-clear" id="contributorSearchClear">×</button>
+    <div class="filter-autocomplete" id="contributorAutocomplete"></div>
+  </div>
+  <div class="contributor-pills" id="contributorPills"></div>
+
   <div class="section-label">Add filter</div>
   <div class="filter-search-wrap">
     <svg class="filter-search-icon" viewBox="0 0 16 16" fill="none">
@@ -2774,6 +2820,16 @@ async function loadDatabase(){
     if(excludedCount > 0){
       console.info('[F13LD.vault] Excluded ' + excludedCount + ' degenerate or invalid-solver row(s) from explorer');
     }
+    // ── Synthesize _grid_N as a top-level field for chip filtering ────
+    // Source of truth: per-design recipe.homogenization.grid (resolved value
+    // after sweep's family-aware picker applies N_std vs N_pi vs N_beam).
+    // Older exports without this field land as null and are skipped by the
+    // String() comparison in filterDesigns when any N chip is active.
+    all.forEach(d => {
+      d._grid_N = (d.recipe && d.recipe.homogenization &&
+                   d.recipe.homogenization.grid != null)
+                    ? d.recipe.homogenization.grid : null;
+    });
     allDesigns=all;
 
     // Global stats per metric
@@ -2862,10 +2918,22 @@ const CHIP_DIMS = [
       {v:0.67, label:'κ=⅔  disc',     shape:'disc'},
       {v:0.33, label:'κ=⅓  rod',      shape:'rod'},
       {v:0,    label:'κ=0  isolated',  shape:'diamond'}
-   ]}
+   ]},
+  // Solver grid — fixed binary (N=16 / N=32). Reads from synthesized _grid_N
+  // (set in loadDatabase from recipe.homogenization.grid). Lets users exclude
+  // suspect N=16 convergences on thin-wall sheets or PI-TPMS.
+  {id:'chipsGrid',     key:'_grid_N',               values:[
+      {v:16, label:'N=16'},
+      {v:32, label:'N=32'}
+   ]},
+  // Contributor — rendered via custom autocomplete UI (not chip row). Present
+  // in CHIP_DIMS so filterDesigns, refreshChipState, refreshChipCounts, and
+  // resetAllFilters all handle it for free. buildChipRows skips it because
+  // there's no `chipsContributor` DOM container.
+  {id:'chipsContributor', key:'contributor_name',   values:null /* derived; custom UI */}
 ];
 
-let chipState = {family:new Set(), connect_idx:new Set()};
+let chipState = {family:new Set(), connect_idx:new Set(), _grid_N:new Set(), contributor_name:new Set()};
 let rangeFilters = [];           // [{key, min, max}]
 let recentFilterKeys = [];       // metric keys, most recent first
 const RECENT_LIMIT = 6;
@@ -3250,7 +3318,10 @@ function wireFilterSearch(){
   const clearBtn = document.getElementById('filterSearchClear');
   if(!search || !clearBtn) return;
 
-  search.addEventListener('focus', () => renderAutocomplete(search.value));
+  search.addEventListener('focus', () => {
+    if(typeof closeContributorAutocomplete === 'function') closeContributorAutocomplete();
+    renderAutocomplete(search.value);
+  });
   search.addEventListener('input', () => {
     clearBtn.classList.toggle('visible', search.value.length > 0);
     renderAutocomplete(search.value);
@@ -3310,6 +3381,181 @@ function updateAcHighlight(){
   if(acHighlightIdx >= 0 && items[acHighlightIdx]){
     items[acHighlightIdx].scrollIntoView({block:'nearest'});
   }
+}
+
+// ─── Contributor filter (search + selected pills) ──────────────────────
+// Same autocomplete pattern as the metric search, but the selection set
+// lives in chipState.contributor_name (a Set of contributor name strings)
+// so filterDesigns, refreshChipState, and resetAllFilters handle it for
+// free. Selected names render as removable pills below the search input.
+let contributorAcHighlightIdx = -1;
+
+// Build the dropdown list — unique contributor names with counts that
+// respect every OTHER active filter (chips, ranges, perc). Mirrors the
+// countMatchingExcluding pattern: temporarily clear the contributor
+// selection, run filterDesigns, then restore.
+function buildContributorList(){
+  const tmp = chipState.contributor_name;
+  chipState.contributor_name = new Set();
+  const pool = filterDesigns();
+  chipState.contributor_name = tmp;
+  const seen = new Map();
+  pool.forEach(d => {
+    const name = d.contributor_name;
+    if(!name) return;
+    seen.set(name, (seen.get(name)||0) + 1);
+  });
+  return [...seen.entries()]
+    .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({name, count}));
+}
+
+function renderContributorAutocomplete(query){
+  const ac = document.getElementById('contributorAutocomplete');
+  if(!ac) return;
+  const q = (query || '').trim().toLowerCase();
+  const all = buildContributorList();
+  const matches = q ? all.filter(c => c.name.toLowerCase().includes(q)) : all;
+  if(matches.length === 0){
+    ac.innerHTML = '<div class="fac-empty">' +
+      (all.length === 0 ? 'No contributors in vault' : 'No matches') + '</div>';
+    ac.classList.add('open');
+    contributorAcHighlightIdx = -1;
+    return;
+  }
+  let html = '';
+  let flatIdx = 0;
+  contributorAcHighlightIdx = -1;
+  matches.forEach(c => {
+    const selected = chipState.contributor_name.has(c.name);
+    const meta = selected ? 'selected'
+                          : (c.count + ' design' + (c.count !== 1 ? 's' : ''));
+    html += '<div class="fac-item ' + (selected?'disabled':'') + '" ' +
+            'data-name="' + escapeAttr(c.name) + '" ' +
+            'data-flat="' + flatIdx + '">' +
+              '<span>' + escapeHtml(c.name) + '</span>' +
+              '<span class="fac-item-meta">' + meta + '</span>' +
+            '</div>';
+    flatIdx++;
+  });
+  ac.innerHTML = html;
+  ac.classList.add('open');
+  ac.querySelectorAll('.fac-item').forEach(el => {
+    el.addEventListener('click', () => {
+      if(el.classList.contains('disabled')) return;
+      const name = el.getAttribute('data-name');
+      toggleContributor(name);
+      const search = document.getElementById('contributorSearch');
+      const clearBtn = document.getElementById('contributorSearchClear');
+      if(search) search.value = '';
+      if(clearBtn) clearBtn.classList.remove('visible');
+      closeContributorAutocomplete();
+    });
+    el.addEventListener('mouseenter', () => {
+      ac.querySelectorAll('.fac-item.highlighted').forEach(e=>e.classList.remove('highlighted'));
+      el.classList.add('highlighted');
+      contributorAcHighlightIdx = parseInt(el.getAttribute('data-flat'), 10);
+    });
+  });
+}
+
+function closeContributorAutocomplete(){
+  const ac = document.getElementById('contributorAutocomplete');
+  if(ac) ac.classList.remove('open');
+  contributorAcHighlightIdx = -1;
+}
+
+function updateContributorAcHighlight(){
+  const items = document.querySelectorAll('#contributorAutocomplete .fac-item:not(.disabled)');
+  items.forEach((el, i) => el.classList.toggle('highlighted', i === contributorAcHighlightIdx));
+  if(contributorAcHighlightIdx >= 0 && items[contributorAcHighlightIdx]){
+    items[contributorAcHighlightIdx].scrollIntoView({block:'nearest'});
+  }
+}
+
+function toggleContributor(name){
+  if(!name) return;
+  if(chipState.contributor_name.has(name)){
+    chipState.contributor_name.delete(name);
+  } else {
+    chipState.contributor_name.add(name);
+  }
+  renderContributorPills();
+  applyFiltersLive();
+}
+
+function renderContributorPills(){
+  const wrap = document.getElementById('contributorPills');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  [...chipState.contributor_name].sort((a,b) => a.localeCompare(b)).forEach(name => {
+    const pill = document.createElement('span');
+    pill.className = 'contributor-pill';
+    pill.innerHTML =
+      '<span class="contributor-pill-name" title="' + escapeAttr(name) + '">' +
+        escapeHtml(name) + '</span>' +
+      '<button class="contributor-pill-remove" title="Remove">×</button>';
+    pill.querySelector('.contributor-pill-remove').addEventListener('click', () => {
+      toggleContributor(name);
+    });
+    wrap.appendChild(pill);
+  });
+}
+
+function wireContributorSearch(){
+  const search = document.getElementById('contributorSearch');
+  const clearBtn = document.getElementById('contributorSearchClear');
+  if(!search || !clearBtn) return;
+
+  search.addEventListener('focus', () => {
+    if(typeof closeAutocomplete === 'function') closeAutocomplete();
+    renderContributorAutocomplete(search.value);
+  });
+  search.addEventListener('input', () => {
+    clearBtn.classList.toggle('visible', search.value.length > 0);
+    renderContributorAutocomplete(search.value);
+  });
+  search.addEventListener('keydown', e => {
+    const items = document.querySelectorAll('#contributorAutocomplete .fac-item:not(.disabled)');
+    if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      contributorAcHighlightIdx = Math.min(items.length-1, contributorAcHighlightIdx+1);
+      updateContributorAcHighlight();
+    } else if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      contributorAcHighlightIdx = Math.max(0, contributorAcHighlightIdx-1);
+      updateContributorAcHighlight();
+    } else if(e.key === 'Enter'){
+      e.preventDefault();
+      const target = contributorAcHighlightIdx >= 0
+                       ? items[contributorAcHighlightIdx]
+                       : items[0];
+      if(target){
+        toggleContributor(target.getAttribute('data-name'));
+        search.value = '';
+        clearBtn.classList.remove('visible');
+        closeContributorAutocomplete();
+      }
+    } else if(e.key === 'Escape'){
+      closeContributorAutocomplete();
+      search.blur();
+    }
+  });
+  clearBtn.addEventListener('click', () => {
+    search.value = '';
+    clearBtn.classList.remove('visible');
+    renderContributorAutocomplete('');
+    search.focus();
+  });
+
+  // Click outside the contributor wrap closes its dropdown. Scoped to
+  // .contributor-search-wrap so it doesn't fight with the metric
+  // autocomplete (which scopes to .filter-search-wrap, a class shared
+  // by both — but the metric handler's check is fine because clicking
+  // inside the contributor wrap doesn't need to close the metric one).
+  document.addEventListener('click', e => {
+    if(!e.target.closest('.contributor-search-wrap')) closeContributorAutocomplete();
+  });
 }
 
 // ─── The actual filter pipeline ─────────────────────────────────────────
@@ -3482,6 +3728,7 @@ function resetAllFilters(){
   percFilters = { connect:{x:false,y:false,z:false}, perc:{x:false,y:false,z:false} };
   syncPercButtonsToState();
   refreshChipState();
+  renderContributorPills();
   renderRangeFilters();
   renderRecentFilters();
   applyFiltersLive();
@@ -3593,6 +3840,8 @@ function applyDomainDefaults(){
   loadRecent();
   renderRecentFilters();
   wireFilterSearch();
+  wireContributorSearch();
+  renderContributorPills();
   renderRangeFilters();
   initDomainSelector();
   initPercCluster();

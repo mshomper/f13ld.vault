@@ -132,3 +132,31 @@ Phase 0 before the Ingest/Vault families pass means Foam, Wave and Bundle land s
 - Do you want the module split as its own step first, as with Lab, Sweep and Mesh?
 - Should brushing a region and shareable links be in the first build, or wait for a later pass?
 - Should this UI work go before or after the Ingest / Vault families pass and the reseed?
+
+---
+
+## 8. Round 2 — changes from your review (2026-10-09)
+
+| You said | What changed in the mockup |
+|---|---|
+| Need to pan the hero | **Ctrl-drag, right-drag or middle-drag pans** in the 3D view (two fingers on a phone). Drag still orbits, scroll zooms, Shift-drag brushes, double-click resets. A hint line under the title says so. |
+| Lots of empty space in the hero | The hero is now **3D \| 2D side by side** (toolbar switch: 3D · Split · 2D). Split is the default on wide panes; panes under about 900 px start in 3D only. |
+| Keep the 2D plot with selectable axes | The 2D plot is back and bigger: click either axis label to pick a metric; **real values with tick labels**; peak stiffness, shear and permeability on a **log scale**; histograms of what still matches along the top and right edges; the selected design gets crosshairs with its values on both axes. **Box-drag in 2D sets two range filters at once** (they appear as dock tags and in the drawer). Ctrl or right-drag pans, scroll zooms around the cursor. Hovering in either view highlights the same design in the other. The phone gets a 3D / 2D switch. |
+| Compare text too small | Compare rebuilt: names 17 px, metric names 13 px, values 15 px with units, a bar per row scaled to the best of the set, a colour stripe per pinned design that matches its line on a larger radar, and a legend. Every other small label in the tool moved up one size too (smallest is now 10 px, most mono labels 11–12 px). |
+| — | Fixed a mockup bug your screenshot showed: under *All applications* the Z axis was the same metric as X, so the cloud lay on a plane. It now uses an overall score. |
+
+### Keeping thumbnails fast
+
+Rendering a lattice is costly. The plan has three parts, and the first two are already working in the mockup.
+
+1. **Each card is a picture, drawn once.** Only the inspector is live. Cards, compare columns and hover previews are rendered once into a small image (200 × 150) and then just shown. Nothing on the cards redraws every frame.
+2. **Only what is on screen, a little per frame.**
+   - Only cards in view (plus a small margin) are queued; scrolling away drops them from the queue.
+   - The queue gets a few milliseconds per frame (9 on desktop, 6 on phones), so scrolling, filtering and orbiting never wait on it.
+   - All renders share one graphics context. Browsers allow only about 16 at once, so one per card would fail.
+3. **For the real build, keep the heavy work off the page.**
+   - Turning a recipe into a field (the slow step) runs in background workers, at 32³ for thumbnails and 64³ for the inspector.
+   - Images are cached in the browser, keyed by design id and recipe, so a second visit is instant.
+   - **Best option:** F13LD.ingest renders each design's thumbnail once, when the design is uploaded (about 5–8 KB each, roughly 4 MB for 612 designs). Vault then just loads pictures, and rendering on your machine becomes the fallback. Since Vault is being wiped and reseeded anyway, this can land with the reseed.
+
+**Measure it on your machine:** the mockup bar shows `thumbnails N drawn · avg ms · max ms · queued` live. Scroll the gallery, switch to table, change filters, and watch the numbers. The mockup's shader is a stand-in, so treat the numbers as the floor for the GPU part. Field baking in the real build is extra cost, and it runs off the page.

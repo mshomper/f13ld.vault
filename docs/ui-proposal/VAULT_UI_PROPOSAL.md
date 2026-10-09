@@ -160,3 +160,60 @@ Rendering a lattice is costly. The plan has three parts, and the first two are a
    - **Best option:** F13LD.ingest renders each design's thumbnail once, when the design is uploaded (about 5–8 KB each, roughly 4 MB for 612 designs). Vault then just loads pictures, and rendering on your machine becomes the fallback. Since Vault is being wiped and reseeded anyway, this can land with the reseed.
 
 **Measure it on your machine:** the mockup bar shows `thumbnails N drawn · avg ms · max ms · queued` live. Scroll the gallery, switch to table, change filters, and watch the numbers. The mockup's shader is a stand-in, so treat the numbers as the floor for the GPU part. Field baking in the real build is extra cost, and it runs off the page.
+
+---
+
+## 9. Critical review before building (2026-10-09)
+
+An independent code read of the mockup plus my own pass. Nothing below is changed yet. Severity: **H** high, **M** medium.
+
+### Must fix — would hurt real use
+
+| # | Problem | Proposed fix |
+|---|---|---|
+| H1 | **No undo.** A stray 8 px drag in the 2D plot sets two filters; brushing, Clear all and changing domain can't be taken back. | Every filter change goes into a history. The toast gets an **Undo** button; Ctrl Z and Ctrl Shift Z step back and forward. |
+| H2 | **The recipe is missing from the inspector.** Today's Vault shows mode, cell scale, pipe radius, seed and so on; the mockup shows only metrics. | Add a **Recipe** section: the key parameters per family, from a family registry, with copy. |
+| H3 | **Cost grows with the database.** Both canvases and the inspector redraw every frame even when nothing moves. A slider drag re-counts every chip about 16 times per move, twice. At 10,000 designs this stutters. | Redraw only when something changes, so idle costs nothing. Production draws the points with WebGL; Vault already uses three.js. Count filters in one pass, once per frame, and update only the visible copy. The inspector renders only while it moves. The thumbnail cache is capped (about 300 images, oldest dropped first). |
+| H4 | **Saved panel sizes can collapse a pane** after reloading in a smaller window. The 3D / 2D split is shared between layouts A and B. | Save sizes as fractions per layout, re-limited on load and on window resize. |
+| H5 | **Mobile sheet:** at the half and peek stops the bottom of the list (and Open in Mesh) can't be scrolled into view. The top bar overflows 364 px. The inspector has no pinch zoom. Results stop at 40. | Pad the sheet body by its hidden height. Collapse the top bar into one pill plus a menu. Add pinch zoom. Load more results as you scroll. |
+| H6 | **Single-key shortcuts fire with Ctrl / Cmd held.** Ctrl F, P, R and T both open the drawer, pin or reset *and* trigger the browser's find, print, reload or new tab. | Shortcuts ignore modified keys. |
+| H7 | **Text still under your comfort level** in places: radar labels 8.5 px, pin numbers 9 px, several 10–10.5 px labels. | **12 px minimum** everywhere, including canvas text. |
+
+### Should fix — consistency and clarity
+
+- **3D and 2D look alike but measure differently.** 3D uses percentile ranks with no ticks; 2D uses real values. Label the 3D axes as *rank* with low / median / high ticks. Work out "nearest designs" in a fixed multi-metric space so it doesn't change when you swap axes.
+- **Region filter is opaque.** It freezes a list of IDs and isn't in the drawer. Store it as a box in axis values, show and edit it in the drawer, and ask whether a second brush replaces or adds.
+- **Dimmed points can't be hovered.** Let them be. The tooltip then says which filter excludes the design.
+- **Sliders are linear for stiffness, shear and permeability.** Use log scale like the 2D plot, and follow Build target units (GPa, µm).
+- **Compare "best" ignores the domain.** Under Biomedical the stiffest design isn't the best. Mark best by the domain's direction, and make bars read "longer is better".
+- **Lime does too many jobs.** It currently marks pins, neighbours, hover, axes, brush, the Beam family and the top of the colour ramp. Keep lime for *active state* only, colour pins by their compare colour, and darken dimmed points so they don't read as Grain grey. Add a "shape by family" option so family isn't colour-only.
+- **The drawer covers the hero while promising live updates.** Cap it near 45% height, with its own drag handle.
+- **Table headers:** every column sortable with a direction toggle, plus hover definitions as in Sweep.
+- **Keyboard and accessibility:**
+  - cards and rows can be focused (Enter selects, P pins)
+  - sliders respond to the arrow keys
+  - visible focus rings
+  - the palette keeps keyboard focus
+- **Small bugs:**
+  - double-click reset also selects a point
+  - Reset spins the cloud several turns
+  - Clear all leaves the 2D score axis stale
+  - the inspector image stretches when the row height changes
+  - 2D hover picks points hidden in the margins
+  - the toolbar sits on the 2D histogram in narrow heroes
+  - the copy link doesn't restore the view yet
+  - the README still describes weighted targets that no longer exist
+
+### New ideas — novelty that serves the work
+
+| Idea | What it does | Effort |
+|---|---|---|
+| **Target pin** | Drop a target on the 2D plot (for example VF 30 %, E\* 0.05). Designs rank by distance to it and the match ring shows closeness. If nothing is near, Vault says so and offers **Explore around the nearest design in Sweep**, handing off its recipe. Vault becomes the front door to inverse design. | M |
+| **Pareto front** | One click lights the Pareto-optimal designs on the current 2D axes and joins them with a glowing front line (Ashby-style selection). | S |
+| **Gap map** | Density shading behind the 2D plot shows where the Vault is thin. Click a gap to seed a Sweep run there. Shows contributors where data is needed. | M |
+| **Score breakdown** | A stacked bar in the inspector shows which metrics made up the domain score. | S |
+| **"Why not?"** | With few or no matches, list which single filter brings back the most designs ("Removing VF 15–35 brings back 212"). | S |
+| **Provenance strip** | Contributor, Sweep version, solver grid, Fast or Full, date and flags in the inspector — trust signals for a community database. | S |
+| **Legend as a control** | Click a family in the legend to isolate it; hover lights that family in both views. | S |
+| **Axis presets** | One-click 2D pairs per domain: stiffness vs density, permeability vs pore size, conductivity vs surface area. | S |
+| **Shortlist to Queue** | Send the pinned set to F13LD.queue as a word-pair code, to pick up on another device or in Mesh. | S |

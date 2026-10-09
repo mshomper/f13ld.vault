@@ -728,6 +728,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 .design-card.fam-noise { --card-fam:#EB7050; }
 .design-card.fam-grain { --card-fam:#a8a59a; }
 .design-card.fam-beam  { --card-fam:#B8D050; }
+.design-card.fam-foam  { --card-fam:#E8D4A2; }
+.design-card.fam-wave  { --card-fam:#D97706; }
+.design-card.fam-bundle{ --card-fam:#7B4F9E; }
+/* v0.4.0 — Sweep v0.26+ markers on a card: the swept recipe itself, and
+   "stiffness may read high" (shown, never hidden) */
+.card-ref{ font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:0.06em;padding:0 5px;border-radius:7px;border:1px dashed var(--accent);color:var(--accent); }
+.card-sflag{ width:6px;height:6px;border-radius:50%;background:#E39B4A;flex-shrink:0; }
 
 /* Card identity strip — family + preset as a single text line at the top */
 .card-ident{
@@ -1792,7 +1799,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
       </svg>
       <span>key</span>
     </button>
-    <span class="fh-version">v0.3.4</span>
+    <span class="fh-version">v0.4.0</span>
     <div class="fh-icon">
       <svg width="18" height="18" viewBox="0 0 40 40">
         <ellipse cx="20" cy="11" rx="13" ry="4.5" stroke="#0C447C" stroke-width="1.8" fill="none"/>
@@ -1917,6 +1924,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;op
 
   <div class="section-label">Solver grid</div>
   <div class="chip-row" id="chipsGrid"></div>
+
+  <div class="section-label">Stiffness flag</div>
+  <div class="chip-row" id="chipsFlag"></div>
 
   <div class="section-label">Contributor</div>
   <div class="filter-search-wrap contributor-search-wrap">
@@ -2176,6 +2186,13 @@ const ALL_METRICS = [
   { group:'Stiffness',  key:'ey_norm',                 label:'Stiffness Ey / Es',         labelAbs:'Stiffness Ey',     unit:'',  norm_kind:'modulus_es'        },
   { group:'Stiffness',  key:'ez_norm',                 label:'Stiffness Ez / Es',         labelAbs:'Stiffness Ez',     unit:'',  norm_kind:'modulus_es'        },
   { group:'Stiffness',  key:'stiffness_density_norm',  label:'Stiffness density E/ρ',     labelAbs:'Specific stiffness',unit:'', norm_kind:'stiffness_density'},
+
+  // v0.4.0 — shear moduli (Sweep v0.24+ GPU solver). Stored in metrics_extended
+  // (Gyz_norm / Gxz_norm / Gxy_norm) and lifted onto each design in loadDatabase.
+  // Empty for CPU-solved or older designs.
+  { group:'Shear',      key:'gyz_norm',                label:'Shear Gyz / Es',            labelAbs:'Shear Gyz',        unit:'',  norm_kind:'modulus_es'        },
+  { group:'Shear',      key:'gxz_norm',                label:'Shear Gxz / Es',            labelAbs:'Shear Gxz',        unit:'',  norm_kind:'modulus_es'        },
+  { group:'Shear',      key:'gxy_norm',                label:'Shear Gxy / Es',            labelAbs:'Shear Gxy',        unit:'',  norm_kind:'modulus_es'        },
 
   // Thermal — ks-decoupled. v4 adds keff_max/avg_norm rollups.
   { group:'Thermal',    key:'keff_x_norm',             label:'Thermal cond. kx / ks',     labelAbs:'Thermal kx',       unit:'',  norm_kind:'thermal_ks'        },
@@ -2733,6 +2750,10 @@ const Z_COMPOUND_GLOSSARY = {
 // a preset name; its field.type ('hyperuniform' / 'spinodoid') is the closest.
 function displayPreset(d){
   const r = d.recipe || {};
+  const fam = d.family || r.family;
+  if (fam === 'foam')   return [r.seeds?.mode, r.geometry?.mode].filter(Boolean).join(' · ') || 'foam';
+  if (fam === 'wave')   return r.field?.symmetry || 'wave';
+  if (fam === 'bundle') return r.surface?.structure || 'bundle';
   if (r.field?.type)         return r.field.type;          // grain
   if (r.surface?.noise_type) return r.surface.noise_type;  // noise
   if (r.topology?.name)      return r.topology.name;       // beam
@@ -2829,6 +2850,15 @@ async function loadDatabase(){
       d._grid_N = (d.recipe && d.recipe.homogenization &&
                    d.recipe.homogenization.grid != null)
                     ? d.recipe.homogenization.grid : null;
+      // v0.4.0 — Sweep v0.24+ fields that F13LD.ingest files in metrics_extended:
+      // shear moduli (normalized), the "stiffness may read high" flag, and the
+      // reference marker (Sweep's design #0, the recipe itself).
+      const ext = d.metrics_extended || {};
+      const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+      d.gyz_norm = num(ext.Gyz_norm); d.gxz_norm = num(ext.Gxz_norm); d.gxy_norm = num(ext.Gxy_norm);
+      d._stiff_flag = ext.stiffness_flag === true ? 'flagged' : ext.stiffness_flag === false ? 'clean' : 'not recorded';
+      d._flag_reasons = typeof ext.stiffness_flag_reasons === 'string' ? ext.stiffness_flag_reasons : '';
+      d._reference = ext.reference === true;
     });
     allDesigns=all;
 
@@ -2924,7 +2954,15 @@ const CHIP_DIMS = [
   // suspect N=16 convergences on thin-wall sheets or PI-TPMS.
   {id:'chipsGrid',     key:'_grid_N',               values:[
       {v:16, label:'N=16'},
-      {v:32, label:'N=32'}
+      {v:32, label:'N=32'},
+      {v:64, label:'N=64'}
+   ]},
+  // v0.4.0 — Sweep's "stiffness may read high" flag (synthesized _stiff_flag in
+  // loadDatabase). Flagged designs are shown by default; this only narrows.
+  {id:'chipsFlag',     key:'_stiff_flag',           values:[
+      {v:'clean',        label:'Clean'},
+      {v:'flagged',      label:'May read high'},
+      {v:'not recorded', label:'Not recorded'}
    ]},
   // Contributor — rendered via custom autocomplete UI (not chip row). Present
   // in CHIP_DIMS so filterDesigns, refreshChipState, refreshChipCounts, and
@@ -2933,7 +2971,7 @@ const CHIP_DIMS = [
   {id:'chipsContributor', key:'contributor_name',   values:null /* derived; custom UI */}
 ];
 
-let chipState = {family:new Set(), connect_idx:new Set(), _grid_N:new Set(), contributor_name:new Set()};
+let chipState = {family:new Set(), connect_idx:new Set(), _grid_N:new Set(), _stiff_flag:new Set(), contributor_name:new Set()};
 let rangeFilters = [];           // [{key, min, max}]
 let recentFilterKeys = [];       // metric keys, most recent first
 const RECENT_LIMIT = 6;
@@ -3964,6 +4002,8 @@ function renderCards(){
         <span class="card-ident-fam">${family}</span>
         <span class="card-ident-sep">·</span>
         <span class="card-ident-preset">${preset}</span>
+        ${d._reference ? '<span class="card-ref" title="The swept recipe itself (Sweep reference design)">ref</span>' : ''}
+        ${d._stiff_flag === 'flagged' ? `<span class="card-sflag" title="Stiffness may read high${d._flag_reasons ? ': ' + d._flag_reasons.replace(/"/g, '&quot;') : ''}"></span>` : ''}
       </div>
       <div class="card-body">
         <div class="card-metrics-dynamic">${metricsHTML}</div>
@@ -4473,7 +4513,35 @@ function renderDetailInspect(d){
       `cell <span>${cellStr}</span><br>` +
       (g.node_smoothing_k ? `node smooth k <span>${(+g.node_smoothing_k).toFixed(3)} mm</span><br>` : '') +
       (g.node_ball_radius ? `node ball r <span>${(+g.node_ball_radius).toFixed(3)} mm</span><br>` : '');
+  } else if(family === 'foam'){
+    // v0.4.0 — F13LD.foam: seed layout, topology, wall (or wet border), stretch
+    const sd = recipe.seeds || {}, an = recipe.anisotropy || {};
+    const nCells = sd.count_actual || sd.count || (Array.isArray(sd.positions) ? sd.positions.length / 3 : null);
+    geoLines =
+      `seeds <span>${sd.mode ?? '—'}${nCells != null ? ' · ' + nCells + ' cells' : ''}</span><br>` +
+      `topology <span>${g.mode ?? '—'}</span><br>` +
+      (g.mode === 'wet'
+        ? (g.border != null ? `border <span>${(+g.border).toFixed(3)}</span><br>` : '')
+        : (g.thickness != null ? `thickness <span>${(+g.thickness).toFixed(3)}</span><br>` : '')) +
+      (an.enabled && Array.isArray(an.stretch) ? `stretch <span>(${an.stretch.map(v => (+v).toFixed(2)).join(', ')})</span><br>` : '') +
+      (g.tile_mm != null ? `tile <span>${(+g.tile_mm).toFixed(2)} mm</span><br>` : '');
+  } else if(family === 'wave'){
+    const fl = recipe.field || {};
+    geoLines =
+      `symmetry <span>${fl.symmetry ?? '—'}</span><br>` +
+      `modes <span>${Array.isArray(fl.modes) ? fl.modes.length : '—'}</span><br>` +
+      `mode <span>${fl.mode ?? '—'}</span><br>` +
+      (fl.iso != null ? `iso <span>${(+fl.iso).toFixed(3)}</span><br>` : '');
+  } else if(family === 'bundle'){
+    const sf = recipe.surface || {};
+    geoLines =
+      `structure <span>${sf.structure ?? '—'}</span><br>` +
+      `topology <span>${sf.topology ?? '—'}</span><br>` +
+      (sf.iso_offset != null ? `iso offset <span>${(+sf.iso_offset).toFixed(3)}</span><br>` : '');
   }
+  // v0.4.0 — Sweep's markers
+  if (d._reference) geoLines += `reference <span>the swept recipe itself</span><br>`;
+  if (d._stiff_flag === 'flagged') geoLines += `stiffness flag <span>may read high${d._flag_reasons ? ' — ' + d._flag_reasons : ''}</span><br>`;
 
   // Cell size and stress reference are first-class provenance; show under the geo block.
   const cellSize = d.cell_size_mm;
@@ -4491,7 +4559,7 @@ function renderDetailInspect(d){
 
   // Build the "All metrics" expander dynamically from ALL_METRICS so it stays in sync
   // with the schema. Group headers come from m.group; rows handle null gracefully.
-  const groupOrder = ['Geometry','Stiffness','Thermal','Compliance','Pore','Curvature','Topology','Transport'];
+  const groupOrder = ['Geometry','Stiffness','Shear','Thermal','Compliance','Pore','Curvature','Topology','Transport'];
   const grouped = {};
   ALL_METRICS.forEach(m => {
     if(!grouped[m.group]) grouped[m.group] = [];
@@ -4650,6 +4718,18 @@ function renderDetailCompare(){
         ? `(${(+sxyz[0]).toFixed(2)}, ${(+sxyz[1]).toFixed(2)}, ${(+sxyz[2]).toFixed(2)})`
         : (g.cell_scale != null ? (+g.cell_scale).toFixed(2) : '—');
       return `topology <span>${t.name??'—'}</span> · cell <span>${cellStr}</span>`;
+    }
+    if(fam === 'foam'){
+      const sd = r.seeds || {};
+      return `seeds <span>${sd.mode??'—'}</span> · top <span>${g.mode??'—'}</span>`;
+    }
+    if(fam === 'wave'){
+      const fl = r.field || {};
+      return `symmetry <span>${fl.symmetry??'—'}</span> · modes <span>${Array.isArray(fl.modes)?fl.modes.length:'—'}</span>`;
+    }
+    if(fam === 'bundle'){
+      const sf = r.surface || {};
+      return `structure <span>${sf.structure??'—'}</span> · top <span>${sf.topology??'—'}</span>`;
     }
     return '';
   }
@@ -4818,7 +4898,9 @@ function openInMesh(){
   const r=selectedDesign&&selectedDesign.recipe;
   if(!r){console.warn('No recipe to open');return;}
   const encoded=encodeURIComponent(JSON.stringify(r));
-  window.open('https://mshomper.github.io/f13ld.mesh/?r='+encoded,'_blank');
+  // v0.4.0 — after "#": a foam recipe carries every seed position (long), and
+  // the part after # never goes to a server, so its length doesn't matter
+  window.open('https://mshomper.github.io/f13ld.mesh/#r='+encoded,'_blank');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4867,7 +4949,10 @@ const CAT_PALETTES = {
     tpms:   '#5DCAA5',
     noise:  '#EB7050',
     grain:  '#a8a59a',
-    beam:   '#B8D050'
+    beam:   '#B8D050',
+    foam:   '#E8D4A2',
+    wave:   '#D97706',
+    bundle: '#7B4F9E'
   },
   topology: {
     'pi-tpms': '#A974FF',
@@ -4928,7 +5013,7 @@ const COLOR_MODES = [
   { id:'family', group:'Categorical', label:'Family', type:'categorical',
     palette: CAT_PALETTES.family,
     valueOf: d => d.family ?? (d.recipe && d.recipe.family) ?? null,
-    legendOrder: ['tpms', 'noise', 'grain', 'beam'] },
+    legendOrder: ['tpms', 'noise', 'grain', 'beam', 'foam', 'wave', 'bundle'] },
   { id:'topology', group:'Categorical', label:'Topology', type:'categorical',
     palette: CAT_PALETTES.topology,
     valueOf: d => {
@@ -6692,7 +6777,7 @@ function buildMetricsKeyContent(){
     if(!grouped[m.group]) grouped[m.group] = [];
     grouped[m.group].push(m);
   });
-  const groupOrder = ['Geometry','Stiffness','Thermal','Compliance','Pore','Curvature','Topology','Transport'];
+  const groupOrder = ['Geometry','Stiffness','Shear','Thermal','Compliance','Pore','Curvature','Topology','Transport'];
 
   let html = '';
 

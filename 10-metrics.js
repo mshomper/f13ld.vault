@@ -780,6 +780,7 @@ function recipeLines(d) {
     if (fw.iso != null) add('iso', n3(fw.iso));
     if (fw.mode === 'sheet' && fw.thickness != null) add('thickness', n3(fw.thickness));
     if (fw.phaseTime) add('phase time', (+fw.phaseTime).toFixed(2));
+    if (Array.isArray(fw.stretch) && fw.stretch.some(function (v) { return Math.abs(v - 1) > 1e-4; })) add('stretch', vec(fw.stretch));
   } else if (fam === 'bundle') {
     var sb = r.surface || {};
     add('structure', sb.structure); add('topology', sb.topology);

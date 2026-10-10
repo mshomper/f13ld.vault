@@ -100,6 +100,7 @@ JSDOM.fromFile(file, {
     [80, "select(null); setColor('_sim'); document.querySelector('#legend').textContent"],
     [80, "setColor('family'); S.aimSel = null; S.color"],
     [80, "setPareto('auto'); FRONT.list.length"],
+    [80, "var pc = paretoCurve([[10,90],[10.5,80],[40,70],[90,20],[200,15]], { x: 1, y: 1 }); pc.p.length + ' points · ' + pc.seg.length + ' segments · ' + pc.ext.length + ' ends'"],
     [80, "setGap(true); GAP.grid ? GAP.max : 'no grid'"],
     [80, "VIEWS.h3.projOK=true; VIEWS.h3.brush=[0,0,900,520]; applyBrush3D(VIEWS.h3); refreshNow(); F.region && F.region.length"],
     [80, "removeFilter('region'); refreshNow(); F.region"],

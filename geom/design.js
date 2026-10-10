@@ -39,6 +39,10 @@ function recipeCellScale(recipe, family) {
     var d = g.cell_scale != null ? g.cell_scale : 1;
     return [g.cell_scale_x != null ? g.cell_scale_x : d, g.cell_scale_y != null ? g.cell_scale_y : d, g.cell_scale_z != null ? g.cell_scale_z : d];
   }
+  if (family === 'wave') {   /* v0.8.0 — relative cell edges (F13LD.wave / F13LD.sweep v0.29.0 field.stretch) */
+    var st = (recipe.field || {}).stretch;
+    return Array.isArray(st) && st.length === 3 && st.every(function (v) { return isFinite(v) && v > 0; }) ? st.slice() : [1, 1, 1];
+  }
   if (family === 'beam') {
     if (Array.isArray(g.scale_xyz)) return g.scale_xyz.slice();
     var c = g.cell != null ? g.cell : 1.5;

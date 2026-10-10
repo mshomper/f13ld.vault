@@ -1,7 +1,7 @@
 # F13LD.vault — session recap, 2026-10-09
 
-**Branch:** `ui-v0.5` (from `main` bf12666). Not merged; waiting for your click-test.
-**Version:** 0.5.0
+**Branch:** `ui-v0.5`, merged to `main` on 2026-10-09 (941a3a8) after your click-test.
+**Version:** 0.5.1 — live at https://mshomper.github.io/f13ld.vault
 
 ## What happened
 
@@ -97,3 +97,27 @@ Then open http://localhost:8765/ (live Vault) or http://localhost:8765/?mock (sa
 - **`geom/`** is a copy of Sweep's MIT geometry. Refresh it by copying from Sweep and running `npm test` (see CLAUDE.md).
 - **Not built:** wave, bundle and reaction-diffusion previews (placeholders for now), and a "shape by family" point option. Points are shaped by connectivity.
 - **Region brush** still stores the list of designs inside the box. It is shown and removable as a chip, but you can't edit its bounds in the drawer.
+
+## After your click-test (v0.5.1)
+
+- **Hero toolbar buttons ignored clicks.** The hero panel stored its view (3D / split / 2D) in the same attribute the 3D / Split / 2D buttons use. The click handler matched the panel first, so every button inside the hero did nothing: Orbit, Brush, Alive, the resets, Box, Target, Pareto, Gap, Presets and Colour. The panel attribute is now `data-heroview`, and the view switch matches buttons only. My earlier tests called the functions directly, which is why they missed it.
+- **3D rank ticks now carry their axis letter** ("X high", "Y median"), because ticks from different axes can sit close together.
+- **The render audit now clicks every visible button with a real mouse** and lists any that change nothing. Run against the broken build, it caught Colour, Target, Pareto, Gap and Presets. It did not flag Orbit, Brush, Alive or the 3D reset, and I didn't find out why, so treat it as a strong check rather than a complete one.
+
+## Next steps
+
+1. **Strain values look far too high: start here next session.** Vault does not compute strain; it shows the `microstrain_*_per_gpa` values that Sweep writes and Ingest uploads. Three things point at a units problem:
+   - **The units are uncertain.** v0.4's note in `10-metrics.js` (around line 163) says the stored value is really microstrain per **MPa** at a baseline solid modulus of 1 GPa, and that the "per GPa" name is a misnomer. Vault still labels the normalised value **"με/GPa"**, so whatever the true unit is, the label may be wrong.
+   - **The scoring assumes those units.** The biomedical strain window is centred at 100,000 in the same units, so it may be scoring against the wrong scale.
+   - **Real units need two inputs.** Strain only shows in real microstrain when Build target has both a solid modulus *and* a reference stress. With just a material picked, you see the raw stored number.
+   - **A 10-second check in the live Vault**, using the browser console:
+     ```
+     DB.all.slice(0, 8).map(d => [d.ex_norm, d.microstrain_x_per_gpa, Math.round(d.microstrain_x_per_gpa * d.ex_norm)])
+     ```
+     The last column is the stored strain × E*. If it is about **1,000** for every row, the stored value is per MPa at Es = 1 GPa (the v0.4 note is right; only the label is wrong). If it is about **1,000,000**, it is per GPa. If it varies from row to row, the strain isn't simply 1/E* and the Sweep pipeline needs a look.
+   - **Then:** fix the unit label and the strain window in Vault. If Sweep's export is off, fix it there instead, so Ingest and every consumer agree.
+2. **Supabase:** revoke `SELECT` on `contributor_contact` for the anon role.
+3. **Sweep link import (`#r=`),** so "Explore in Sweep" is one click.
+4. **Ingest pre-renders thumbnails** at upload.
+5. **Previews for wave, bundle and reaction-diffusion grain**, which show placeholders today.
+6. **Wipe and reseed Vault** with the new Sweep results once the families pass is done. Re-check strain against the fresh data.

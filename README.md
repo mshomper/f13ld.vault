@@ -20,6 +20,7 @@ needs, compare candidates, and send the winner on to Mesh, Lab or Sweep.
   Drag a box to set two range filters. You can also drop a **target** so results rank by closeness.
   The plot can show the **Pareto front** and a **gap map** of where the library has holes.
 - **Split view**: the 3D design space and the 2D plot side by side. Every panel boundary is resizable.
+- **Density exponent** (n in E ∝ ρⁿ, fitted per design type) and **bound efficiency** (peak stiffness as a share of the Voigt bound) work as plot axes, range filters and colour modes. Exponents borrowed from the wider family are drawn faded.
 
 **Narrow it down**
 - **Application domains** (biomedical, aerospace, automotive, oil & gas, thermal) re-rank everything by that domain's score.
@@ -29,7 +30,7 @@ needs, compare candidates, and send the winner on to Mesh, Lab or Sweep.
 - **Undo / redo** for every filter change (Ctrl Z · Ctrl Shift Z), and a **share link** that restores the whole view.
 
 **Look closely**
-- **Geometry previews** on every card, raymarched on the GPU from the recipe itself.
+- **Geometry previews** on every card (TPMS, Noise, Grain, Beam, Foam and Wave), raymarched on the GPU from the recipe itself.
   Thumbnails bake only for cards on screen, in background workers, and are cached in the browser.
 - **Inspector**: an orbitable 1–3 cell preview, percentile tiles, a radar signature, the domain score broken into its factors, the recipe and its provenance.
 - **Compare**: pin up to four designs. Bars and the best value follow the current domain.

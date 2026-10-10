@@ -65,6 +65,13 @@ JSDOM.fromFile(file, {
     [80, "cpRun(0); S.sel && displayPreset(S.sel)"],
     [80, "setLayout('b'); document.querySelector('#dApp').className"],
     [80, "setAxis2('x', 'pore_size_p50_norm'); S.ax2.x"],
+    /* v0.8.0 — density exponent and bound efficiency as axes and range filters; wave designs */
+    [80, "hasMetric('_nexp') + ' ' + hasMetric('_beff') + ' ' + DB.stats._nexp.n + ' with n'"],
+    [80, "setAxis2('y', '_nexp'); setAxis2('x', '_beff'); S.ax2.x + ' / ' + S.ax2.y"],
+    [80, "var b = DB.all.filter(d => d._nexpLvl > 0 && isNum(d._nexp))[0]; b ? (b._col[0].toFixed(2) + ' faded') : 'no borrowed'"],
+    [80, "setRange('_nexp', 1.2, 2.4); setRange('_beff', 0.05, 0.6); changed('test ranges'); refreshNow(); S.cnt + ' lit'"],
+    [80, "delete F.ranges._nexp; delete F.ranges._beff; setAxis2('x', 'volume_fraction', true); setAxis2('y', '_emax', true); refreshNow(); S.cnt"],
+    [80, "var wv = DB.all.filter(d => d.family === 'wave'); wv.length + ' wave · ' + recipeLines(wv[0]).map(r => r[0] + '=' + r[1]).join(' | ').slice(0, 160)"],
     [80, "setAxis3('y', 'stiffness_density_norm'); S.ax3.y"],
     [80, "VIEWS.p2.R={L:100,T:80,W:600,H:400}; VIEWS.p2.brush=[150,120,500,400]; applyBrush2D(VIEWS.p2); refreshNow(); Object.keys(F.ranges).join(',')"],
     [80, "setTarget('volume_fraction','_emax',30,0.05); refreshNow(); S.sort.k + ' ' + (S.list[0] && S.list[0]._tdist.toFixed(3))"],

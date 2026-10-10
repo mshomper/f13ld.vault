@@ -625,7 +625,10 @@ var DERIVED_METRICS = [
   { group:'Derived', key:'_gmean', label:'Mean shear G / Es',      labelAbs:'Mean shear G',      unit:'', norm_kind:'modulus_es', short:'G*' },
   { group:'Derived', key:'_perf',  label:'Stiffness efficiency |E|/VF', unit:'', short:'|E|/VF' },
   { group:'Derived', key:'_score', label:'Domain score',          unit:'', short:'Score' },
-  { group:'Derived', key:'_scar',  label:'Domain scarcity',       unit:'', short:'Rare' }
+  { group:'Derived', key:'_scar',  label:'Domain scarcity',       unit:'', short:'Rare' },
+  /* v0.8.0 — the v0.7.1 colour modes, now axes and range filters too (computed at load) */
+  { group:'Derived', key:'_nexp',  label:'Density exponent n',    unit:'', short:'n' },
+  { group:'Derived', key:'_beff',  label:'Bound efficiency',      unit:'', short:'Bound eff' }
 ];
 DERIVED_METRICS.forEach(function (m) { METRIC_MAP[m.key] = m; });
 var DERIVED_GLOSSARY = {
@@ -633,7 +636,9 @@ var DERIVED_GLOSSARY = {
   _gmean: { def:'Mean of the three shear moduli Gyz, Gxz, Gxy, as a fraction of the solid modulus.', interp:'Empty for designs solved before Sweep v0.24 (no shear moduli recorded).' },
   _perf:  { def:'Length of the stiffness vector (Ex, Ey, Ez) divided by volume fraction.', interp:'Stiffness bought per unit of material; the default X axis of the design space.' },
   _score: { def:'The active domain\'s compound score (see Domain compounds below).', interp:'Drives the Z axis and the score ring on every card.' },
-  _scar:  { def:'Mean distance to the 5 nearest designs in the active domain\'s compound inputs.', interp:'High = few designs like this one in the Vault for that domain.' }
+  _scar:  { def:'Mean distance to the 5 nearest designs in the active domain\'s compound inputs.', interp:'High = few designs like this one in the Vault for that domain.' },
+  _nexp:  { def:'n in E ∝ ρⁿ: how stiffness grows with density, fitted across designs of the same family, topology and preset (the geometric mean of Ex, Ey, Ez; peak stiffness where an axis carries no load).', interp:'About 1 = stretch-dominated, about 2 = bending-dominated, above 2 = worse. Designs whose type is too small or too narrow in density borrow the trend of their family and are drawn faded.' },
+  _beff:  { def:'Peak stiffness E* / Es divided by the solid fraction — the share of the Voigt upper bound the design reaches along its stiffest axis.', interp:'1 = the bound (straight struts along the load). Past 1 means the solve needs checking.' }
 };
 
 /* Short names for tight places (tiles, table headers, tags). */
@@ -765,9 +770,16 @@ function recipeLines(d) {
     if (an.enabled && Array.isArray(an.stretch)) add('stretch', vec(an.stretch));
     if (g.tile_mm != null) add('tile', (+g.tile_mm).toFixed(2) + ' mm');
   } else if (fam === 'wave') {
-    var fw = r.field || {};
-    add('symmetry', fw.symmetry); add('modes', Array.isArray(fw.modes) ? fw.modes.length : null); add('mode', fw.mode);
+    var fw = r.field || {}, wm = Array.isArray(fw.modes) ? fw.modes : [];
+    add('symmetry', fw.symmetry || 'pure'); add('topology', fw.mode === 'sheet' ? 'sheet' : 'solid');
+    add('phase', fw.signFlip ? 'B' : 'A');
+    /* v0.8.0 — each mode's indices and amplitude, e.g. (1,1,0) ×1.00 */
+    if (wm.length) add(wm.length === 1 ? 'mode' : wm.length + ' modes', wm.map(function (mm) {
+      return '(' + mm.n + ',' + mm.m + ',' + mm.p + ')' + (mm.A != null && mm.A !== 1 ? ' ×' + (+mm.A).toFixed(2) : '');
+    }).join('  '));
     if (fw.iso != null) add('iso', n3(fw.iso));
+    if (fw.mode === 'sheet' && fw.thickness != null) add('thickness', n3(fw.thickness));
+    if (fw.phaseTime) add('phase time', (+fw.phaseTime).toFixed(2));
   } else if (fam === 'bundle') {
     var sb = r.surface || {};
     add('structure', sb.structure); add('topology', sb.topology);
@@ -778,7 +790,7 @@ function recipeLines(d) {
 }
 
 /* Families with preview geometry in this build (F13LD.sweep geom/). */
-var PREVIEW_FAMILIES = { tpms:1, noise:1, grain:1, beam:1, foam:1 };
+var PREVIEW_FAMILIES = { tpms:1, noise:1, grain:1, beam:1, foam:1, wave:1 };
 var FAMILY_ORDER = ['tpms', 'noise', 'grain', 'beam', 'foam', 'wave', 'bundle'];
 var FAMILY_NAME = { tpms:'TPMS', noise:'Noise', grain:'Grain', beam:'Beam', foam:'Foam', wave:'Wave', bundle:'Bundle' };
 var KAPPA_CLASSES = [

@@ -78,6 +78,8 @@ function shapeDesign(d, i) {
   d._gmean = G.length ? G.reduce(function (a, b) { return a + b; }, 0) / G.length : null;
   var mag = Math.sqrt((d.ex_norm || 0) * (d.ex_norm || 0) + (d.ey_norm || 0) * (d.ey_norm || 0) + (d.ez_norm || 0) * (d.ez_norm || 0));
   d._perf = isNum(d.volume_fraction) && d.volume_fraction > 0 ? mag / (d.volume_fraction / 100) : null;
+  d._beff = isNum(d._emax) && isNum(d.volume_fraction) && d.volume_fraction > 0 ? d._emax / (d.volume_fraction / 100) : null;   /* v0.8.0 (24-aim.js beffOf) */
+  d._nexp = null;
   d._score = null; d._scar = null;
   d._h = { x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, u: 0.5, v: 0.5, tu: 0.5, tv: 0.5, a: 0, s: 0, tw: 0, delay: Math.random() * 900 };
   d._m = true;
@@ -92,6 +94,7 @@ function ingestRows(rows) {
   DB.byId = new Map(DB.all.map(function (d) { return [d._id, d]; }));
   DB.stats = {}; DB.sorted = {}; DB.log = {}; _pctCache = {}; _popCache = {};
   strainCoefficients(); applyLoadValues();   /* v0.6 */
+  resetColorCaches(); ensureNexp();          /* v0.8.0 — density exponent at load: an axis and a range filter, not only a colour */
   pickableMetrics().forEach(function (m) { computeStat(m.key); });
   var fam = {}, con = {}, grd = {};
   DB.all.forEach(function (d) {
@@ -102,7 +105,7 @@ function ingestRows(rows) {
   DB.families = Object.keys(fam).sort(function (a, b) { var ia = FAMILY_ORDER.indexOf(a), ib = FAMILY_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
   DB.contributors = Object.keys(con).sort(function (a, b) { return con[b] - con[a]; });
   DB.grids = Object.keys(grd).map(Number).sort(function (a, b) { return a - b; });
-  resetColorCaches(); buildAimRuns();   /* v0.7.1 — 24-aim.js */
+  buildAimRuns();   /* v0.7.1 — 24-aim.js (colour caches reset above, before the stats) */
   DB.loaded = true;
 }
 
@@ -257,10 +260,10 @@ function mockRows(n) {
   var who = ['mshomper', 'lattice-lab', 'kwong', 'r.ortega', 'am-group', 'jlee', 'tmb-studio'], rows = [];
   function jit(v, a, lo, hi) { return clamp(v + (R() * 2 - 1) * a, lo, hi); }
   for (var i = 0; i < n; i++) {
-    var key = i < n - 12 ? keys[Math.floor(R() * keys.length)] : (i % 2 ? 'wave' : 'bundle');
+    var waveKeys = keys.filter(function (k) { return k.indexOf('wave-') === 0; });
+    var key = i < n - 12 ? keys[Math.floor(R() * keys.length)] : (i % 2 && waveKeys.length ? waveKeys[Math.floor(R() * waveKeys.length)] : 'bundle');
     var recipe, fam;
-    if (key === 'wave') { fam = 'wave'; recipe = { family: 'wave', field: { symmetry: 'cubic', mode: 'sheet', iso: 0.1, modes: [{ k: [1, 0, 0] }, { k: [0, 1, 0] }, { k: [0, 0, 1] }] }, geometry: { mode: 'sheet' } }; }
-    else if (key === 'bundle') { fam = 'bundle'; recipe = { family: 'bundle', surface: { structure: 'helix', topology: 'sheet', iso_offset: 0.05 } }; }
+    if (key === 'bundle') { fam = 'bundle'; recipe = { family: 'bundle', surface: { structure: 'helix', topology: 'sheet', iso_offset: 0.05 } }; }
     else {
       recipe = JSON.parse(JSON.stringify(MOCK_RECIPES[key])); fam = recipe.family; var g = recipe.geometry = recipe.geometry || {};
       if (fam === 'tpms') { if (g.mode === 'solid') g.offset = jit(g.offset || 0, 0.5, -0.9, 0.9); else g.wallThickness = jit(g.wallThickness || 0.3, 0.15, 0.12, 0.6); g.cell_scale = +(jit(1.1, 0.35, 0.75, 1.6)).toFixed(2); }
@@ -268,8 +271,9 @@ function mockRows(n) {
       else if (fam === 'grain') { if (g.half_width) g.half_width = jit(g.half_width, 0.07, 0.08, 0.3); g.center = jit(g.center || 0, 0.1, -0.3, 0.3); recipe.field.rng_seed = 1 + Math.floor(R() * 99); }
       else if (fam === 'beam') { g.radius = jit(g.radius || 0.1, 0.05, 0.05, 0.2); var c = jit(1, 0.25, 0.75, 1.4); if (R() < 0.35) g.scale_xyz = [c, c, +(jit(1, 0.4, 0.6, 1.6)).toFixed(2)]; }
       else if (fam === 'foam') { if (g.mode === 'wet') g.border = jit(g.border || 0.45, 0.12, 0.25, 0.6); else g.thickness = jit(g.thickness || 0.1, 0.05, 0.05, 0.22); }
+      else if (fam === 'wave') { var fw = recipe.field; delete recipe.geometry; if (fw.mode === 'sheet') fw.thickness = +jit(fw.thickness || 0.25, 0.1, 0.1, 0.6).toFixed(3); else fw.iso = +jit(fw.iso || 0, 0.3, -0.8, 0.8).toFixed(3); }   /* v0.8.0: real F13LD.wave recipes */
     }
-    var sheet = /sheet|shell|pi-tpms|half/.test(JSON.stringify(recipe.geometry || {}).toLowerCase()) || fam === 'noise';
+    var sheet = /sheet|shell|pi-tpms|half/.test(JSON.stringify(recipe.geometry || {}).toLowerCase()) || fam === 'noise' || (fam === 'wave' && recipe.field.mode === 'sheet');
     var vf = 8 + Math.pow(R(), 0.9) * 46, v = vf / 100;
     var nE = sheet ? 1.25 + R() * 0.2 : fam === 'beam' ? 1.75 + R() * 0.3 : fam === 'foam' ? 1.95 + R() * 0.2 : 1.6 + R() * 0.3;
     var base = (fam === 'beam' ? 0.6 : 0.78 + R() * 0.2) * Math.pow(v, nE);

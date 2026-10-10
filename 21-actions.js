@@ -99,8 +99,8 @@ function domainChanged(quiet) {
 function rangesChanged() { buildRangeRows(); }
 
 /* ── axes, colour, views ────────────────────────────────────────────── */
-function setAxis3(a, k) { S.ax3[a] = k; setAxesTargets3D(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (S.sel) select(S.sel, 'axis'); toast('3D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b> (rank)'); }
-function setAxis2(a, k, quiet) { S.ax2[a] = k; set2DTargets(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (!quiet) toast('2D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b>' + (plotScale(k).lg ? ' (log scale)' : '')); }
+function setAxis3(a, k) { var was = S.ax3[a]; S.ax3[a] = k; if (was === '_nexp' || k === '_nexp') recolor(); setAxesTargets3D(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (S.sel) select(S.sel, 'axis'); toast('3D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b> (rank)'); }
+function setAxis2(a, k, quiet) { var was = S.ax2[a]; S.ax2[a] = k; if (was === '_nexp' || k === '_nexp') recolor(); set2DTargets(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (!quiet) toast('2D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b>' + (plotScale(k).lg ? ' (log scale)' : '')); }
 function setColor(id) { S.color = id; recolor(); renderLegend(); savePrefs(); shareLinkSoon(); }
 function setView(v) { S.view = v; savePrefs(); renderResults(); }
 function setHv(hv) { S.hv = hv; var h = $('#pHero'); if (h) h.dataset.heroview = hv; $$('#dHv [data-hv]').forEach(function (b) { b.classList.toggle('on', b.dataset.hv === hv); }); savePrefs(); markViewsDirty(); requestAnimationFrame(placeSplits); }

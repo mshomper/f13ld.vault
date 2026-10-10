@@ -69,6 +69,9 @@ function renderLegend() {
   if (mode.id === '_sim' && !S.sel) { el.innerHTML = '<span class="lg-l lg-msg" title="Select a design to colour the rest by how alike they are">Select a design to compare the rest</span>'; return; }
   if (mode.type === 'cont') {
     el.innerHTML = '<span class="lg-l">' + esc(mode.lo || 'low') + '</span><span class="lg-grad"></span><span class="lg-l">' + esc(mode.hi || 'high') + '</span>';
+    /* v0.7.1 — modes that fade some points say what fading means */
+    if (mode.dim) { var r = COLOR_RAMP[16], f = [r[0] + (0.33 - r[0]) * 0.45, r[1] + (0.35 - r[1]) * 0.45, r[2] + (0.45 - r[2]) * 0.45];
+      el.innerHTML += '<span class="lg-l lg-other" title="Faded: the design type has too few designs, or too narrow a density range, so the trend comes from its wider family"><i class="dot" style="background:' + rgbHex(f[0] * 255, f[1] * 255, f[2] * 255) + '"></i>faded: borrowed</span>'; }
     return;
   }
   /* v0.7.1 — aimed runs: one entry per run with its hit rate; click picks the run */
@@ -163,7 +166,7 @@ function setTab(t) {
 /* v0.7.1 — what the colour says about this design, for the modes that aren't a column */
 function colorTipLine(d) {
   var c = S.color, v = null;
-  if (c === '_nexp') v = isNum(d._nexp) ? 'n ' + d._nexp.toFixed(2) : 'no exponent: ' + (d._nexpWhy || 'not computed');
+  if (c === '_nexp') v = isNum(d._nexp) ? 'n ' + d._nexp.toFixed(2) + (d._nexpLvl > 0 ? ' (borrowed from its ' + TREND_LVL_NAME[d._nexpLvl] + ')' : '') + (d._nexpSrc === 'peak' ? ' · on peak stiffness' : '') : 'no exponent: ' + (d._nexpWhy || 'not computed');
   else if (c === '_beff') { var b = beffOf(d); v = isNum(b) ? Math.round(b * 100) + ' % of the bound' + (b > 1.02 ? ' — past it: check the solve' : '') : null; }
   else if (c === '_pdepth') v = isNum(d._pdepth) ? (d._pdepth === 0 ? 'on the Pareto front' : d._pdepth + ' layers behind the front') : null;
   else if (c === '_sim') v = isNum(d._sim) ? Math.round(d._sim * 100) + ' % alike' : null;

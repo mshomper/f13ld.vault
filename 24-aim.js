@@ -11,8 +11,9 @@
    picking a run shows the seed it started from and the path to its cluster.
 
    Colour modes (30-points-gl.js COLOR_MODE_LIST):
-     _nexp   density exponent — n in E ∝ ρⁿ around the design, fitted on its
-             nearest same-family neighbours (≈ 1 stretch-, ≈ 2 bending-dominated)
+     _nexp   density exponent — n in E ∝ ρⁿ around the design, fitted across
+             its design type (≈ 1 stretch-, ≈ 2 bending-dominated); faded when
+             borrowed from the wider family
      _beff   bound efficiency — peak stiffness as a share of Voigt's bound at
              that density (E* / Es ÷ solid fraction)
      _pdepth Pareto depth on the current 2D axes (0 = the front)
@@ -102,10 +103,13 @@ function aimCatColor(v) {
 }
 
 /* Density exponent: the slope of ln E̅ against ln ρ through the design's
-   own design type (23-reach.js trendPeers + reachFit — the same trend the
-   seed picker uses). E̅ = the geometric mean of Ex, Ey, Ez: cell stretching
-   moves stiffness between the axes but barely changes it (the peak did, and
-   scattered the fit). d._nexpWhy says why a design has none. Once per load. */
+   own design type (23-reach.js trendFit — the same trend the seed picker
+   uses). E̅ = the geometric mean of Ex, Ey, Ez: cell stretching moves
+   stiffness between the axes but barely changes it (the peak did, and
+   scattered the fit). Designs with an axis that carries no load use the
+   peak (d._nexpSrc 'peak'). A type too small or too narrow in density
+   borrows the trend of its family + topology, then its family
+   (d._nexpLvl 1–2; drawn faded). d._nexpWhy says why a design has none. */
 var _nexpDone = false;
 function egeoOf(d) { var a = d.ex_norm, b = d.ey_norm, c = d.ez_norm; return isNum(a) && isNum(b) && isNum(c) && a > 0 && b > 0 && c > 0 ? Math.cbrt(a * b * c) : null; }
 function ensureNexp() {
@@ -113,13 +117,19 @@ function ensureNexp() {
   _trendIdx = null;
   DB.all.forEach(function (d) { d._egeo = egeoOf(d); });
   DB.all.forEach(function (d) {
-    d._nexp = null; d._nexpWhy = '';
+    d._nexp = null; d._nexpWhy = ''; d._nexpLvl = 0; d._nexpSrc = 'mean';
     if (!(isNum(d.volume_fraction) && d.volume_fraction > 0)) { d._nexpWhy = 'no volume fraction'; return; }
-    if (d._egeo == null) { d._nexpWhy = 'an axis carries no load'; return; }
-    var f = trendFit(d, '_egeo');
-    if (f) d._nexp = f.b; else d._nexpWhy = _fitWhy;
+    var k = '_egeo';
+    if (d._egeo == null) {
+      if (!(isNum(d._emax) && d._emax > 0)) { d._nexpWhy = 'no stiffness'; return; }
+      k = '_emax'; d._nexpSrc = 'peak';
+    }
+    var f = trendFit(d, k);
+    if (f) { d._nexp = f.b; d._nexpLvl = f.lvl || 0; } else d._nexpWhy = _fitWhy;
   });
 }
+/* faded colour for a borrowed exponent (30-points-gl.js mode.dim) */
+function nexpDim(d) { return d._nexp != null && d._nexpLvl > 0 ? 0.45 : 0; }
 /* Bound efficiency: E* / Es over the solid fraction (Voigt: at most 1). */
 function beffOf(d) { return isNum(d._emax) && isNum(d.volume_fraction) && d.volume_fraction > 0 ? d._emax / (d.volume_fraction / 100) : null; }
 

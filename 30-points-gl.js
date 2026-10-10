@@ -143,8 +143,8 @@ var COLOR_MODE_LIST = [
   { id: '_scar', label: 'Domain scarcity', type: 'cont' },
   /* v0.7.1 (24-aim.js) — absolute scales: abs = [value at the low end, value at the high end] */
   { id: 'aim', label: 'Aimed run', type: 'cat' },
-  { id: '_nexp', label: 'Density exponent', type: 'cont', abs: [1, 3.5], lo: 'stretch 1', hi: '3.5 bend', prep: function () { ensureNexp(); },
-    tip: 'How stiffness grows with density for each design type, E ∝ ρⁿ (mean of Ex, Ey, Ez, fitted across designs of the same family, topology and preset). Near 1: stretch-dominated; near 2 and up: bending-dominated. Grey: too few designs of that type, or they span less than 1.6× in density.' },
+  { id: '_nexp', label: 'Density exponent', type: 'cont', abs: [1, 3.5], lo: 'stretch 1', hi: '3.5 bend', prep: function () { ensureNexp(); }, dim: function (d) { return nexpDim(d); },
+    tip: 'How stiffness grows with density for each design type, E ∝ ρⁿ (mean of Ex, Ey, Ez, fitted across designs of the same family, topology and preset). Near 1: stretch-dominated; near 2 and up: bending-dominated. Faded: the type has too few designs or too narrow a density range, so the trend is borrowed from its wider family. Grey: not even the family can give a trend.' },
   { id: '_beff', label: 'Bound efficiency', type: 'cont', abs: [0, 1], lo: '0 %', hi: '100 %', val: function (d) { return beffOf(d); },
     tip: 'Peak stiffness as a share of the most any structure can have at that density (Voigt bound: E* / Es ≤ solid fraction).' },
   { id: '_pdepth', label: 'Pareto depth', type: 'cont', abs: [12, 0], lo: 'deep', hi: 'front', prep: function () { ensurePareto(); },
@@ -182,7 +182,10 @@ function recolor() {
     else { var p;
       if (mode.abs) { var av = mode.val ? mode.val(d) : d[mode.id]; p = isNum(av) ? clamp((av - mode.abs[0]) / (mode.abs[1] - mode.abs[0]), 0, 1) : NaN; }
       else p = pr[d._i];
-      if (isNaN(p)) { d._col = [0.33, 0.35, 0.45]; d._colHex = '#555a73'; } else { var r = COLOR_RAMP[Math.round(p * 31)]; d._col = r; d._colHex = rgbHex(r[0] * 255, r[1] * 255, r[2] * 255); } }
+      if (isNaN(p)) { d._col = [0.33, 0.35, 0.45]; d._colHex = '#555a73'; } else {
+        var r = COLOR_RAMP[Math.round(p * 31)], m = mode.dim ? mode.dim(d) : 0;
+        if (m > 0) r = [r[0] + (0.33 - r[0]) * m, r[1] + (0.35 - r[1]) * m, r[2] + (0.45 - r[2]) * m];   /* faded toward the no-value grey */
+        d._col = r; d._colHex = rgbHex(r[0] * 255, r[1] * 255, r[2] * 255); } }
   });
   markViewsDirty();
 }

@@ -93,7 +93,7 @@ var _trendIdx = null;
 /* groups at three levels, each sorted by ln(solid fraction) once */
 function trendIndex() {
   if (_trendIdx && _trendIdx.n === DB.N) return _trendIdx;
-  var idx = { n: DB.N, g: [{}, {}, {}], fits: {} };
+  var idx = { n: DB.N, g: [{}, {}, {}], gk: {}, fits: {} };
   DB.all.forEach(function (d) {
     if (!(isNum(d.volume_fraction) && d.volume_fraction > 0) || d._stiff_flag === 'flagged') return;
     for (var l = 0; l < 3; l++) { var k = trendKey(d, l); (idx.g[l][k] = idx.g[l][k] || []).push(d); }
@@ -112,36 +112,74 @@ function trendIndex() {
    the design's place in it; → { list, key } (key names the window, so a
    fit over the same window is computed once). */
 var TREND_MIN_N = 30, TREND_MIN_SPAN = Math.log(1.6);
-function trendWindow(d, minN) {
+/* the window at one level (0 type, 1 family + topology, 2 family), or null;
+   with a metric k, over the designs that have it (so the span it reaches is
+   the span the fit sees) */
+function trendWindowAt(d, l, minN, k) {
   minN = minN || TREND_MIN_N;
-  var idx = trendIndex(), lv = Math.log(d.volume_fraction / 100);
+  var idx = trendIndex(), lv = Math.log(d.volume_fraction / 100), gk = trendKey(d, l);
+  var G = idx.g[l][gk];
+  if (!G) return null;
+  if (k) {
+    var ck = l + ':' + gk + '|' + k;
+    if (!idx.gk[ck]) { var o = [], x = [];
+      G.o.forEach(function (e, i) { if (isNum(e[k]) && e[k] > 0) { o.push(e); x.push(G.x[i]); } });
+      idx.gk[ck] = { key: G.key + '|' + k, o: o, x: x }; }
+    G = idx.gk[ck];
+    if (!G.o.length) return null;
+  }
+  var X = G.x, n = X.length, lo = 0, hi = n;
+  while (lo < hi) { var m = (lo + hi) >> 1; if (X[m] < lv) lo = m + 1; else hi = m; }
+  /* grown from the nearest of ~24 anchors along the group, so neighbouring
+     designs share a window (and its fit): one fit per anchor, not per design */
+  var st = Math.max(1, Math.round(n / 24)), c0 = Math.min(n - 1, Math.round(Math.min(lo, n - 1) / st) * st);
+  lv = X[c0];
+  var a = c0, b = a;                                         /* window [a, b], grown toward the nearer side */
+  while (b - a + 1 < n && (b - a + 1 < minN || X[b] - X[a] < TREND_MIN_SPAN)) {
+    if (a === 0) b++; else if (b === n - 1) a--;
+    else if (lv - X[a - 1] <= X[b + 1] - lv) a--; else b++;
+  }
+  return { list: G.o.slice(a, b + 1), key: G.key + '|' + a + '|' + b, lvl: l };
+}
+/* the design's own type, or the next level up when the type has fewer than 8 */
+function trendWindow(d, minN) {
+  var idx = trendIndex();
   for (var l = 0; l < 3; l++) {
     var G = idx.g[l][trendKey(d, l)];
     if (!G || (G.o.length < 8 && l < 2)) continue;
-    var X = G.x, n = X.length, lo = 0, hi = n;
-    while (lo < hi) { var m = (lo + hi) >> 1; if (X[m] < lv) lo = m + 1; else hi = m; }
-    /* grown from the nearest of ~24 anchors along the type, so neighbouring
-       designs share a window (and its fit): one fit per anchor, not per design */
-    var st = Math.max(1, Math.round(n / 24)), c0 = Math.min(n - 1, Math.round(Math.min(lo, n - 1) / st) * st);
-    lv = X[c0];
-    var a = c0, b = a;                                         /* window [a, b], grown toward the nearer side */
-    while (b - a + 1 < n && (b - a + 1 < minN || X[b] - X[a] < TREND_MIN_SPAN)) {
-      if (a === 0) b++; else if (b === n - 1) a--;
-      else if (lv - X[a - 1] <= X[b + 1] - lv) a--; else b++;
-    }
-    return { list: G.o.slice(a, b + 1), key: G.key + '|' + a + '|' + b };
+    return trendWindowAt(d, l, minN);
   }
-  return { list: [], key: null };
+  return { list: [], key: null, lvl: 2 };
 }
 function trendPeers(d, minN) { return trendWindow(d, minN).list; }
-/* a density trend over the design's window, cached per window and metric */
+/* A density trend around d, cached per window and metric: from its own
+   design type when that supports a fit, else borrowed from family +
+   topology, then the family (v0.7.1 — 134 of 1,040 live designs sat in
+   types spanning < 1.6× in density). → fit with lvl (0 own type, 1–2
+   borrowed) or null; _fitWhy says why (the family-level reason). */
+var TREND_LVL_NAME = ['design type', 'family and topology', 'family'];
 function trendFit(d, k) {
-  var w = trendWindow(d), idx = trendIndex(), ck = w.key && w.key + '|' + k;
-  if (ck && ck in idx.fits) { _fitWhy = idx.fits[ck] ? '' : idx.fits[ck + '?']; return idx.fits[ck]; }
-  var list = w.list.indexOf(d) >= 0 ? w.list : w.list.concat([d]);
-  var f = reachFit(list, k);
-  if (ck && w.list.indexOf(d) >= 0) { idx.fits[ck] = f; idx.fits[ck + '?'] = _fitWhy; }
-  return f;
+  var idx = trendIndex(), why = '', seen = {};
+  for (var l = 0; l < 3; l++) {
+    var w = trendWindowAt(d, l, 0, k);
+    if (!w) continue;
+    var ck = w.key + '|' + k, f;
+    if (ck in idx.fits) { f = idx.fits[ck]; _fitWhy = f ? '' : idx.fits[ck + '?']; }
+    else {
+      var inW = w.list.indexOf(d) >= 0, list = inW ? w.list : w.list.concat([d]);
+      /* same designs as the level below (a family with one type): nothing new to fit */
+      var sig = list.length + ':' + (list[0] && list[0].id) + ':' + (list[list.length - 1] && list[list.length - 1].id);
+      if (seen[sig]) continue;
+      seen[sig] = 1;
+      f = reachFit(list, k);
+      if (f) f = { a: f.a, b: f.b, n: f.n, span: f.span, lvl: l };
+      if (inW) { idx.fits[ck] = f; idx.fits[ck + '?'] = _fitWhy; }
+    }
+    if (f) { _fitWhy = ''; return f; }
+    why = _fitWhy;
+  }
+  _fitWhy = why ? why.replace('of this type', 'in its family') : 'no designs to compare with';
+  return null;
 }
 
 /* ln(value) against ln(volume fraction) through a set of designs → {a, b, n, span} or null.

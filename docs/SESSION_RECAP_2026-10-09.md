@@ -121,3 +121,18 @@ Then open http://localhost:8765/ (live Vault) or http://localhost:8765/?mock (sa
 4. **Ingest pre-renders thumbnails** at upload.
 5. **Previews for wave, bundle and reaction-diffusion grain**, which show placeholders today.
 6. **Wipe and reseed Vault** with the new Sweep results once the families pass is done. Re-check strain against the fresh data.
+
+## Strain fix (v0.6.0) and Sweep v0.27.2, merged 2026-10-09
+
+- **Cause:** Sweep stores strain per GPa of stress for its own 100 GPa solid (1e6 ÷ (E* × 100)). v0.4 converted it as if it were per MPa at a 1 GPa solid, so absolute strain read 10× high, and the raw number was labelled "με/GPa". Your console check confirmed it: strain × E* = 10,000 on every design.
+- **Vault v0.6.0:**
+  - Strain is rebuilt from stiffness: με = 1000 ÷ E* × stress ÷ solid modulus.
+  - Strain stays hidden until a load is entered.
+  - Biomedical uses a Frost-style window, 1,000–3,500 με by default and editable.
+  - Switching to Biomedical without a load or cell size opens a loading-case card. "Not now" is remembered.
+  - Numbers of 10,000 and over read like "12.5k".
+- **Sweep v0.27.2:**
+  - Stiffness, shear and conductivity are saved to 4 significant figures. Soft PI-TPMS used to round to 0.
+  - The export records the solid modulus and stress Sweep used, in `Es_ref_GPa` and `sigma_ref_GPa`.
+  - Very soft designs may now get the "stiffness may be inflated" flag.
+- **Next:** reseed the 500 from Sweep v0.27.2, then check that soft PI-TPMS stiffness and strain look sane in Vault.

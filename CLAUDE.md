@@ -95,3 +95,8 @@ npm run audit               # tests/render-audit.js — real Chrome, 4 sizes, sc
   render audit covers them.
 - Shaders must link on strict drivers (ANGLE/iOS): uniforms shared by both
   stages need the same precision.
+
+## Notes
+
+- Latest session recap: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed). Previous: `docs/SESSION_RECAP_2026-10-09.md`.
+- `32-plot2d.js` `paretoCurve`: the 2D front is drawn as a monotone cubic through the front designs (screen space), extended to the plot edges.

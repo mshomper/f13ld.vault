@@ -145,3 +145,4 @@ Goes with F13LD.sweep v0.28.0 (branch `v0.28.0-target`).
 - **Solver line fixed** ("FFT-CG · GPU · v0.24.0", details on hover) and an "aimed at" row for runs that came from a target.
 - Checks: `npm test` (smoke gains reach / payload / link / physics / solver-text steps), `npm run audit` at 1600 / 1280 / 1024 / 390 — no overlaps, no small text, no sideways scroll.
 - **Testing both branches together:** Vault reads `?sweep=<url>` (raw.githack.com, GitHub Pages or localhost only) so its Sweep links can open the Sweep branch build, e.g. `https://raw.githack.com/mshomper/f13ld.vault/v0.7.0-target/index.html?mock&sweep=https://raw.githack.com/mshomper/f13ld.sweep/v0.28.0-target/index.html`. Merge Sweep first, then Vault: the live Vault's links need the live Sweep to read them.
+- **Merged to `main` 2026-10-10** after Matt's click-test (Sweep v0.28.0 first, then Vault v0.7.0).

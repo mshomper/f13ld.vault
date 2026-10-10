@@ -22,7 +22,8 @@ function fmtNum(v) {
   if (!isNum(v)) return '—';
   var a = Math.abs(v);
   if (a === 0) return '0';
-  if (a >= 10000) return v.toExponential(2);
+  if (a >= 1e6) return v.toExponential(2);
+  if (a >= 10000) return (v / 1000).toFixed(a < 1e5 ? 1 : 0) + 'k';   /* 12.5k reads better than 1.25e+4 */
   if (a >= 100) return v.toFixed(0);
   if (a >= 10) return v.toFixed(1);
   if (a >= 1) return v.toFixed(2);

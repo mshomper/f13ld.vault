@@ -28,7 +28,7 @@ function scoreBreakdownHTML(d) {
   var sb = scoreFactors(d, F.domain, domainPop(F.domain)), p = pct(d, '_score');
   return '<div class="isec"><div class="ish">' + ic(DOMAIN_IDS.indexOf(F.domain) >= 0 ? F.domain : 'all') + '<span>' + esc(domainZLabel()) + '</span><b>' + (p == null ? '—' : Math.round(p * 100)) + '</b><em>rank in the Vault</em></div>' +
     '<div class="factors">' + sb.factors.map(function (f) {
-      return '<div class="fac"><span class="fl">' + esc(f.label) + '</span><span class="fb"><i style="width:' + (f.v == null ? 0 : (f.v * 100).toFixed(0)) + '%"></i></span><span class="fv">' + esc(f.txt) + '</span></div>';
+      return '<div class="fac"><span class="fl">' + esc(f.label) + '</span><span class="fb"><i style="width:' + (f.v == null ? 0 : (f.v * 100).toFixed(0)) + '%"></i></span><span class="fv">' + (f.act ? '<button class="mini" data-act="' + f.act + '">' + esc(f.txt) + '</button>' : esc(f.txt)) + '</span></div>';
     }).join('') + '</div><div class="fhow">Factors combined by ' + esc(sb.how) + '.' + (d._score == null ? ' This design is missing an input, so it has no score.' : '') + '</div></div>';
 }
 function noticesHTML(d) {

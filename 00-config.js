@@ -7,7 +7,7 @@
    same or a lower-numbered file.
    ============================================================ */
 
-var VAULT_VERSION = '0.5.1';
+var VAULT_VERSION = '0.6.0';
 
 var SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_DAlrNLqbUZiwkaA6wPSMIw_YUNY85LX';
@@ -51,4 +51,5 @@ var MOBILE_PAGE = 40;
 /* Storage keys (all wrapped in try/catch — the page works without storage) */
 var LS_PREFS  = 'f13ld.vault.prefs.v2';
 var LS_SPLITS = 'f13ld.vault.splits.v2';
+var LS_BIO_SKIP = 'f13ld.vault.bioSkip.v1';      /* v0.6: "Not now" on the Biomedical card */
 var LS_BUILD  = 'f13ld.vault.globalInputs.v1';   /* same key as v0.4 so build targets carry over */

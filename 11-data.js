@@ -91,6 +91,7 @@ function ingestRows(rows) {
   DB.N = DB.all.length;
   DB.byId = new Map(DB.all.map(function (d) { return [d._id, d]; }));
   DB.stats = {}; DB.sorted = {}; DB.log = {}; _pctCache = {}; _popCache = {};
+  strainCoefficients(); applyLoadValues();   /* v0.6 */
   pickableMetrics().forEach(function (m) { computeStat(m.key); });
   var fam = {}, con = {}, grd = {};
   DB.all.forEach(function (d) {
@@ -116,6 +117,68 @@ function computeStat(k) {
   DB.log[k] = k !== 'volume_fraction' && vals[0] > 0 && hi / Math.max(lo, 1e-12) >= 40;
 }
 function hasMetric(k) { return !!DB.stats[k]; }
+
+/* ── strain (v0.6) ───────────────────────────────────────────────────────
+   Sweep stores microstrain_*_per_gpa = 1e6 / (E* · Es_ref): strain per GPa
+   of stress for the solid modulus IT assumed (100 GPa unless told), capped
+   at 1e6. Vault instead keeps a coefficient c = 1000 / E* — microstrain per
+   MPa of stress per GPa of solid modulus — so real strain under the user's
+   load is  με = c · σ[MPa] / Es[GPa],  whatever Es Sweep used.
+   c comes from E* when E* is precise (≥ 0.01, or an export that records
+   Es_ref_GPa); otherwise from Sweep's stored strain (unrounded E), using
+   Es_ref from the row, or estimated from the rows where both are good. */
+var STRAIN_KEYS = ['microstrain_x_per_gpa', 'microstrain_y_per_gpa', 'microstrain_z_per_gpa', 'microstrain_avg_per_gpa', 'u_compliance'];
+function strainCoefficients() {
+  var est = [], AX = ['x', 'y', 'z'];
+  DB.all.forEach(function (d) {
+    var ext = d.metrics_extended || {};
+    d._msS = AX.map(function (a) { return d['microstrain_' + a + '_per_gpa']; }).concat([d.microstrain_avg_per_gpa]);
+    d._En = [d.ex_norm, d.ey_norm, d.ez_norm];
+    d._EsRef = isNum(ext.Es_ref_GPa) ? ext.Es_ref_GPa : isNum(d.Es_ref_GPa) ? d.Es_ref_GPa : null;
+    for (var i = 0; i < 3; i++) { var st = d._msS[i], e = d._En[i]; if (isNum(st) && st > 0 && st < 999999 && isNum(e) && e >= 0.01) est.push(1e6 / (st * e)); }
+  });
+  est.sort(function (a, b) { return a - b; });
+  DB.esRefGuess = est.length ? est[est.length >> 1] : 100;
+  DB.all.forEach(function (d) {
+    var es = d._EsRef != null ? d._EsRef : DB.esRefGuess, exact = d._EsRef != null;
+    var c = [0, 1, 2].map(function (i) {
+      var e = d._En[i], st = d._msS[i];
+      if (isNum(e) && e > 0 && (exact || e >= 0.01)) return 1000 / e;
+      if (isNum(st) && st > 0 && st < 999999) return st * es / 1000;
+      return isNum(e) && e > 0 ? 1000 / e : null;
+    });
+    var ok = c.filter(isNum), avg = ok.length ? ok.reduce(function (a, b) { return a + b; }, 0) / ok.length : (isNum(d._msS[3]) && d._msS[3] < 999999 ? d._msS[3] * es / 1000 : null);
+    d._msc = c.concat([avg]);
+  });
+}
+/* Real strain (με) and strain energy (kJ/m³) under the Build target load;
+   empty without a load, so every list, axis and slider hides them. */
+function applyLoadValues() {
+  var on = hasLoad(), sig = globalInputs.ref_stress_mpa, Es = globalInputs.modulus_gpa;
+  DB.all.forEach(function (d) {
+    var c = d._msc || [null, null, null, null], k = on ? sig / Es : 0;
+    d.microstrain_x_per_gpa = on && isNum(c[0]) ? c[0] * k : null;
+    d.microstrain_y_per_gpa = on && isNum(c[1]) ? c[1] * k : null;
+    d.microstrain_z_per_gpa = on && isNum(c[2]) ? c[2] * k : null;
+    d.microstrain_avg_per_gpa = on && isNum(c[3]) ? c[3] * k : null;
+    /* U = σ²/(2E): c/2e6 · σ²/Es MPa → × 1000 kJ/m³ */
+    d.u_compliance = on && isNum(c[3]) ? c[3] / 2e6 * sig * sig / Es * 1000 : null;
+  });
+}
+/* After the load, material or window changes: real values, stats, ranks, scores. */
+function loadChanged() {
+  if (!DB.N) return;
+  applyLoadValues();
+  STRAIN_KEYS.forEach(function (k) { computeStat(k); delete _pctCache[k]; delete _popCache[k]; });
+  if (!hasLoad()) {   /* strain went away: drop anything that pointed at it */
+    STRAIN_KEYS.forEach(function (k) { delete F.ranges[k]; });
+    F.rangeKeys = F.rangeKeys.filter(function (k) { return STRAIN_KEYS.indexOf(k) < 0; });
+    ['x', 'y'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax2[a]) >= 0) S.ax2[a] = { x: 'volume_fraction', y: '_emax' }[a]; });
+    ['x', 'y', 'z'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax3[a]) >= 0) S.ax3[a] = { x: '_perf', y: 'anisotropy', z: '_score' }[a]; });
+    if (STRAIN_KEYS.indexOf(S.sort.k) >= 0) S.sort = { k: '_score', dir: -1 };
+  }
+  computeScores(F.domain);
+}
 
 /* Percentile rank 0..1 of every design for metric k (NaN where missing).
    Ties break on stiffness efficiency, then row order, so a heavily tied
@@ -214,7 +277,7 @@ function mockRows(n) {
     var kap = fam === 'grain' && R() < 0.15 ? 0.67 : (fam === 'noise' && R() < 0.08 ? 0.33 : 1);
     var pore = Math.pow(1 - v, 0.6) * (0.24 + R() * 0.24), cell = +(3 + R() * 3).toFixed(1);
     var kx = E.map(function (e) { return clamp(v * (0.45 + R() * 0.35) * (e / emean), 0.005, 0.95); });
-    var mu = 1000 / Math.max(emean, 1e-5);
+    var mu = Math.min(1e6, (1e4 / E[0] + 1e4 / E[1] + 1e4 / E[2]) / 3);
     var flag = R() < (v < 0.18 ? 0.24 : 0.06);
     rows.push({
       id: 1040 + i, created_at: new Date(Date.UTC(2026, 9, 1 + Math.floor(R() * 9), Math.floor(R() * 24))).toISOString(),
@@ -226,7 +289,8 @@ function mockRows(n) {
       aniso_efficiency: (emx / emn) / v, surface_complexity: (sheet ? 2.4 : 1.4) + v * 3 + R() * 1.6,
       ex_norm: E[0], ey_norm: E[1], ez_norm: E[2], stiffness_density_norm: emean / v,
       keff_x_norm: kx[0], keff_y_norm: kx[1], keff_z_norm: kx[2], keff_max_norm: Math.max.apply(null, kx), keff_avg_norm: (kx[0] + kx[1] + kx[2]) / 3, thermal_anisotropy: Math.max.apply(null, kx) / Math.min.apply(null, kx),
-      microstrain_x_per_gpa: 1000 / E[0], microstrain_y_per_gpa: 1000 / E[1], microstrain_z_per_gpa: 1000 / E[2], microstrain_avg_per_gpa: mu, u_compliance: 0.5 / emean,
+      /* Sweep's stored form: 1e6 / (E* · 100 GPa), capped at 1e6 */
+      microstrain_x_per_gpa: Math.min(1e6, 1e4 / E[0]), microstrain_y_per_gpa: Math.min(1e6, 1e4 / E[1]), microstrain_z_per_gpa: Math.min(1e6, 1e4 / E[2]), microstrain_avg_per_gpa: mu, u_compliance: mu / 2e6,
       pore_size_norm: pore * 1.05, pore_size_p10_norm: pore * 0.55, pore_size_p50_norm: pore, pore_size_p90_norm: pore * 1.5, pore_size_cv: 0.15 + R() * 0.5,
       throat_size_norm: pore * (0.35 + R() * 0.3), throat_ratio: 0.3 + R() * 0.5,
       h_mean: (sheet ? 0 : 0.4) + (R() - 0.5) * 0.3, h_mean_abs: 0.2 + R() * 0.8, h_std: 0.1 + R() * 0.6, k_gauss_mean: -(0.1 + R() * 0.8), curvature_uniformity: (sheet ? 0.55 : 0.3) + R() * 0.35, mih: 1 + R() * 6, genus_per_cell: 2 + R() * 20,

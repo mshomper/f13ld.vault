@@ -78,6 +78,8 @@ function start(rows) {
   if (DB.excluded) console.info('[F13LD.vault] ' + DB.excluded + ' degenerate or invalid-solver rows are kept out of the explorer.');
   S.ready = true; S.cntShown = 0;
   initHints();
+  _loadSig = [globalInputs.ref_stress_mpa, globalInputs.modulus_gpa, globalInputs.strain_lo, globalInputs.strain_hi, globalInputs.cell_size_mm].join('|');
+  if (bioPromptWanted()) setTimeout(openBioPrompt, 1400);   /* v0.6: a saved Biomedical view asks too */
 }
 /* Gesture hints: shown until the first drag in that view, then they fade and
    stay away (remembered per browser). The shortcuts sheet (?) keeps them. */
@@ -187,6 +189,10 @@ function act(a, b, e) {
     case 'palette': openCP(); break;
     case 'kbd': showShortcuts(); break;
     case 'kbd-close': closeShortcuts(); break;
+    case 'bio-prompt': openBioPrompt(); break;
+    case 'bio-apply': closeBioPrompt('apply'); break;
+    case 'bio-skip': closeBioPrompt('skip'); break;
+    case 'bio-close': closeBioPrompt('close'); break;
     case 'bt-reset': btReset(); break;
     case 'mock': location.href = location.href.split('#')[0].split('?')[0] + '?mock'; break;
     case 'retry': location.reload(); break;
@@ -225,8 +231,10 @@ document.addEventListener('keydown', function (e) {
   }
   if (mod && k.toLowerCase() === 'k') { e.preventDefault(); openCP(); return; }
   if (mod && !typing(e) && (k.toLowerCase() === 'z' || k.toLowerCase() === 'y')) { e.preventDefault(); if (k.toLowerCase() === 'y' || e.shiftKey) redo(); else undo(); return; }
+  if (k === 'Enter' && e.target.closest && e.target.closest('#bioDlg') && e.target.tagName === 'INPUT') { e.preventDefault(); closeBioPrompt('apply'); return; }
   if (k === 'Escape') {
-    if ($('#kbd').classList.contains('open')) closeShortcuts(); else if (_menu) closeMenu();
+    if ($('#bioDlg').classList.contains('open')) closeBioPrompt('close');
+    else if ($('#kbd').classList.contains('open')) closeShortcuts(); else if (_menu) closeMenu();
     else if ($('#mFilters').classList.contains('open')) closeMFilters(); else if (S.drawer) closeDrawer();
     else if (S.tool === 'brush') setTool('orbit'); else if (S.tool2 === 'target') setTool2('box');
     return;

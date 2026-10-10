@@ -84,6 +84,7 @@ function setDomain(dom) {
   F.domain = dom;
   domainChanged(false);
   changed('domain · ' + DOMAIN_SHORT[dom], true);
+  if (bioPromptWanted()) setTimeout(openBioPrompt, 250);   /* v0.6 */
 }
 function domainChanged(quiet) {
   computeScores(F.domain);

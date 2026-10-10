@@ -22,9 +22,11 @@ function onFiltersApplied() {
 function renderTags() {
   var el = $('#tags'); if (!el) return;
   var T = activeFilterList();
-  el.innerHTML = T.length ? T.map(function (t) {
+  /* v0.6: Biomedical without a loading case gets a tag that reopens the prompt */
+  var bio = F.domain === 'biomedical' && needsBioInputs() ? '<button class="tag needs" type="button" data-act="bio-prompt" title="Enter the load and cell size the Biomedical score needs">' + ic('target') + '<b>Biomedical</b><span class="tv">add load &amp; cell size</span></button>' : '';
+  el.innerHTML = bio + (T.length ? T.map(function (t) {
     return '<span class="tag" data-tag="' + esc(t.id) + '"><b>' + esc(t.k) + '</b><span class="tv">' + esc(t.v) + '</span><button class="x" data-untag="' + esc(t.id) + '" title="Remove" aria-label="Remove ' + esc(t.k + ' ' + t.v) + '">' + gl('x') + '</button></span>';
-  }).join('') : '<span class="tag hint">No filters — pick a domain, brush the design space or box-drag the 2D plot</span>';
+  }).join('') : (bio ? '' : '<span class="tag hint">No filters — pick a domain, brush the design space or box-drag the 2D plot</span>'));
   requestAnimationFrame(function () {
     var kids = Array.prototype.slice.call(el.children).filter(function (k) { return !k.classList.contains('hint'); });
     if (!kids.length || !el.clientWidth) return;

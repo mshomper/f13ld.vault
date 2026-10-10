@@ -9,6 +9,7 @@ var _inspSoon = debounce(function () { renderInspector(); }, 90);
 /* After every filter pass. */
 function onFiltersApplied() {
   if (S.pareto) computeFront();
+  if (S.color === '_pdepth') recolor();   /* v0.7.1 — follows the filters */
   markViewsDirty();
   renderTags(); updateFilterUI(); renderLegend(); updateHeroSub(); renderTargetBanner();
   if (S.sel) _inspSoon();      /* coalesced: a slider drag doesn't rebuild the inspector every frame */
@@ -61,11 +62,27 @@ function updateHeroSub() { var e = $('#heroSub'); if (e) e.innerHTML = '<b>' + S
 
 /* ── hero header: colour + legend (legend items isolate on click) ─────── */
 function renderLegend() {
-  var mode = COLOR_MODE_LIST.filter(function (m) { return m.id === S.color; })[0] || COLOR_MODE_LIST[0];
+  var mode = colorMode();
   $$('.colorName').forEach(function (e) { e.textContent = mode.label; });
   var el = $('#legend'); if (!el) return;
+  el.title = mode.tip || '';
+  if (mode.id === '_sim' && !S.sel) { el.innerHTML = '<span class="lg-l lg-msg" title="Select a design to colour the rest by how alike they are">Select a design to compare the rest</span>'; return; }
   if (mode.type === 'cont') {
-    el.innerHTML = '<span class="lg-l">low</span><span class="lg-grad"></span><span class="lg-l">high</span>';
+    el.innerHTML = '<span class="lg-l">' + esc(mode.lo || 'low') + '</span><span class="lg-grad"></span><span class="lg-l">' + esc(mode.hi || 'high') + '</span>';
+    /* v0.7.1 — modes that fade some points say what fading means */
+    if (mode.dim) { var r = COLOR_RAMP[16], f = [r[0] + (0.33 - r[0]) * 0.45, r[1] + (0.35 - r[1]) * 0.45, r[2] + (0.45 - r[2]) * 0.45];
+      el.innerHTML += '<span class="lg-l lg-other" title="Faded: the design type has too few designs, or too narrow a density range, so the trend comes from its wider family"><i class="dot" style="background:' + rgbHex(f[0] * 255, f[1] * 255, f[2] * 255) + '"></i>faded: borrowed</span>'; }
+    return;
+  }
+  /* v0.7.1 — aimed runs: one entry per run with its hit rate; click picks the run */
+  if (mode.id === 'aim') {
+    var runs = DB.aimRuns || [];
+    if (!runs.length) { el.innerHTML = '<span class="lg-l lg-msg" title="Aim Sweep at a target, export the final run and add it with F13LD.ingest">No aimed runs yet</span>'; return; }
+    el.innerHTML = runs.map(function (R) {
+      var on = S.aimSel === R.id;
+      return '<button class="lg-it' + (on ? ' on' : '') + '" data-legend="' + esc(R.id) + '" title="' + esc(aimLegendLabel(R) + ' · ' + R.hits + ' of ' + R.designs.length + ' on target (within ' + Math.round(R.tol * 100) + ' %)' + (R.rounds ? ' · ' + R.rounds + ' rounds' : '') + ' — click to show its seed and path') + '"><i class="dot" style="background:' + R.color + '"></i>' + esc(aimLabel(R)) + '<span class="n">' + R.hits + '/' + R.designs.length + '</span></button>';
+    }).join('') + '<span class="lg-l lg-other"><i class="dot" style="background:' + AIM_DIM + '"></i>other</span>';
+    legendFit(el);
     return;
   }
   var counts = {};
@@ -75,6 +92,10 @@ function renderLegend() {
     var on = mode.id === 'family' && F.fam.indexOf(v) >= 0, lbl = mode.id === 'family' ? (FAMILY_NAME[v] || v) : mode.id === 'kappa' ? (KAPPA_CLASSES.filter(function (c) { return c.key === v; })[0] || { label: v }).label : v;
     return '<button class="lg-it' + (on ? ' on' : '') + '" data-legend="' + esc(v) + '" title="' + (mode.id === 'family' ? 'Click to show only this family · Shift-click to add' : esc(lbl)) + '"><i class="dot" style="background:' + catColor(mode.id, v) + '"></i>' + esc(lbl) + '<span class="n">' + (counts[v] || 0) + '</span></button>';
   }).join('');
+  legendFit(el);
+}
+/* Fold the entries that don't fit into "+n". */
+function legendFit(el) {
   requestAnimationFrame(function () {
     var kids = Array.prototype.slice.call(el.children); if (!el.clientWidth) return;
     kids.forEach(function (k) { k.style.display = ''; });
@@ -85,6 +106,7 @@ function renderLegend() {
   });
 }
 function legendClick(v, add) {
+  if (S.color === 'aim') { selectAimRun(v); return; }   /* v0.7.1 */
   if (S.color !== 'family') return;
   if (add) { if (F.fam.indexOf(v) >= 0) F.fam = F.fam.filter(function (x) { return x !== v; }); else F.fam.push(v); }
   else F.fam = (F.fam.length === 1 && F.fam[0] === v) ? [] : [v];
@@ -141,6 +163,16 @@ function setTab(t) {
 }
 
 /* ── tooltip ─────────────────────────────────────────────────────────── */
+/* v0.7.1 — what the colour says about this design, for the modes that aren't a column */
+function colorTipLine(d) {
+  var c = S.color, v = null;
+  if (c === '_nexp') v = isNum(d._nexp) ? 'n ' + d._nexp.toFixed(2) + (d._nexpLvl > 0 ? ' (borrowed from its ' + TREND_LVL_NAME[d._nexpLvl] + ')' : '') + (d._nexpSrc === 'peak' ? ' · on peak stiffness' : '') : 'no exponent: ' + (d._nexpWhy || 'not computed');
+  else if (c === '_beff') { var b = beffOf(d); v = isNum(b) ? Math.round(b * 100) + ' % of the bound' + (b > 1.02 ? ' — past it: check the solve' : '') : null; }
+  else if (c === '_pdepth') v = isNum(d._pdepth) ? (d._pdepth === 0 ? 'on the Pareto front' : d._pdepth + ' layers behind the front') : null;
+  else if (c === '_sim') v = isNum(d._sim) ? Math.round(d._sim * 100) + ' % alike' : null;
+  else if (c === 'aim') { var R = aimRunOf(d); v = R ? 'aimed run · ' + aimLabel(R) : null; }
+  return v ? '<div class="tw tc">' + esc(v) + '</div>' : '';
+}
 function showTip(d, x, y, panel) {
   var t = $('#tip'); if (!t) return;
   if (!d || !panel) { t.classList.remove('on'); return; }
@@ -150,6 +182,7 @@ function showTip(d, x, y, panel) {
     var fails = d._m ? [] : failingFilters(d), k = cardMetrics();
     t.innerHTML = '<canvas data-th="' + esc(d._id) + '" width="168" height="126"></canvas><div class="tb"><div class="tn">' + esc(displayPreset(d)) + '</div><div class="tf">' + esc(FAMILY_NAME[d.family] || d.family) + ' · ' + esc(d._id) + '</div>' +
       '<div class="tm">' + k.map(function (key) { var r = resolveValue(d[key], key); return esc(mShort(key)) + ' <b>' + esc(d[key] == null ? '—' : r.value + (r.isResolved ? ' ' + r.unit : '')) + '</b>'; }).join('<br>') + '</div>' +
+      colorTipLine(d) +
       (fails.length ? '<div class="tw">Hidden by ' + fails.map(function (f) { return esc(f.k + ' ' + f.v); }).join(', ') + '</div>' : '') + '</div>';
     paintThumbs(t);
   }

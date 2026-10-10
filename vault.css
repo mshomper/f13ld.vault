@@ -598,3 +598,9 @@ body.is-mobile .m-app{display:block;position:fixed;inset:0;overflow:hidden}
 .tag.needs{border-color:var(--neon-ring);background:var(--neon-tint);color:var(--neon);cursor:pointer;padding-right:9px}
 .tag.needs .ic{width:16px;height:16px}
 .tag.needs .tv{color:var(--t1)}
+/* v0.7.1 — from an aimed run */
+.notice.aim{border-color:rgba(200,245,66,.35);background:rgba(200,245,66,.04)}.notice.aim .gl{color:var(--neon,#c8f542)}
+.lg-other{display:inline-flex;align-items:center;gap:5px;opacity:.75}
+.lg-l{white-space:nowrap}
+.lg-msg{overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%}
+.tip .tc{color:var(--t2)}

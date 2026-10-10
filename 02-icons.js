@@ -46,6 +46,7 @@ var ICONS = {
 };
 var GLY = {
   x:       '<path d="M4.5 4.5L11.5 11.5M11.5 4.5L4.5 11.5"' + ST + '/>',
+  target:  '<circle cx="8" cy="8" r="4.6"' + ST + '/><path d="M8 1.5V4M8 12V14.5M1.5 8H4M12 8H14.5"' + ST + '/>',   /* v0.7.1 */
   chev:    '<path d="M4.5 6.2L8 9.7L11.5 6.2"' + ST + '/>',
   next:    '<path d="M6.2 4.5L9.7 8L6.2 11.5"' + ST + '/>',
   prev:    '<path d="M9.8 4.5L6.3 8L9.8 11.5"' + ST + '/>',

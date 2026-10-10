@@ -140,14 +140,26 @@ var COLOR_MODE_LIST = [
   { id: '_score', label: 'Domain score', type: 'cont' },
   { id: '_perf', label: 'Stiffness efficiency', type: 'cont' },
   { id: 'anisotropy', label: 'Anisotropy', type: 'cont' },
-  { id: '_scar', label: 'Domain scarcity', type: 'cont' }
+  { id: '_scar', label: 'Domain scarcity', type: 'cont' },
+  /* v0.7.1 (24-aim.js) — absolute scales: abs = [value at the low end, value at the high end] */
+  { id: 'aim', label: 'Aimed run', type: 'cat' },
+  { id: '_nexp', label: 'Density exponent', type: 'cont', abs: [1, 3.5], lo: 'stretch 1', hi: '3.5 bend', prep: function () { ensureNexp(); }, dim: function (d) { return nexpDim(d); },
+    tip: 'How stiffness grows with density for each design type, E ∝ ρⁿ (mean of Ex, Ey, Ez, fitted across designs of the same family, topology and preset). Near 1: stretch-dominated; near 2 and up: bending-dominated. Faded: the type has too few designs or too narrow a density range, so the trend is borrowed from its wider family. Grey: not even the family can give a trend.' },
+  { id: '_beff', label: 'Bound efficiency', type: 'cont', abs: [0, 1], lo: '0 %', hi: '100 %', val: function (d) { return beffOf(d); },
+    tip: 'Peak stiffness as a share of the most any structure can have at that density (Voigt bound: E* / Es ≤ solid fraction).' },
+  { id: '_pdepth', label: 'Pareto depth', type: 'cont', abs: [12, 0], lo: 'deep', hi: 'front', prep: function () { ensurePareto(); },
+    tip: 'How many layers each design sits behind the Pareto front of the 2D axes (bright = the front). Follows the axes and the filters.' },
+  { id: '_sim', label: 'Similar to selected', type: 'cont', abs: [0, 1], lo: 'unlike', hi: 'alike', prep: function () { ensureSim(); },
+    tip: 'How close each design is to the selected one across volume fraction, stiffness, shear, anisotropy, pores, conductivity, connectivity, tortuosity and curvature.' }
 ];
+function colorMode() { return COLOR_MODE_LIST.filter(function (m) { return m.id === S.color; })[0] || COLOR_MODE_LIST[0]; }
 var FLAG_COLORS = { flagged: '#f0b429', clean: '#3f4766', 'not recorded': '#5f6582' };
 function catValue(d, id) {
   if (id === 'family') return d.family;
   if (id === 'kappa') return d._kappa;
   if (id === 'stiff_axis') return d.stiff_axis || 'none';
   if (id === '_stiff_flag') return d._stiff_flag;
+  if (id === 'aim') return aimCatValue(d);
   if (id === 'topology') { var g = (d.recipe && d.recipe.geometry) || {}; return String(g.mode || g.topology || 'other').replace(/^(grain|noise)-/, ''); }
   return null;
 }
@@ -157,15 +169,23 @@ function catColor(id, v) {
   if (id === 'stiff_axis') return CAT_PALETTES.stiff_axis[v] || '#666666';
   if (id === '_stiff_flag') return FLAG_COLORS[v] || '#5f6582';
   if (id === 'topology') return CAT_PALETTES.topology[v] || '#9a9fb7';
+  if (id === 'aim') return aimCatColor(v);
   return '#9a9fb7';
 }
 function recolor() {
-  var mode = COLOR_MODE_LIST.filter(function (m) { return m.id === S.color; })[0] || COLOR_MODE_LIST[0];
+  var mode = colorMode();
   if (mode.id === '_scar') ensureScarcity(F.domain);
-  var pr = mode.type === 'cont' ? pctOf(mode.id) : null;
+  if (mode.prep) mode.prep();
+  var pr = mode.type === 'cont' && !mode.abs ? pctOf(mode.id) : null;
   DB.all.forEach(function (d) {
     if (mode.type === 'cat') { var c = hexRGB(catColor(mode.id, catValue(d, mode.id))); d._col = [c[0] / 255, c[1] / 255, c[2] / 255]; d._colHex = catColor(mode.id, catValue(d, mode.id)); }
-    else { var p = pr[d._i]; if (isNaN(p)) { d._col = [0.33, 0.35, 0.45]; d._colHex = '#555a73'; } else { var r = COLOR_RAMP[Math.round(p * 31)]; d._col = r; d._colHex = rgbHex(r[0] * 255, r[1] * 255, r[2] * 255); } }
+    else { var p;
+      if (mode.abs) { var av = mode.val ? mode.val(d) : d[mode.id]; p = isNum(av) ? clamp((av - mode.abs[0]) / (mode.abs[1] - mode.abs[0]), 0, 1) : NaN; }
+      else p = pr[d._i];
+      if (isNaN(p)) { d._col = [0.33, 0.35, 0.45]; d._colHex = '#555a73'; } else {
+        var r = COLOR_RAMP[Math.round(p * 31)], m = mode.dim ? mode.dim(d) : 0;
+        if (m > 0) r = [r[0] + (0.33 - r[0]) * m, r[1] + (0.35 - r[1]) * m, r[2] + (0.45 - r[2]) * m];   /* faded toward the no-value grey */
+        d._col = r; d._colHex = rgbHex(r[0] * 255, r[1] * 255, r[2] * 255); } }
   });
   markViewsDirty();
 }

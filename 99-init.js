@@ -173,6 +173,7 @@ function act(a, b, e) {
     case 'lab': if (d) openLab(d); break;
     case 'sweep': if (d) openSweep(d); break;
     case 'aim-sweep': aimSweep(); break;   /* v0.7.0 */
+    case 'show-aim': if (b.dataset.aim) { S.aimSel = null; selectAimRun(b.dataset.aim); renderInspector(); } break;   /* v0.7.1 */
     case 'prev': step(-1); break;
     case 'next': step(1); break;
     case 'm-back': S.mInsp = false; renderMobile(); break;

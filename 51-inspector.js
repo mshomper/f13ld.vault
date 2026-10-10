@@ -39,6 +39,9 @@ function noticesHTML(d) {
   }
   if (d._stiff_flag === 'flagged') h += '<div class="notice warn">' + gl('flag') + '<div><b>Stiffness may read high</b>' + (d._flag_reasons ? ' — ' + esc(d._flag_reasons) : '') + '. Sweep\'s fast mode flagged it; verify in F13LD.lab.</div></div>';
   if (d.linear_cap_active) h += '<div class="notice warn">' + gl('flag') + '<div><b>' + esc(d.linear_cap_kind || 'Yield') + ' cap reached</b> at the reference load — compliance metrics are empty for this design.</div></div>';
+  /* v0.7.1 — from an aimed run (24-aim.js) */
+  var AR = aimRunOf(d);
+  if (AR) h += '<div class="notice aim">' + gl('target') + '<div><b>From an aimed run</b> — ' + esc(aimLabel(AR)) + (AR.seedName ? ', seeded from ' + esc(AR.seedName) : '') + ' · ' + AR.hits + ' of ' + AR.designs.length + ' on target. <button class="chip-mini" data-act="show-aim" data-aim="' + esc(AR.id) + '">' + (S.color === 'aim' && S.aimSel === AR.id ? 'Showing this run' : 'Show this run') + '</button></div></div>';
   if (d.solver_validity === 'partial') h += '<div class="notice">' + gl('dot') + '<div><b>Partial load path</b> — only some axes percolate; their stiffness is reported, the others are zero.</div></div>';
   return h;
 }

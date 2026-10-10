@@ -7,7 +7,7 @@
    ============================================================ */
 
 function freshFilters() {
-  return { domain: 'all', fam: [], kappa: [], grid: [], flag: [], contrib: [], solid: [], void: [],
+  return { domain: 'all', fam: [], kappa: [], grid: [], flag: [], contrib: [], src: [], aim: [], solid: [], void: [],
            ranges: {}, rangeKeys: ['volume_fraction', 'stiffness_density_norm', 'pore_size_p50_norm'],
            region: null, target: null };
 }
@@ -17,7 +17,7 @@ var S = {
   layout: 'a', mobile: false, hv: 'split', mhv: '3d', alive: true, color: 'family', tool: 'orbit', tool2: 'box',
   ax3: { x: '_perf', y: 'anisotropy', z: '_score' }, ax2: { x: 'volume_fraction', y: '_emax' },
   sort: { k: '_score', dir: -1 }, view: 'gallery', shown: PAGE_SIZE,
-  sel: null, near: [], pins: [], hot: null, hiFam: null,
+  sel: null, near: [], pins: [], hot: null, hiFam: null, aimSel: null,
   drawer: false, tab: 'filters', pareto: null, gap: false,
   list: [], cnt: 0, cntShown: 0, snap: 'peek', mInsp: false,
   introT0: 0, ready: false

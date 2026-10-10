@@ -24,7 +24,7 @@ function rangeScale(k) {
 function compileFilters() {
   var dims = [], bit = {}, n = 0;
   function add(name) { bit[name] = 1 << n; dims.push(name); n++; }
-  ['fam', 'kappa', 'grid', 'flag', 'contrib', 'perc', 'region'].forEach(add);
+  ['fam', 'kappa', 'grid', 'flag', 'contrib', 'src', 'aim', 'perc', 'region'].forEach(add);
   Object.keys(F.ranges).forEach(function (k) { if (F.ranges[k]) add('r:' + k); });
   F.rangeKeys.forEach(function (k) { if (!bit['r:' + k]) add('r:' + k); });   /* shown sliders get histograms even when open */
   FX.dims = dims; FX.bit = bit;
@@ -32,6 +32,7 @@ function compileFilters() {
     fam: F.fam.length ? new Set(F.fam) : null, kappa: F.kappa.length ? new Set(F.kappa) : null,
     grid: F.grid.length ? new Set(F.grid.map(Number)) : null, flag: F.flag.length ? new Set(F.flag) : null,
     contrib: F.contrib.length ? new Set(F.contrib) : null,
+    src: F.src.length ? new Set(F.src) : null, aim: F.aim.length ? new Set(F.aim) : null,   /* v0.7.1 */
     solid: F.solid.map(function (a) { return 'xyz'.indexOf(a); }), void: F.void.map(function (a) { return 'xyz'.indexOf(a); }),
     region: F.region ? new Set(F.region) : null,
     ranges: Object.keys(F.ranges).filter(function (k) { return F.ranges[k]; }).map(function (k) { return [k, F.ranges[k][0], F.ranges[k][1], bit['r:' + k]]; })
@@ -45,6 +46,8 @@ function maskOf(d, C) {
   if (C.grid && !C.grid.has(d._grid_N)) m |= b.grid;
   if (C.flag && !C.flag.has(d._stiff_flag)) m |= b.flag;
   if (C.contrib && !C.contrib.has(d.contributor_name)) m |= b.contrib;
+  if (C.src && !C.src.has(d._aim ? 'aimed' : 'plain')) m |= b.src;
+  if (C.aim && !C.aim.has(d._aim || '')) m |= b.aim;
   if (C.solid.length || C.void.length) {
     var bad = false, i;
     for (i = 0; i < C.solid.length; i++) if (!d._sp[C.solid[i]]) bad = true;
@@ -58,7 +61,7 @@ function maskOf(d, C) {
 
 function runFilters() {
   var C = compileFilters(), b = FX.bit, N = DB.N;
-  var counts = { fam: {}, kappa: {}, grid: {}, flag: {}, contrib: {} }, hist = {}, why = {}, list = [];
+  var counts = { fam: {}, kappa: {}, grid: {}, flag: {}, contrib: {}, src: {}, aim: {} }, hist = {}, why = {}, list = [];
   var hk = F.rangeKeys.slice(); Object.keys(F.ranges).forEach(function (k) { if (F.ranges[k] && hk.indexOf(k) < 0) hk.push(k); });
   var hs = {}; hk.forEach(function (k) { hs[k] = rangeScale(k); hist[k] = { all: new Uint32Array(HIST_BINS), on: new Uint32Array(HIST_BINS) }; });
   FX.dims.forEach(function (n) { why[n] = 0; });
@@ -72,6 +75,8 @@ function runFilters() {
     if ((m & ~b.grid) === 0 && d._grid_N != null) counts.grid[d._grid_N] = (counts.grid[d._grid_N] || 0) + 1;
     if ((m & ~b.flag) === 0) counts.flag[d._stiff_flag] = (counts.flag[d._stiff_flag] || 0) + 1;
     if ((m & ~b.contrib) === 0 && d.contributor_name) counts.contrib[d.contributor_name] = (counts.contrib[d.contributor_name] || 0) + 1;
+    if ((m & ~b.src) === 0) { var sk = d._aim ? 'aimed' : 'plain'; counts.src[sk] = (counts.src[sk] || 0) + 1; }
+    if ((m & ~b.aim) === 0 && d._aim) counts.aim[d._aim] = (counts.aim[d._aim] || 0) + 1;
     for (var h = 0; h < hk.length; h++) {
       var k = hk[h], v = d[k]; if (!isNum(v)) continue;
       var bin = Math.min(HIST_BINS - 1, Math.floor(hs[k].f(v) * HIST_BINS));
@@ -110,6 +115,8 @@ function activeFilterList() {
   if (F.void.length) T.push({ id: 'void', dim: 'perc', k: 'Void perc', v: F.void.join(' ').toUpperCase() });
   Object.keys(F.ranges).forEach(function (k) { var r = F.ranges[k]; if (r) T.push({ id: 'range:' + k, dim: 'r:' + k, k: mShort(k), v: fmtRangeVal(k, r[0]) + ' – ' + fmtRangeVal(k, r[1]) }); });
   F.contrib.forEach(function (c) { T.push({ id: 'contrib:' + c, dim: 'contrib', k: 'By', v: c }); });
+  F.src.forEach(function (s) { T.push({ id: 'src:' + s, dim: 'src', k: 'Source', v: s === 'aimed' ? 'Aimed runs' : 'Ordinary sweeps' }); });
+  F.aim.forEach(function (a) { var R = DB.aimById && DB.aimById[a]; T.push({ id: 'aim:' + a, dim: 'aim', k: 'Aimed', v: R ? aimLabel(R) : a }); });
   if (F.region) T.push({ id: 'region', dim: 'region', k: 'Region', v: F.region.length + ' designs' });
   if (F.target) T.push({ id: 'target', dim: null, k: 'Target', v: mShort(F.target.kx) + ' ' + fmtRangeVal(F.target.kx, F.target.x) + ' · ' + mShort(F.target.ky) + ' ' + fmtRangeVal(F.target.ky, F.target.y) });
   return T;
@@ -121,7 +128,7 @@ function filterCount() { return activeFilterList().filter(function (t) { return 
 function removeFilter(id) {
   var p = id.split(':'), dim = p[0], v = p.slice(1).join(':');
   if (dim === 'domain') { setDomain('all'); return; }
-  if (dim === 'fam' || dim === 'kappa' || dim === 'flag' || dim === 'contrib') F[dim] = F[dim].filter(function (x) { return x !== v; });
+  if (dim === 'fam' || dim === 'kappa' || dim === 'flag' || dim === 'contrib' || dim === 'src' || dim === 'aim') F[dim] = F[dim].filter(function (x) { return x !== v; });
   else if (dim === 'grid') F.grid = F.grid.filter(function (x) { return String(x) !== v; });
   else if (dim === 'solid' || dim === 'void') F[dim] = [];
   else if (dim === 'range') { delete F.ranges[v]; }

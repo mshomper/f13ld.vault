@@ -7,7 +7,7 @@
    same or a lower-numbered file.
    ============================================================ */
 
-var VAULT_VERSION = '0.6.0';
+var VAULT_VERSION = '0.7.0';
 
 var SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_DAlrNLqbUZiwkaA6wPSMIw_YUNY85LX';
@@ -16,6 +16,11 @@ var VAULT_TABLE  = 'f13ld_designs';
 var MESH_URL  = 'https://mshomper.github.io/f13ld.mesh/';
 var LAB_URL   = 'https://mshomper.github.io/f13ld.lab/';
 var SWEEP_URL = 'https://mshomper.github.io/f13ld.sweep/';
+/* v0.7.0 — testing a Sweep branch: ?sweep=<url> (raw.githack.com, GitHub Pages or a local server only) */
+try {
+  var _sweepQ = new URLSearchParams(location.search).get('sweep');
+  if (_sweepQ && /^(https:\/\/(raw\.githack\.com|mshomper\.github\.io)\/|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/)/.test(_sweepQ)) SWEEP_URL = _sweepQ;
+} catch (e) { /* no URLSearchParams: keep the default */ }
 var QUEUE_JS  = 'https://mshomper.github.io/f13ld.queue/f13ld-queue.js';
 var HANDOFF_URL_MAX = 2000000;            /* past this a recipe is copied instead of linked */
 

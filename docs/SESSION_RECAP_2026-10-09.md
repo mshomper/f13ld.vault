@@ -136,3 +136,12 @@ Then open http://localhost:8765/ (live Vault) or http://localhost:8765/?mock (sa
   - The export records the solid modulus and stress Sweep used, in `Es_ref_GPa` and `sigma_ref_GPa`.
   - Very soft designs may now get the "stiffness may be inflated" flag.
 - **Next:** reseed the 500 from Sweep v0.27.2, then check that soft PI-TPMS stiffness and strain look sane in Vault.
+
+## Evening — Aim Sweep (v0.7.0, branch `v0.7.0-target`, not merged)
+Goes with F13LD.sweep v0.28.0 (branch `v0.28.0-target`).
+- **Aim Sweep** on the target banner (and the inspector's Sweep button while a target is set) opens F13LD.sweep with `#r=<recipe>&t=<target and ranges>`; without a target the Sweep button now opens Sweep with the recipe loaded (no more download-and-drop). Past the link limit it falls back to the download.
+- **Seed by reachability** (`23-reach.js`): for the 80 designs nearest the target, fit the density trend on each one's 30 nearest same-family designs (unflagged when there are ≥ 12), slide along it to the density with the smallest worst-metric error (a small charge per step of density), pick the best — or the nearest unflagged design when that's no better. Families Sweep sweeps only.
+- **Physics warnings** (Voigt's bound, rising or falling with density) in the toast.
+- **Solver line fixed** ("FFT-CG · GPU · v0.24.0", details on hover) and an "aimed at" row for runs that came from a target.
+- Checks: `npm test` (smoke gains reach / payload / link / physics / solver-text steps), `npm run audit` at 1600 / 1280 / 1024 / 390 — no overlaps, no small text, no sideways scroll.
+- **Testing both branches together:** Vault reads `?sweep=<url>` (raw.githack.com, GitHub Pages or localhost only) so its Sweep links can open the Sweep branch build, e.g. `https://raw.githack.com/mshomper/f13ld.vault/v0.7.0-target/index.html?mock&sweep=https://raw.githack.com/mshomper/f13ld.sweep/v0.28.0-target/index.html`. Merge Sweep first, then Vault: the live Vault's links need the live Sweep to read them.

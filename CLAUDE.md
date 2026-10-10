@@ -31,6 +31,13 @@ https://mshomper.github.io/f13ld.vault
   records `Es_ref_GPa`). The Biomedical score uses a Frost-style window
   (default 1,000–3,500 με) and asks for load and cell size when they are missing.
 
+- **Sweep targets (v0.7)**: "Aim Sweep" (target banner, or the inspector's
+  Sweep button while a target is set) opens F13LD.sweep with
+  `#r=<recipe>&t=<target>`. The target's metric names are Vault's column
+  names; Sweep's `13-target.js` reads the same names, so a new targetable
+  metric needs both lists updated. Strain targets carry the Build target
+  load as `scale` (σ MPa ÷ Es GPa). Seeds skip flagged designs.
+
 ## Layout
 
 Numbered classic scripts, one global scope, loaded in order by `index.html`
@@ -48,6 +55,7 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `13-state.js` | filters `F`, UI state `S`, prefs, undo/redo, share link `#v=` |
 | `20-filter.js` | one-pass bitmask filter engine, what-if counts, histograms, "why not" |
 | `21-actions.js` | views registry, point animation, select/step, setters, presets |
+| `23-reach.js` | v0.7: aiming F13LD.sweep at a 2D target — seed by reachability (density trend per family), the `&t=` payload, Voigt-bound physics warnings; `SWEEP_TARGET_KEYS` mirrors Sweep's `13-target.js` |
 | `30-points-gl.js` | WebGL1 point renderer (dim / glow / core), premultiplied alpha |
 | `31-hero3d.js` | 3D design space (ranked axes; orbit, pan, brush, label placer) |
 | `32-plot2d.js` | 2D plot (real values, log axes, box ranges, target, Pareto, gap map) |
@@ -60,7 +68,7 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `62-panes.js` | Build target (absolute units) and the metric key |
 | `63-palette.js` | command palette (Ctrl K) and shortcuts sheet (?) |
 | `64-splits.js` | resizable splits, stored as fractions per layout |
-| `70-handoff.js` | Mesh / Lab (`#r=`), Sweep (recipe download + open), Queue |
+| `70-handoff.js` | Mesh / Lab / Sweep (`#r=`; Sweep also `&t=` target + ranges), Queue |
 | `80-mobile.js` | phone layout: bottom sheet, gallery, inspector, filters |
 | `99-init.js` | boot, events, keyboard, loop |
 | `geom/`, `worker/` | geometry for previews — `geom/*.js` **copied unchanged from f13ld.sweep** (MIT side); `geom/design.js` and `worker/bake-worker.js` are Vault's own |

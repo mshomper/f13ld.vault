@@ -47,17 +47,46 @@ function recipeHTML(d) {
   return '<div class="isec"><div class="ish">' + ic('cell') + '<span>Recipe</span><button class="mini" data-act="copy-recipe" title="Copy the recipe JSON">' + gl('copy') + 'Copy JSON</button></div>' +
     (L.length ? '<div class="kv">' + L.map(function (r) { return '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>'; }).join('') + '</div>' : '<div class="fhow">No recipe stored with this design.</div>') + '</div>';
 }
+/* v0.7.0 — Sweep v0.24+ exports the solver as a block of details, older
+   exports as one word; Ingest stores either. */
+function solverText(sv) {
+  if (sv == null || sv === '') return null;
+  if (typeof sv === 'string') { try { var j = JSON.parse(sv); if (j && typeof j === 'object') sv = j; else return j == null ? sv : String(j); } catch (e) { return sv; } }
+  if (typeof sv !== 'object') return String(sv);
+  var parts = [sv.method || 'solver', sv.backend ? String(sv.backend).toUpperCase() : null, sv.version ? 'v' + String(sv.version).replace(/^v/, '') : null].filter(Boolean);
+  return parts.join(' · ');
+}
+function solverTitle(sv) {
+  if (typeof sv === 'string') { try { sv = JSON.parse(sv); } catch (e) { return ''; } }
+  if (!sv || typeof sv !== 'object') return '';
+  var t = [];
+  if (sv.gpu_adapter) t.push('GPU: ' + sv.gpu_adapter);
+  if (sv.precision_mode) t.push('precision: ' + sv.precision_mode);
+  if (sv.gpu_cg_tol) t.push('CG tolerance ' + sv.gpu_cg_tol);
+  if (sv.void_ratio) t.push('pores ' + sv.void_ratio + ' of the solid');
+  if (sv.resolution_picker) t.push('grid picker ' + sv.resolution_picker + '³');
+  return t.join(' · ');
+}
+/* the target a Sweep v0.28+ run aimed at, when it was one */
+function aimedText(sv) {
+  if (typeof sv === 'string') { try { sv = JSON.parse(sv); } catch (e) { return null; } }
+  var T = sv && sv.target;
+  if (!T || !Array.isArray(T.metrics) || !T.metrics.length) return null;
+  return T.metrics.filter(function (m) { return m && m.key; }).map(function (m) { return mShort(m.key) + ' ' + (isNum(m.value) ? fmtRangeVal(m.key, m.value) : '?'); }).join(' · ') +
+    (T.rounds && T.rounds.length ? ' · ' + T.rounds.length + ' round' + (T.rounds.length > 1 ? 's' : '') : '');
+}
 function provenanceHTML(d) {
   var date = d.exported_at || d.created_at, mat = d.material && (d.material.label || d.material.key || d.material.name);
   var L = [
     ['contributor', d.contributor_name], ['from', [d.source_tool, d.source_version ? 'v' + d.source_version : null].filter(Boolean).join(' ')],
-    ['solver', d.solver], ['grid', d._grid_N != null ? 'N = ' + d._grid_N : null], ['validity', d.solver_validity],
+    ['solver', solverText(d.solver)], ['aimed at', aimedText(d.solver)], ['grid', d._grid_N != null ? 'N = ' + d._grid_N : null], ['validity', d.solver_validity],
     ['converged', d.cg_converged == null ? null : (d.cg_converged ? 'yes' : 'no') + (d.cg_iters ? ' · ' + d.cg_iters + ' iterations' : '')],
     ['material', mat ? mat + (d.e_solid_gpa ? ' · ' + d.e_solid_gpa + ' GPa' : '') : (d.e_solid_gpa ? d.e_solid_gpa + ' GPa' : null)],
     ['cell size', d.cell_size_mm != null ? (+d.cell_size_mm).toFixed(2) + ' mm' : null], ['σ ref', d.sigma_ref_gpa != null ? (+d.sigma_ref_gpa * 1000).toFixed(0) + ' MPa' : null],
     ['date', date ? new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null]
   ].filter(function (r) { return r[1] != null && r[1] !== ''; });
-  return '<div class="isec"><div class="ish">' + ic('key') + '<span>Provenance</span></div><div class="kv">' + L.map(function (r) { return '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>'; }).join('') + '</div>' +
+  var st = solverTitle(d.solver);
+  return '<div class="isec"><div class="ish">' + ic('key') + '<span>Provenance</span></div><div class="kv">' + L.map(function (r) { return '<span>' + esc(r[0]) + '</span><b' + (r[0] === 'solver' && st ? ' title="' + esc(st) + '"' : '') + '>' + esc(r[1]) + '</b>'; }).join('') + '</div>' +
     (d.contributor_notes ? '<div class="fhow">' + esc(d.contributor_notes) + '</div>' : '') + '</div>';
 }
 function allMetricsHTML(d) {

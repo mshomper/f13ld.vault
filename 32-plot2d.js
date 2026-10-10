@@ -29,6 +29,7 @@ function set2DTargets() {
     h.tu = isNum(vx) ? sx.f(vx) : -1; h.tv = isNum(vy) ? sy.f(vy) : -1;
   }
   computeFront(); computeGapGrid();
+  if (S.color === '_pdepth') recolor();   /* v0.7.1 — Pareto depth follows the axes */
   markViewsDirty();
 }
 function ticksFor(k, lo, hi) {
@@ -119,6 +120,9 @@ Plot2D.prototype.bind = function () {
     if (g.mode === 'box' && g.moved) { applyBrush2D(self); self.brush = null; self.dirty = true; return; }
     var tUp = performance.now(), second = !g.moved && tUp - (self._lastUp || -1e9) < 320; if (!g.moved) self._lastUp = second ? -1e9 : tUp;   /* 2nd click of a double-click resets, never picks */
     if (g.moved || self._dbl || second) return;
+    /* v0.7.1 — a ghost target (colour by aimed run) picks its run */
+    var gh = g.mode !== 'target' && (self.ghosts || []).filter(function (q) { return Math.hypot(q.x - p[0], q.y - p[1]) < (self.mobile ? 20 : 13); })[0];
+    if (gh) { selectAimRun(gh.id); return; }
     var d = self.pick(p[0], p[1], self.mobile ? 24 : 13, false);
     if (d && g.mode !== 'target') { select(d, 'plot'); return; }
     if ((g.mode === 'target' || (S.gap && !d)) && self.inPlot(p[0], p[1])) { var f = self.toF(p[0], p[1]); setTarget(S.ax2.x, S.ax2.y, plotScale(S.ax2.x).inv(f[0]), plotScale(S.ax2.y).inv(f[1])); return; }
@@ -240,6 +244,7 @@ Plot2D.prototype.drawOverlay = function (now, w, h, dpr) {
     near.forEach(function (d) { var i = d._i; if (!d._h.has2) return; ctx.beginPath(); ctx.moveTo(ts[0], ts[1]); ctx.lineTo(self.px[i], self.py[i]); ctx.stroke(); });
     ctx.setLineDash([]);
   }
+  this.ghosts = S.color === 'aim' ? aimOverlay2D(this, ctx, sx, sy, kx, ky) : [];
   ctx.restore();
   /* selection crosshair with value chips on both axes */
   var sel = S.sel;
@@ -269,6 +274,69 @@ Plot2D.prototype.drawOverlay = function (now, w, h, dpr) {
       '<button class="axchip ax-y" data-axis2="y" style="left:' + (m ? 8 : 12) + 'px;top:' + (r.T + r.H / 2) + 'px" title="Pick the Y metric"><i>Y</i>' + lab(ky) + gl('chev') + '</button>';
   }
 };
+
+/* v0.7.1 — colour by aimed run: every run's target as a ghost crosshair
+   (a dashed line when the run aimed at only one of the two axes); the
+   picked run also shows the seed it started from and the path to its
+   cluster. → the ghosts' screen positions, for clicking. */
+function aimOverlay2D(P, ctx, sx, sy, kx, ky) {
+  var runs = DB.aimRuns || [], out = [], r = P.R;
+  runs.forEach(function (R) {
+    var mx = R.metrics.filter(function (m) { return m.key === kx; })[0], my = R.metrics.filter(function (m) { return m.key === ky; })[0];
+    if (!mx && !my) return;
+    var picked = S.aimSel === R.id, faint = S.aimSel && !picked;
+    var c = hexRGB(R.color), col = function (a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; };
+    ctx.save();
+    ctx.setLineDash([4, 4]); ctx.lineWidth = picked ? 1.6 : 1.2; ctx.strokeStyle = col(faint ? 0.25 : picked ? 0.95 : 0.7);
+    if (mx && my) {
+      var s = P.toS(sx.f(mx.value), sy.f(my.value));
+      if (s[0] >= r.L - 20 && s[0] <= r.L + r.W + 20 && s[1] >= r.T - 20 && s[1] <= r.T + r.H + 20) {
+        ctx.beginPath(); ctx.arc(s[0], s[1], picked ? 11 : 9, 0, 6.2832); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(s[0] - 16, s[1]); ctx.lineTo(s[0] + 16, s[1]); ctx.moveTo(s[0], s[1] - 16); ctx.lineTo(s[0], s[1] + 16); ctx.stroke();
+        out.push({ id: R.id, x: s[0], y: s[1] });
+        if (picked) {
+          /* the seed, and a path from it to the middle of the run's cluster */
+          var pts = R.designs.filter(function (d) { return d._h.has2; }), seedBox = null;
+          if (pts.length) {
+            var cx = 0, cy = 0; pts.forEach(function (d) { cx += P.px[d._i]; cy += P.py[d._i]; }); cx /= pts.length; cy /= pts.length;
+            var sd = R.seed && R.seed._h.has2 ? R.seed : null;
+            ctx.setLineDash([]); ctx.strokeStyle = col(0.9); ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.2832); ctx.stroke();
+            if (sd) {
+              var qx = P.px[sd._i], qy = P.py[sd._i];
+              ctx.strokeStyle = 'rgba(228,230,242,0.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(qx, qy, 8, 0, 6.2832); ctx.stroke();
+              ctx.setLineDash([3, 4]); ctx.strokeStyle = col(0.8); ctx.lineWidth = 1.3;
+              var mxp = (qx + cx) / 2 - (cy - qy) * 0.18, myp = (qy + cy) / 2 + (cx - qx) * 0.18;
+              ctx.beginPath(); ctx.moveTo(qx, qy); ctx.quadraticCurveTo(mxp, myp, cx, cy); ctx.stroke();
+              /* arrowhead at the cluster */
+              var ang = Math.atan2(cy - myp, cx - mxp); ctx.setLineDash([]);
+              ctx.beginPath(); ctx.moveTo(cx - 9 * Math.cos(ang - 0.45), cy - 9 * Math.sin(ang - 0.45)); ctx.lineTo(cx, cy); ctx.lineTo(cx - 9 * Math.cos(ang + 0.45), cy - 9 * Math.sin(ang + 0.45)); ctx.stroke();
+              var sw = ctx.measureText('seed').width;
+              seedBox = { x: qx + 12, y: qy - 8, w: sw + 2, h: 16 };
+              ctx.font = '600 12px "JetBrains Mono",monospace'; ctx.fillStyle = 'rgba(228,230,242,0.9)'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+              ctx.fillText('seed', qx + 12, qy);
+            }
+            /* the hit rate beside the ghost target, on whichever side keeps clear of the seed's label */
+            ctx.font = '600 12px "JetBrains Mono",monospace';
+            var ht = R.hits + '/' + R.designs.length + ' on target', hw = ctx.measureText(ht).width;
+            var spots = [[s[0] + 16, s[1] - 22], [s[0] - 16 - hw, s[1] - 22], [s[0] + 16, s[1] + 8], [s[0] - 16 - hw, s[1] + 8]];
+            var clear = function (q) { return !seedBox || q[0] > seedBox.x + seedBox.w + 4 || q[0] + hw < seedBox.x - 4 || q[1] > seedBox.y + seedBox.h + 2 || q[1] + 14 < seedBox.y - 2; };
+            var at = spots.filter(clear)[0] || spots[0];
+            ctx.fillStyle = col(0.95); ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText(ht, at[0], at[1]);
+          }
+        }
+      }
+    } else {
+      /* aimed at one of these axes only: a dashed line at its value */
+      ctx.setLineDash([2, 6]);
+      if (mx) { var X = P.toS(sx.f(mx.value), 0)[0]; if (X >= r.L && X <= r.L + r.W) { ctx.beginPath(); ctx.moveTo(X, r.T); ctx.lineTo(X, r.T + r.H); ctx.stroke(); } }
+      if (my) { var Y = P.toS(0, sy.f(my.value))[1]; if (Y >= r.T && Y <= r.T + r.H) { ctx.beginPath(); ctx.moveTo(r.L, Y); ctx.lineTo(r.L + r.W, Y); ctx.stroke(); } }
+    }
+    ctx.restore();
+  });
+  return out;
+}
 
 /* Box in 2D → one range filter per axis (a region when an axis isn't a column). */
 function applyBrush2D(p) {

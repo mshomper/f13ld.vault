@@ -146,3 +146,16 @@ Goes with F13LD.sweep v0.28.0 (branch `v0.28.0-target`).
 - Checks: `npm test` (smoke gains reach / payload / link / physics / solver-text steps), `npm run audit` at 1600 / 1280 / 1024 / 390 — no overlaps, no small text, no sideways scroll.
 - **Testing both branches together:** Vault reads `?sweep=<url>` (raw.githack.com, GitHub Pages or localhost only) so its Sweep links can open the Sweep branch build, e.g. `https://raw.githack.com/mshomper/f13ld.vault/v0.7.0-target/index.html?mock&sweep=https://raw.githack.com/mshomper/f13ld.sweep/v0.28.0-target/index.html`. Merge Sweep first, then Vault: the live Vault's links need the live Sweep to read them.
 - **Merged to `main` 2026-10-10** after Matt's click-test (Sweep v0.28.0 first, then Vault v0.7.0).
+
+## 2026-10-10 — aimed runs and four colour modes (v0.7.1, branch `v0.7.1-aimed`)
+Matt: highlight which designs came from a target sweep, as a filter; more colour options that add a dimension. Decisions: build the aimed-run filter / colour / ghost target first; the four colour modes density exponent, bound efficiency, Pareto depth and similar-to-selected; ghost targets show with the colour mode, and picking one shows the seed path and the run's cluster.
+- **Aimed runs** (`24-aim.js`): designs whose `solver.target` (Sweep v0.28+) shares a target, seed and export time form one run, with a stable id. Hit rate = designs within the run's tolerance on every metric (strain only with a Build target load).
+- **Filter → Source** (Percolation column, under Contributor): Aimed runs · Ordinary sweeps, and one chip per run. In the dock tags, undo and share links like every other filter.
+- **Colour → Aimed run**: one colour per run, everything else dims; the legend lists each run with its hit rate. In 2D, every run aimed at the plotted metrics shows a ghost crosshair (a dashed line when it aimed at only one of the two axes). Click a ghost or a legend entry — or "Show this run" in the inspector — to pick a run: the other runs fade, the seed gets a ring and a curved path to the cluster's centre, and the hit rate sits by the ghost on whichever side keeps clear of the seed's label.
+- **Density exponent** — n in E* ∝ ρⁿ around each design, fitted on its own design type (family + topology + preset) nearest in density. Absolute scale 1 (stretch) → 3 (bend).
+- **Bound efficiency** — E* / Es ÷ solid fraction (Voigt: ≤ 100 %); a design reading over 100 % is a solver artefact worth a look.
+- **Pareto depth** — layers behind the front of the current 2D axes and filters (O(n log n) peel); follows axis and filter changes.
+- **Similar to selected** — e^(−distance) over z-scored core metrics; follows the selection.
+- **Seed picker** (`23-reach.js`) now fits its density trends the same way (design type, nearest in density). Picking neighbours in the plot's two dimensions mixed design types whose curves run parallel and flattened the slope (sample data: median exponent 0.96 → 1.69, close to the generator's 1.25–2.1).
+- Sample data (`?mock`) carries two aimed runs (VF × E* and VF × k max).
+- Checks: `npm test` (smoke gains aimed-run, filter, inspector and colour-mode steps), render audit at 1600 / 1280 / 1024 / 390 clean.

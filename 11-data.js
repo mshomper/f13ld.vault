@@ -102,6 +102,7 @@ function ingestRows(rows) {
   DB.families = Object.keys(fam).sort(function (a, b) { var ia = FAMILY_ORDER.indexOf(a), ib = FAMILY_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
   DB.contributors = Object.keys(con).sort(function (a, b) { return con[b] - con[a]; });
   DB.grids = Object.keys(grd).map(Number).sort(function (a, b) { return a - b; });
+  resetColorCaches(); buildAimRuns();   /* v0.7.1 — 24-aim.js */
   DB.loaded = true;
 }
 
@@ -178,6 +179,7 @@ function loadChanged() {
     if (STRAIN_KEYS.indexOf(S.sort.k) >= 0) S.sort = { k: '_score', dir: -1 };
   }
   computeScores(F.domain);
+  aimHits();   /* v0.7.1 — strain targets count only with a load */
 }
 
 /* Percentile rank 0..1 of every design for metric k (NaN where missing).
@@ -302,5 +304,40 @@ function mockRows(n) {
       recipe: Object.assign(recipe, { homogenization: { grid: R() < 0.7 ? 64 : 32 } })
     });
   }
+  mockAimedRuns(rows, R);
   return rows;
+}
+/* v0.7.1 — two aimed runs in the sample data, as F13LD.sweep v0.28 exports them */
+function mockAimedRuns(rows, R) {
+  var tp = rows.filter(function (r) { return r.family === 'tpms'; });
+  if (tp.length < 60) return;
+  function setE(r, target) {
+    var E = [r.ex_norm, r.ey_norm, r.ez_norm], f = target / Math.max.apply(null, E), v = r.volume_fraction / 100;
+    r.ex_norm *= f; r.ey_norm *= f; r.ez_norm *= f; E = [r.ex_norm, r.ey_norm, r.ez_norm];
+    r.stiffness_density_norm = (E[0] + E[1] + E[2]) / 3 / v;
+    r.microstrain_x_per_gpa = Math.min(1e6, 1e4 / E[0]); r.microstrain_y_per_gpa = Math.min(1e6, 1e4 / E[1]); r.microstrain_z_per_gpa = Math.min(1e6, 1e4 / E[2]);
+    r.microstrain_avg_per_gpa = (r.microstrain_x_per_gpa + r.microstrain_y_per_gpa + r.microstrain_z_per_gpa) / 3;
+  }
+  function run(list, seed, metrics, when, apply) {
+    var at = new Date(Date.UTC(2026, 9, 10, 9, 0)).toISOString();
+    list.forEach(function (r) {
+      apply(r);
+      r.exported_at = at; r.created_at = when; r.source_version = '0.28.0'; r.contributor_name = 'mshomper';
+      r.solver = { method: 'FFT-CG', version: 'lab-0.24.0+sweep', backend: 'gpu', precision_mode: 'rigorous', resolution_picker: 32,
+        target: { metrics: metrics, tol: 0.05, round: 'final', cancelled: false, stopped: 'on-target',
+          source: { tool: 'f13ld.vault', id: String(seed.id), name: 'Gyroid sheet', reason: 'reach' },
+          rounds: [{ k: 1, best: 0.21 }, { k: 2, best: 0.09 }, { k: 3, best: 0.04 }] } };
+    });
+  }
+  var a = tp.slice(0, 25), sa = tp[30], b = tp.slice(31, 51), sb = tp[55];
+  run(a, sa, [{ key: 'volume_fraction', value: 17 }, { key: '_emax', value: 0.056 }], new Date(Date.UTC(2026, 9, 10, 9, 5)).toISOString(), function (r) {
+    r.volume_fraction = +(17 + (R() * 2 - 1) * 0.9).toFixed(2); setE(r, 0.056 * (1 + (R() * 2 - 1) * 0.07));
+  });
+  sa.volume_fraction = 24; setE(sa, 0.09);
+  run(b, sb, [{ key: 'volume_fraction', value: 40 }, { key: 'keff_max_norm', value: 0.3 }], new Date(Date.UTC(2026, 9, 10, 9, 20)).toISOString(), function (r) {
+    r.volume_fraction = +(40 + (R() * 2 - 1) * 2).toFixed(2);
+    var k = [r.keff_x_norm, r.keff_y_norm, r.keff_z_norm], f = 0.3 * (1 + (R() * 2 - 1) * 0.1) / Math.max.apply(null, k);
+    r.keff_x_norm *= f; r.keff_y_norm *= f; r.keff_z_norm *= f; k = [r.keff_x_norm, r.keff_y_norm, r.keff_z_norm];
+    r.keff_max_norm = Math.max.apply(null, k); r.keff_avg_norm = (k[0] + k[1] + k[2]) / 3;
+  });
 }

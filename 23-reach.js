@@ -79,6 +79,39 @@ function reachPhysics(T) {
   return out;
 }
 
+/* v0.7.1 — the designs to fit a density trend on around d: its own design
+   type (family + topology + preset — the lineage a sweep varies), nearest
+   in density, widening to family + topology, then family, when the type has
+   too few. Neighbours picked in the plot's two dimensions mix design types
+   whose curves run parallel, and flatten the slope (regression dilution). */
+function trendKey(d, lvl) {
+  var g = (d.recipe && d.recipe.geometry) || {}, topo = String(g.mode || g.topology || '').replace(/^(grain|noise)-/, '');
+  var pre = (d.recipe && d.recipe.surface && (d.recipe.surface.preset || d.recipe.surface.type)) || d.preset || '';
+  return lvl === 0 ? d.family + '|' + topo + '|' + pre : lvl === 1 ? d.family + '|' + topo : d.family;
+}
+var _trendIdx = null;
+function trendIndex() {
+  if (_trendIdx && _trendIdx.n === DB.N) return _trendIdx;
+  var idx = { n: DB.N, g: [{}, {}, {}] };
+  DB.all.forEach(function (d) {
+    if (!(isNum(d.volume_fraction) && d.volume_fraction > 0) || d._stiff_flag === 'flagged') return;
+    for (var l = 0; l < 3; l++) { var k = trendKey(d, l); (idx.g[l][k] = idx.g[l][k] || []).push(d); }
+  });
+  return (_trendIdx = idx);
+}
+function trendPeers(d, k) {
+  k = k || 30;
+  var idx = trendIndex(), lv = Math.log(d.volume_fraction / 100);
+  for (var l = 0; l < 3; l++) {
+    var g = idx.g[l][trendKey(d, l)] || [];
+    if (g.length >= 8 || l === 2) {
+      return g.map(function (o) { return { o: o, r: Math.abs(Math.log(o.volume_fraction / 100) - lv) }; })
+        .sort(function (a, b) { return a.r - b.r; }).slice(0, k).map(function (e) { return e.o; });
+    }
+  }
+  return [];
+}
+
 /* ln(value) against ln(volume fraction) through a set of designs → {a, b, r2} or null. */
 function reachFit(list, k) {
   var xs = [], ys = [];
@@ -115,24 +148,21 @@ function reachSeed(T, pool) {
   cands.forEach(function (d) { d._rd = Math.hypot(sx.f(d[T.kx]) - tx, sy.f(d[T.ky]) - ty); });
   cands.sort(function (a, b) { return a._rd - b._rd; });
   var nearest = cands[0], top = cands.slice(0, 80);
-  /* the family around each candidate: its 30 nearest same-family designs in
-     the whole Vault (unflagged ones when there are enough), with plot
-     positions and the family's density span worked out once */
+  /* each family's density span, worked out once; the trend around each
+     candidate comes from its own design type (trendPeers) */
   var byFam = {};
   DB.all.forEach(function (d) { if (ok(d)) (byFam[d.family] = byFam[d.family] || []).push(d); });
   Object.keys(byFam).forEach(function (f) {
     var all = byFam[f], clean = all.filter(function (o) { return o._stiff_flag !== 'flagged'; });
     var use = clean.length >= 12 ? clean : all, lo = Infinity, hi = -Infinity;
     use.forEach(function (o) { var p = o.volume_fraction / 100; if (p < lo) lo = p; if (p > hi) hi = p; });
-    byFam[f] = { pts: use.map(function (o) { return { o: o, x: sx.f(o[T.kx]), y: sy.f(o[T.ky]) }; }), lo: lo, hi: hi };
+    byFam[f] = { lo: lo, hi: hi };
   });
   var best = null;
   top.forEach(function (d) {
     var F0 = byFam[d.family];
     if (!F0) return;
-    var px = sx.f(d[T.kx]), py = sy.f(d[T.ky]);
-    var local = F0.pts.map(function (e) { return { o: e.o, r: Math.hypot(e.x - px, e.y - py) }; })
-      .sort(function (a, b) { return a.r - b.r; }).slice(0, 30).map(function (e) { return e.o; });
+    var local = trendPeers(d, 30);
     var fits = keys.map(function (k) { var f = reachFit(local, k); return f && Math.abs(f.b) >= 0.05 && f.r2 >= 0.3 ? f : null; });
     if (!fits[0] && !fits[1]) return;
     /* slide along the design's own trend, v(p) = v_d (p / p_d)^b, to the

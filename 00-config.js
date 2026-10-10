@@ -7,7 +7,7 @@
    same or a lower-numbered file.
    ============================================================ */
 
-var VAULT_VERSION = '0.7.0';
+var VAULT_VERSION = '0.7.1';
 
 var SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_DAlrNLqbUZiwkaA6wPSMIw_YUNY85LX';

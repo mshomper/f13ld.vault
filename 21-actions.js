@@ -67,6 +67,7 @@ function select(d, src) {
   }
   ['#hpQueue', '#hpMesh', '#hpLab', '#dMesh'].forEach(function (s) { var b = $(s); if (b) b.disabled = !d; });
   markViewsDirty(); shareLinkSoon();
+  if (S.color === '_sim') { recolor(); renderLegend(); }   /* v0.7.1 — similarity follows the selection */
   if (S.mobile) renderMobile();
 }
 function step(dir) {

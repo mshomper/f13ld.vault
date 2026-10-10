@@ -18,11 +18,16 @@ function filtersHTML(prefix) {
   }).join('');
   var con = '<div class="csearch"><span class="gl-wrap">' + gl('search') + '</span><input data-csearch placeholder="Find a contributor" autocomplete="off" spellcheck="false"></div><div class="chips contribs">' +
     DB.contributors.map(function (c, i) { return '<button class="chip" data-chip="contrib:' + esc(c) + '"' + (i >= 10 ? ' data-extra="1"' : '') + '>' + esc(c) + '<span class="n"></span></button>'; }).join('') + '</div>';
+  /* v0.7.1 — where designs came from: aimed runs (24-aim.js) */
+  var runs = DB.aimRuns || [];
+  var src = runs.length ? '<div class="lbl">Source <span class="lbl-n">aimed = a Sweep run aimed at a target</span></div><div class="chips">' +
+    '<button class="chip" data-chip="src:aimed">' + gl('target') + 'Aimed runs<span class="n"></span></button><button class="chip" data-chip="src:plain">Ordinary sweeps<span class="n"></span></button></div>' +
+    '<div class="chips aims">' + runs.map(function (R) { return '<button class="chip" data-chip="aim:' + esc(R.id) + '" title="' + esc(aimLegendLabel(R) + ' · ' + R.hits + ' of ' + R.designs.length + ' on target') + '"><i class="dot" style="background:' + R.color + '"></i>' + esc(aimLabel(R)) + '<span class="n"></span></button>'; }).join('') + '</div>' : '';
   var add = '<div class="addm"><span class="gl-wrap">' + gl('search') + '</span><input data-addin placeholder="Add a metric filter" autocomplete="off" spellcheck="false"><div class="addm-list" data-addlist></div></div>';
   return '<div class="dr-cols">' +
     '<section class="dr-col" data-sec="domain"><div class="dr-h"><span class="ico">' + ic('target') + '</span>Domain<span>re-ranks everything</span></div>' + dom + '</section>' +
     '<section class="dr-col"><div class="dr-h"><span class="ico">' + ic('cell') + '</span>Population</div><div class="lbl">Family</div>' + fam + '<div class="lbl">Connectivity</div>' + kap + grid + '<div class="lbl">Stiffness flag <span class="lbl-n">flagged designs are never hidden unless you choose</span></div>' + flag + '</section>' +
-    '<section class="dr-col"><div class="dr-h"><span class="ico">' + ic('orbit') + '</span>Percolation</div>' + perc + '<div class="lbl">Contributor</div>' + con + '<div data-region></div></section>' +
+    '<section class="dr-col"><div class="dr-h"><span class="ico">' + ic('orbit') + '</span>Percolation</div>' + perc + '<div class="lbl">Contributor</div>' + con + src + '<div data-region></div></section>' +
     '<section class="dr-col"><div class="dr-h"><span class="ico">' + ic('filters') + '</span>Ranges<span>bars = designs still in play</span></div><div data-ranges></div>' + add + '</section>' +
   '</div>';
 }

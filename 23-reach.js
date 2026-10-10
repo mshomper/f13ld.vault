@@ -90,29 +90,66 @@ function trendKey(d, lvl) {
   return lvl === 0 ? d.family + '|' + topo + '|' + pre : lvl === 1 ? d.family + '|' + topo : d.family;
 }
 var _trendIdx = null;
+/* groups at three levels, each sorted by ln(solid fraction) once */
 function trendIndex() {
   if (_trendIdx && _trendIdx.n === DB.N) return _trendIdx;
-  var idx = { n: DB.N, g: [{}, {}, {}] };
+  var idx = { n: DB.N, g: [{}, {}, {}], fits: {} };
   DB.all.forEach(function (d) {
     if (!(isNum(d.volume_fraction) && d.volume_fraction > 0) || d._stiff_flag === 'flagged') return;
     for (var l = 0; l < 3; l++) { var k = trendKey(d, l); (idx.g[l][k] = idx.g[l][k] || []).push(d); }
   });
+  for (var l = 0; l < 3; l++) Object.keys(idx.g[l]).forEach(function (k) {
+    var a = idx.g[l][k].map(function (o) { return { o: o, x: Math.log(o.volume_fraction / 100) }; }).sort(function (p, q) { return p.x - q.x; });
+    idx.g[l][k] = { key: l + ':' + k, o: a.map(function (e) { return e.o; }), x: a.map(function (e) { return e.x; }) };
+  });
   return (_trendIdx = idx);
 }
-function trendPeers(d, k) {
-  k = k || 30;
+/* The peers: widen from the nearest in density until they span at least
+   1.6× in density with at least 30 designs, or take the whole type. (A
+   fixed count of nearest designs sits in a sliver of density in a dense
+   sweep — too narrow to fit a slope: 480 of 939 live designs, 2026-10-10.)
+   The nearest-in-density set is a window of the sorted group, grown from
+   the design's place in it; → { list, key } (key names the window, so a
+   fit over the same window is computed once). */
+var TREND_MIN_N = 30, TREND_MIN_SPAN = Math.log(1.6);
+function trendWindow(d, minN) {
+  minN = minN || TREND_MIN_N;
   var idx = trendIndex(), lv = Math.log(d.volume_fraction / 100);
   for (var l = 0; l < 3; l++) {
-    var g = idx.g[l][trendKey(d, l)] || [];
-    if (g.length >= 8 || l === 2) {
-      return g.map(function (o) { return { o: o, r: Math.abs(Math.log(o.volume_fraction / 100) - lv) }; })
-        .sort(function (a, b) { return a.r - b.r; }).slice(0, k).map(function (e) { return e.o; });
+    var G = idx.g[l][trendKey(d, l)];
+    if (!G || (G.o.length < 8 && l < 2)) continue;
+    var X = G.x, n = X.length, lo = 0, hi = n;
+    while (lo < hi) { var m = (lo + hi) >> 1; if (X[m] < lv) lo = m + 1; else hi = m; }
+    /* grown from the nearest of ~24 anchors along the type, so neighbouring
+       designs share a window (and its fit): one fit per anchor, not per design */
+    var st = Math.max(1, Math.round(n / 24)), c0 = Math.min(n - 1, Math.round(Math.min(lo, n - 1) / st) * st);
+    lv = X[c0];
+    var a = c0, b = a;                                         /* window [a, b], grown toward the nearer side */
+    while (b - a + 1 < n && (b - a + 1 < minN || X[b] - X[a] < TREND_MIN_SPAN)) {
+      if (a === 0) b++; else if (b === n - 1) a--;
+      else if (lv - X[a - 1] <= X[b + 1] - lv) a--; else b++;
     }
+    return { list: G.o.slice(a, b + 1), key: G.key + '|' + a + '|' + b };
   }
-  return [];
+  return { list: [], key: null };
+}
+function trendPeers(d, minN) { return trendWindow(d, minN).list; }
+/* a density trend over the design's window, cached per window and metric */
+function trendFit(d, k) {
+  var w = trendWindow(d), idx = trendIndex(), ck = w.key && w.key + '|' + k;
+  if (ck && ck in idx.fits) { _fitWhy = idx.fits[ck] ? '' : idx.fits[ck + '?']; return idx.fits[ck]; }
+  var list = w.list.indexOf(d) >= 0 ? w.list : w.list.concat([d]);
+  var f = reachFit(list, k);
+  if (ck && w.list.indexOf(d) >= 0) { idx.fits[ck] = f; idx.fits[ck + '?'] = _fitWhy; }
+  return f;
 }
 
-/* ln(value) against ln(volume fraction) through a set of designs → {a, b, r2} or null. */
+/* ln(value) against ln(volume fraction) through a set of designs → {a, b, n, span} or null.
+   v0.7.1: Theil–Sen — the median of the pairwise slopes, the intercept the
+   median of the residuals — so shape jitter (cell stretching, wall changes
+   at the same density) widens the estimate instead of dragging it. Needs 6
+   designs spanning at least 1.6× in density; why = the reason when not. */
+var _fitWhy = '';
 function reachFit(list, k) {
   var xs = [], ys = [];
   for (var i = 0; i < list.length; i++) {
@@ -120,15 +157,21 @@ function reachFit(list, k) {
     if (isNum(v) && v > 0 && isNum(vf) && vf > 0) { xs.push(Math.log(vf / 100)); ys.push(Math.log(v)); }
   }
   var n = xs.length;
-  if (n < 6) return null;
-  var mx = 0, my = 0, j;
-  for (j = 0; j < n; j++) { mx += xs[j]; my += ys[j]; }
-  mx /= n; my /= n;
-  var sxx = 0, sxy = 0, syy = 0;
-  for (j = 0; j < n; j++) { var dx = xs[j] - mx, dy = ys[j] - my; sxx += dx * dx; sxy += dx * dy; syy += dy * dy; }
-  if (sxx / n < 0.0004) return null;
-  var b = sxy / sxx;
-  return { a: my - b * mx, b: b, r2: syy > 0 ? sxy * sxy / (sxx * syy) : 1, n: n };
+  if (n < 6) { _fitWhy = 'fewer than 6 designs of this type'; return null; }
+  var lo = Math.min.apply(null, xs), hi = Math.max.apply(null, xs);
+  if (hi - lo < TREND_MIN_SPAN * 0.999) { _fitWhy = 'designs of this type span less than 1.6× in density'; return null; }
+  /* pairs far enough apart in density; a fixed stride keeps big types fast */
+  var sl = [], step = Math.max(1, Math.floor(n * (n - 1) / 2 / 20000)), c = 0;
+  for (var p = 0; p < n; p++) for (var q = p + 1; q < n; q++) {
+    if ((c++ % step) !== 0) continue;
+    var dx = xs[q] - xs[p]; if (Math.abs(dx) < 0.02) continue;
+    sl.push((ys[q] - ys[p]) / dx);
+  }
+  if (sl.length < 5) { _fitWhy = 'designs of this type barely differ in density'; return null; }
+  var med = function (a) { a.sort(function (u, v) { return u - v; }); var m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  var b = med(sl), r = xs.map(function (x, t) { return ys[t] - b * x; });
+  _fitWhy = '';
+  return { a: med(r), b: b, n: n, span: Math.exp(hi - lo) };
 }
 function reachRelErr(v, t) { if (!isNum(v) || !isNum(t)) return Infinity; return Math.abs(t) < 1e-12 ? Math.abs(v - t) : Math.abs(v / t - 1); }
 
@@ -162,8 +205,7 @@ function reachSeed(T, pool) {
   top.forEach(function (d) {
     var F0 = byFam[d.family];
     if (!F0) return;
-    var local = trendPeers(d, 30);
-    var fits = keys.map(function (k) { var f = reachFit(local, k); return f && Math.abs(f.b) >= 0.05 && f.r2 >= 0.3 ? f : null; });
+    var fits = keys.map(function (k) { var f = trendFit(d, k); return f && Math.abs(f.b) >= 0.05 ? f : null; });
     if (!fits[0] && !fits[1]) return;
     /* slide along the design's own trend, v(p) = v_d (p / p_d)^b, to the
        density whose worst metric is closest (the measure Sweep ranks by) */

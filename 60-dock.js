@@ -160,6 +160,16 @@ function setTab(t) {
 }
 
 /* ── tooltip ─────────────────────────────────────────────────────────── */
+/* v0.7.1 — what the colour says about this design, for the modes that aren't a column */
+function colorTipLine(d) {
+  var c = S.color, v = null;
+  if (c === '_nexp') v = isNum(d._nexp) ? 'n ' + d._nexp.toFixed(2) : 'no exponent: ' + (d._nexpWhy || 'not computed');
+  else if (c === '_beff') { var b = beffOf(d); v = isNum(b) ? Math.round(b * 100) + ' % of the bound' + (b > 1.02 ? ' — past it: check the solve' : '') : null; }
+  else if (c === '_pdepth') v = isNum(d._pdepth) ? (d._pdepth === 0 ? 'on the Pareto front' : d._pdepth + ' layers behind the front') : null;
+  else if (c === '_sim') v = isNum(d._sim) ? Math.round(d._sim * 100) + ' % alike' : null;
+  else if (c === 'aim') { var R = aimRunOf(d); v = R ? 'aimed run · ' + aimLabel(R) : null; }
+  return v ? '<div class="tw tc">' + esc(v) + '</div>' : '';
+}
 function showTip(d, x, y, panel) {
   var t = $('#tip'); if (!t) return;
   if (!d || !panel) { t.classList.remove('on'); return; }
@@ -169,6 +179,7 @@ function showTip(d, x, y, panel) {
     var fails = d._m ? [] : failingFilters(d), k = cardMetrics();
     t.innerHTML = '<canvas data-th="' + esc(d._id) + '" width="168" height="126"></canvas><div class="tb"><div class="tn">' + esc(displayPreset(d)) + '</div><div class="tf">' + esc(FAMILY_NAME[d.family] || d.family) + ' · ' + esc(d._id) + '</div>' +
       '<div class="tm">' + k.map(function (key) { var r = resolveValue(d[key], key); return esc(mShort(key)) + ' <b>' + esc(d[key] == null ? '—' : r.value + (r.isResolved ? ' ' + r.unit : '')) + '</b>'; }).join('<br>') + '</div>' +
+      colorTipLine(d) +
       (fails.length ? '<div class="tw">Hidden by ' + fails.map(function (f) { return esc(f.k + ' ' + f.v); }).join(', ') + '</div>' : '') + '</div>';
     paintThumbs(t);
   }

@@ -101,18 +101,23 @@ function aimCatColor(v) {
   return DB.aimById[v].color;
 }
 
-/* Density exponent: the slope of ln E* against ln ρ through the design's
-   own design type, nearest in density (23-reach.js trendPeers — the same
-   trend the seed picker uses). Computed once per load. */
+/* Density exponent: the slope of ln E̅ against ln ρ through the design's
+   own design type (23-reach.js trendPeers + reachFit — the same trend the
+   seed picker uses). E̅ = the geometric mean of Ex, Ey, Ez: cell stretching
+   moves stiffness between the axes but barely changes it (the peak did, and
+   scattered the fit). d._nexpWhy says why a design has none. Once per load. */
 var _nexpDone = false;
+function egeoOf(d) { var a = d.ex_norm, b = d.ey_norm, c = d.ez_norm; return isNum(a) && isNum(b) && isNum(c) && a > 0 && b > 0 && c > 0 ? Math.cbrt(a * b * c) : null; }
 function ensureNexp() {
   if (_nexpDone) return; _nexpDone = true;
   _trendIdx = null;
+  DB.all.forEach(function (d) { d._egeo = egeoOf(d); });
   DB.all.forEach(function (d) {
-    d._nexp = null;
-    if (!(isNum(d._emax) && d._emax > 0 && isNum(d.volume_fraction) && d.volume_fraction > 0)) return;
-    var f = reachFit(trendPeers(d, 24).concat([d]), '_emax');
-    if (f && f.r2 >= 0.3) d._nexp = f.b;
+    d._nexp = null; d._nexpWhy = '';
+    if (!(isNum(d.volume_fraction) && d.volume_fraction > 0)) { d._nexpWhy = 'no volume fraction'; return; }
+    if (d._egeo == null) { d._nexpWhy = 'an axis carries no load'; return; }
+    var f = trendFit(d, '_egeo');
+    if (f) d._nexp = f.b; else d._nexpWhy = _fitWhy;
   });
 }
 /* Bound efficiency: E* / Es over the solid fraction (Voigt: at most 1). */

@@ -143,8 +143,8 @@ var COLOR_MODE_LIST = [
   { id: '_scar', label: 'Domain scarcity', type: 'cont' },
   /* v0.7.1 (24-aim.js) — absolute scales: abs = [value at the low end, value at the high end] */
   { id: 'aim', label: 'Aimed run', type: 'cat' },
-  { id: '_nexp', label: 'Density exponent', type: 'cont', abs: [0.8, 3], lo: 'stretch 1', hi: '3 bend', prep: function () { ensureNexp(); },
-    tip: 'How stiffness grows with density around each design, E ∝ ρⁿ (fitted on its nearest same-family designs). Near 1: stretch-dominated; near 2 and up: bending-dominated.' },
+  { id: '_nexp', label: 'Density exponent', type: 'cont', abs: [1, 3.5], lo: 'stretch 1', hi: '3.5 bend', prep: function () { ensureNexp(); },
+    tip: 'How stiffness grows with density for each design type, E ∝ ρⁿ (mean of Ex, Ey, Ez, fitted across designs of the same family, topology and preset). Near 1: stretch-dominated; near 2 and up: bending-dominated. Grey: too few designs of that type, or they span less than 1.6× in density.' },
   { id: '_beff', label: 'Bound efficiency', type: 'cont', abs: [0, 1], lo: '0 %', hi: '100 %', val: function (d) { return beffOf(d); },
     tip: 'Peak stiffness as a share of the most any structure can have at that density (Voigt bound: E* / Es ≤ solid fraction).' },
   { id: '_pdepth', label: 'Pareto depth', type: 'cont', abs: [12, 0], lo: 'deep', hi: 'front', prep: function () { ensurePareto(); },

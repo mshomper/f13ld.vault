@@ -193,7 +193,7 @@ Hero3D.prototype.drawOverlay = function (now, w, h, dpr) {
     [['high', 0.94], ['median', 0.5], ['low', 0.06]].forEach(function (tk) {
       AX.forEach(function (ax) {
         var f = -1 + 2 * tk[1], q = ax[0] === 'x' ? P(f, -1.16, -1) : ax[0] === 'y' ? P(-1.18, f, -1) : P(-1.16, -1, f);
-        place(tk[0], q[0], q[1], '500 12px "JetBrains Mono",monospace', 'rgba(154,159,183,0.8)');
+        place(ax[0].toUpperCase() + ' ' + tk[0], q[0], q[1], '500 12px "JetBrains Mono",monospace', 'rgba(154,159,183,0.8)');   /* axis letter: ticks from different axes can sit close */
       });
     });
   }

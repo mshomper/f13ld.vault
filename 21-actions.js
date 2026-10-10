@@ -101,7 +101,7 @@ function setAxis3(a, k) { S.ax3[a] = k; setAxesTargets3D(); renderAxisChips(); s
 function setAxis2(a, k, quiet) { S.ax2[a] = k; set2DTargets(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (!quiet) toast('2D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b>' + (plotScale(k).lg ? ' (log scale)' : '')); }
 function setColor(id) { S.color = id; recolor(); renderLegend(); savePrefs(); shareLinkSoon(); }
 function setView(v) { S.view = v; savePrefs(); renderResults(); }
-function setHv(hv) { S.hv = hv; var h = $('#pHero'); if (h) h.dataset.hv = hv; $$('#dHv [data-hv]').forEach(function (b) { b.classList.toggle('on', b.dataset.hv === hv); }); savePrefs(); markViewsDirty(); requestAnimationFrame(placeSplits); }
+function setHv(hv) { S.hv = hv; var h = $('#pHero'); if (h) h.dataset.heroview = hv; $$('#dHv [data-hv]').forEach(function (b) { b.classList.toggle('on', b.dataset.hv === hv); }); savePrefs(); markViewsDirty(); requestAnimationFrame(placeSplits); }
 function setLayout(l) { S.layout = l; var a = $('#dApp'); a.classList.toggle('lay-a', l === 'a'); a.classList.toggle('lay-b', l === 'b'); $$('[data-layout]').forEach(function (b) { b.classList.toggle('on', b.dataset.layout === l); }); savePrefs(); loadSplits(); requestAnimationFrame(function () { placeSplits(); renderTags(); markViewsDirty(); }); }
 function setAlive(v) { S.alive = v; $$('[data-act="alive"]').forEach(function (b) { b.classList.toggle('on', v); b.setAttribute('aria-pressed', v ? 'true' : 'false'); }); savePrefs(); }
 function setTool(t) { S.tool = t; $$('#dTool [data-tool]').forEach(function (b) { b.classList.toggle('on', b.dataset.tool === t); }); if (t === 'brush') toast('Drag a box over the 3D design space — designs inside become a region filter'); }

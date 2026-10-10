@@ -137,7 +137,7 @@ document.addEventListener('click', function (e) {
   if ((b = t.closest('[data-sortk]'))) { var k = b.dataset.sortk; S.sort = S.sort.k === k ? { k: k, dir: -S.sort.dir } : { k: k, dir: k === '_name' ? 1 : -1 }; savePrefs(); requestRefresh(); return; }
   if ((b = t.closest('[data-sort]'))) { closeMenu(); var sk = b.dataset.sort.split(':'); S.sort = { k: sk[0], dir: +sk[1] }; savePrefs(); requestRefresh(); return; }
   if ((b = t.closest('[data-view]'))) { setView(b.dataset.view); return; }
-  if ((b = t.closest('[data-hv]'))) { setHv(b.dataset.hv); return; }
+  if ((b = t.closest('button[data-hv]'))) { setHv(b.dataset.hv); return; }
   if ((b = t.closest('[data-mhv]'))) { setMhv(b.dataset.mhv); return; }
   if ((b = t.closest('[data-layout]'))) { setLayout(b.dataset.layout); return; }
   if ((b = t.closest('[data-tool]'))) { setTool(b.dataset.tool); return; }

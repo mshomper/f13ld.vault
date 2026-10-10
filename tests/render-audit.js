@@ -6,6 +6,7 @@
      · text that overlaps other text (clipped to what is visible on screen)
      · horizontal page scroll
      · page errors and failed requests
+     · buttons that do nothing when clicked with a real mouse
    This is the collision check for the 12 px minimum.
 
      npm install                          (once — playwright-core + jsdom)
@@ -36,6 +37,44 @@ const AUDIT = `(() => {
     if (ox > 2 && oy > 2) { const pa = a.closest('.menu,.tip,.toast,.cp,.kbd,.drawer'), pb = b.closest('.menu,.tip,.toast,.cp,.kbd,.drawer'); if (pa !== pb) continue; res.overlap.push(name(a) + ' X ' + name(b)); } }
   res.hscroll = document.documentElement.scrollWidth > innerWidth ? document.documentElement.scrollWidth : 0;
   return res; })()`;
+
+/* Real-mouse click on every distinct visible button: flags any that change
+   nothing on the page (no DOM change, no state change, no new window). */
+async function clickSweep(p, n) {
+  await p.goto(URL); await p.waitForTimeout(3500);
+  await p.evaluate(() => { window.__opened = 0; window.open = () => { window.__opened++; return null; };
+    const a = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { window.__opened++; }; });
+  const keys = await p.evaluate(() => {
+    const seen = new Set(), out = [];
+    document.querySelectorAll('button, [role=button]').forEach((el, i) => {
+      const r = el.getBoundingClientRect(); if (!r.width || !r.height || el.disabled || el.closest('[inert]') || el.closest('.card,.tbl tbody,#splash')) return;
+      const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || +cs.opacity === 0) return;
+      const sig = [...el.attributes].filter(a => a.name.startsWith('data-') && a.name !== 'data-ic' && a.name !== 'data-gl').map(a => a.name + '=' + a.value).join(' ') || ('#' + el.id) || el.textContent.trim().slice(0, 20);
+      if (seen.has(sig) || /data-act=(mock|retry)/.test(sig)) return; seen.add(sig); el.dataset.auditI = i; out.push([i, sig, el.textContent.trim().slice(0, 24)]);
+    });
+    return out;
+  });
+  const dead = [];
+  for (const [i, sig, txt] of keys) {
+    const el = p.locator('[data-audit-i="' + i + '"]');
+    const box = await el.boundingBox().catch(() => null); if (!box) continue;
+    const top = await p.evaluate(([x, y, i]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('[data-audit-i="' + i + '"]')); }, [box.x + box.width / 2, box.y + box.height / 2, i]);
+    if (!top) continue;   // covered by something (menu, drawer) — not clickable right now
+    await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await p.waitForTimeout(160);   // let hover tooltips settle first
+    await p.evaluate(() => { window.__snap = () => document.body.innerHTML.replace(/ data-audit-i="\d+"/g, '') + JSON.stringify([S.tool, S.tool2, S.alive, S.pareto, S.gap, S.hv, S.view, S.color, S.sort, S.pins.length, S.sel && S.sel._id, IV.cells, IV.zoom, location.hash,
+        VIEWS.h3 && [VIEWS.h3.yawT, VIEWS.h3.zT, VIEWS.h3.cT], VIEWS.p2 && VIEWS.p2.vT, VIEWS.m3 && VIEWS.m3.yawT, VIEWS.m2 && VIEWS.m2.vT]) + JSON.stringify(F);
+      window.__s0 = __snap(); window.__o0 = window.__opened; });
+    await p.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await p.waitForTimeout(220);
+    /* compare what the page actually shows and holds — rewriting an attribute with the same value doesn't count */
+    const fx = await p.evaluate(() => ({ changed: __snap() !== __s0, opened: window.__opened !== __o0 }));
+    const wasOn = await el.evaluate(e => e.classList.contains('on') || e.getAttribute('aria-pressed') === 'true').catch(() => false);
+    if (!fx.changed && !fx.opened) dead.push(sig + '  "' + txt + '"' + (wasOn ? '  (was already on — fine)' : ''));
+    await p.keyboard.press('Escape'); await p.waitForTimeout(80);
+  }
+  console.log(' click sweep: ' + keys.length + ' buttons, ' + dead.length + ' with no visible effect (a reset already at rest, or Queue offline, is expected)');
+  dead.forEach(d => console.log('   no effect: ' + d));
+}
+
 (async () => {
   const launch = process.env.CHROME ? { executablePath: process.env.CHROME } : { channel: 'chrome' };
   const b = await chromium.launch(Object.assign(launch, { args: ['--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'] }));
@@ -61,6 +100,7 @@ const AUDIT = `(() => {
       await p.evaluate("act('m-back'); openMFilters()"); await p.waitForTimeout(500); await p.screenshot({ path: OUT + '/' + n + '-filters.png' });
       await p.evaluate("closeMFilters(); setMhv('2d')"); await p.waitForTimeout(600); await p.screenshot({ path: OUT + '/' + n + '-2d.png' });
     }
+    if (n === 'd1600' || n === 'p390') await clickSweep(p, n);
     await p.close();
   }
   await b.close();

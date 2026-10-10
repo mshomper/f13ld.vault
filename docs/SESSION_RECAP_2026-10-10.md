@@ -19,3 +19,19 @@
 - **Lab → Vault round trip** (scoped, its own session): Vault's *Open in Lab* will carry the row's content hash, and Lab-verified results come back through Ingest — a filter, inspector values beside Sweep's, a Sweep-vs-Lab gap metric. Scope: `f13ld.lab/docs/VAULT_ROUNDTRIP_SCOPE.md`.
 - **Bundle** previews and Aim Sweep once Sweep v0.30.0 adds the family (copy `geom/bundle.js` the same way).
 - Later: density exponent and bound efficiency as Sweep target metrics (`SWEEP_TARGET_KEYS` here and Sweep's `13-target.js`).
+
+## Late evening — database migration and direct push (no Vault code changed)
+
+From the direct-push session (F13LD.ingest `docs/SESSION_RECAP_2026-10-10.md`, plan `docs/F13LD_VAULT_PUSH_PLAN.md`, SQL `docs/sql/` there):
+
+- **Database:** the public key now reads **named columns only** on `f13ld_designs` (contact is not readable at all — `select=*` fails with a permission error), inserts, and cannot update, delete or truncate. Vault's loader already asks for named columns, so it loads as before. A new column needs `grant select (column) on public.f13ld_designs to anon, authenticated` before Vault can read it.
+- New column **`provenance_kind`** (`sweep` · `lab` · `file`) — not yet in `VAULT_COLUMNS`.
+- New table **`f13ld_lab_results`** (one row per Lab solve, tied by `content_hash`, newest by `created_at` wins; contact not readable).
+- `f13ld_designs_dimensional` rebuilt without contact. Backup `f13ld_designs_backup_20261010` (1,042 rows); the old backup and the v5 archive are gone.
+- **Push to Vault** shipped in F13LD.sweep v0.29.2 (rows `provenance_kind = 'sweep'`), through F13LD.ingest's shared `f13ld-vault-push.js` (v1.0.1). Wipe with `delete from public.f13ld_designs;` (it clears Lab results too; truncate fails).
+
+## Next session (updated)
+
+- Matt **wipes and re-seeds** through Sweep's Push to Vault (instead of Ingest drops).
+- **Phase 5 — Lab results in Vault** (after F13LD.lab's Phase 4 push): add `provenance_kind` to `VAULT_COLUMNS`; read `f13ld_lab_results` by named columns (never `contributor_contact`), newest solve per `content_hash`; show Lab values in place of Sweep's estimates with Sweep's beside them; Lab-verified filter chip and colour mode; filterable yield per axis, buckling strain, failure mode, thermal `k_rel_water`, shear moduli; the Sweep vs Lab gap metric by family and grid; Compare shows both. *Open in Lab* adds the row hash (`#r=…&v=<hash>`, `70-handoff.js`) — that piece belongs to Phase 4.
+

@@ -21,6 +21,10 @@ https://mshomper.github.io/f13ld.vault
 - **Privacy**: `contributor_contact` is never fetched. The loader asks for the
   named columns in `VAULT_COLUMNS` only — never `select=*`. If a column is
   missing, the loader drops that one column and retries.
+  Since the 2026-10-10 migration the database enforces it too: the public key
+  reads named columns only (`select=*` and contact fail), and a new column needs
+  `grant select (column) … to anon, authenticated` before Vault can read it.
+  Lab solves live in `f13ld_lab_results` (insert-only; newest per hash wins).
 - **Words**: never use "genuine" or "genuinely" in UI text or docs.
 - **Heavy checks run on Matt's machine**, not in the VM: hand him the command.
 - **Strain (v0.6)**: Vault rebuilds strain from stiffness (`11-data.js`

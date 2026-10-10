@@ -1,9 +1,10 @@
 /* ============================================================
    F13LD.vault · 70-handoff.js
-   Sending a design onward: F13LD.mesh and F13LD.lab read the recipe from
-   #r=<JSON>; F13LD.sweep has no link import yet, so its recipe is saved as
-   a file to drop into Sweep; F13LD.queue goes through its client library
-   (loaded on first use). Also: recipe download / copy and the share link.
+   Sending a design onward: F13LD.mesh, F13LD.lab and (v0.7.0) F13LD.sweep
+   read the recipe from #r=<JSON>; Sweep also reads &t=<JSON>, a target and
+   the ranges to start from (23-reach.js). F13LD.queue goes through its
+   client library (loaded on first use). Also: recipe download / copy and
+   the share link.
    ============================================================ */
 
 function recipeOf(d) { return d && d.recipe ? JSON.parse(JSON.stringify(d.recipe)) : null; }
@@ -24,12 +25,54 @@ function openLab(d) {
   r.title = 'Vault ' + d._id + ' · ' + displayPreset(d);
   openTool(LAB_URL, r, 'F13LD.lab'); toast('Opened <b>' + esc(displayPreset(d)) + '</b> in F13LD.lab');
 }
-/* "Explore around it": Sweep jitters a loaded recipe, so hand it this one. */
-function openSweep(d) {
+/* v0.7.0 — Sweep opens with the recipe loaded (and, with a target, aimed at
+   it); it waits for Run. Past the link limit the recipe is downloaded as before. */
+function sweepLink(r, t) {
+  return SWEEP_URL + '#r=' + encodeURIComponent(JSON.stringify(r)) + (t ? '&t=' + encodeURIComponent(JSON.stringify(t)) : '');
+}
+function openSweepLink(d, t, note) {
   var r = recipeOf(d); if (!r) { toast('This design has no recipe stored'); return; }
-  downloadJSON(r, recipeFileName(d));
-  window.open(SWEEP_URL, '_blank', 'noopener');
-  toast('Saved <b>' + esc(recipeFileName(d)) + '</b> — drop it onto F13LD.sweep and run a Neighbourhood sweep around it');
+  var url = sweepLink(r, t);
+  if (url.length > HANDOFF_URL_MAX) {
+    downloadJSON(r, recipeFileName(d));
+    window.open(SWEEP_URL, '_blank', 'noopener');
+    toast('Recipe too long for a link — saved <b>' + esc(recipeFileName(d)) + '</b>; drop it onto F13LD.sweep');
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
+  toast(note || ('Opened <b>' + esc(displayPreset(d)) + '</b> in F13LD.sweep — press Run there'));
+}
+/* "Explore around it": with a target, aim Sweep at it from this design;
+   without one, hand Sweep the recipe to vary. */
+function openSweep(d) {
+  d = d || S.sel; if (!d) return;
+  if (F.target) { aimSweep(d); return; }
+  openSweepLink(d, null, 'Opened <b>' + esc(displayPreset(d)) + '</b> in F13LD.sweep — press Run for a Neighbourhood sweep around it');
+}
+/* Aim Sweep at the target. Without a design given, Vault picks the seed by
+   reachability (23-reach.js); with one, it starts from that design. */
+function aimSweep(d) {
+  var T = F.target; if (!T) return;
+  var dropped = [T.kx, T.ky].filter(function (k) { return !sweepCanAim(k); });
+  var strainNoLoad = [T.kx, T.ky].some(function (k) { return STRAIN_KEYS.indexOf(k) >= 0; }) && !hasLoad();
+  var seed = d ? reachSeed(T, [d]) : reachSeed(T);
+  if (!seed && d) {   /* this design lacks one of the target's values: hand Sweep its recipe to vary */
+    if (!d.recipe || SWEEP_FAMILIES_OK.indexOf(d.family) < 0) { toast('F13LD.sweep doesn\'t sweep ' + esc(d.family || 'this family') + ' designs yet'); return; }
+    openSweepLink(d, null, 'This design has no value on one of the target\'s axes — opened <b>' + esc(displayPreset(d)) + '</b> in F13LD.sweep to vary, without the target');
+    return;
+  }
+  if (!seed) { toast('No design with a recipe F13LD.sweep can sweep has both of the target\'s values'); return; }
+  var t = reachPayload(T, seed);
+  var warn = reachPhysics(T);
+  if (!t) {
+    openSweepLink(seed.d, null, 'Sweep can\'t aim at ' + esc(dropped.map(mShort).join(' or ') || 'these axes') + ' — opened <b>' + esc(displayPreset(seed.d)) + '</b> to vary instead');
+    return;
+  }
+  var why = seed.reason === 'reach' ? 'its density trend runs closest to the target' : 'the nearest unflagged design';
+  var note = 'Aimed F13LD.sweep at the target from <b>' + esc(displayPreset(seed.d)) + '</b> (' + why + ') · density ' + t.density.lo + '–' + t.density.hi + ' % — press Run there';
+  if (dropped.length || strainNoLoad) note += '<br>Not aimed at ' + esc((dropped.concat(strainNoLoad ? ['strain (no load in Build target)'] : [])).map(function (k) { return METRIC_MAP[k] ? mShort(k) : k; }).join(', '));
+  if (warn.length) note += '<br>Physics: ' + esc(warn.join('; ')) + ' — Sweep will still try';
+  openSweepLink(seed.d, t, note);
 }
 function downloadRecipe(d) { d = d || S.sel; var r = recipeOf(d); if (!r) { toast('This design has no recipe stored'); return; } downloadJSON(r, recipeFileName(d)); toast('Saved <b>' + esc(recipeFileName(d)) + '</b>'); }
 function copyRecipe(d) { d = d || S.sel; var r = recipeOf(d); if (!r) return; copyText(JSON.stringify(r, null, 2)).then(function (ok) { toast(ok ? 'Recipe JSON copied' : 'Copy was blocked by the browser — use Download instead'); }); }

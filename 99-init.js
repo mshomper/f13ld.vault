@@ -172,6 +172,7 @@ function act(a, b, e) {
     case 'mesh': if (d) openMesh(d); break;
     case 'lab': if (d) openLab(d); break;
     case 'sweep': if (d) openSweep(d); break;
+    case 'aim-sweep': aimSweep(); break;   /* v0.7.0 */
     case 'prev': step(-1); break;
     case 'next': step(1); break;
     case 'm-back': S.mInsp = false; renderMobile(); break;

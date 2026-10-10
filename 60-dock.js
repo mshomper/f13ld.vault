@@ -158,7 +158,7 @@ function showTip(d, x, y, panel) {
   t.style.left = clamp(x + 18, 8, W - tw - 8) + 'px'; t.style.top = clamp(y - th / 2, 8, H - th - 8) + 'px';
 }
 
-/* ── target banner: nothing near the target → explore around the nearest in Sweep ── */
+/* ── target banner: aim F13LD.sweep at the target (v0.7.0 — 23-reach.js picks the seed) ── */
 function renderTargetBanner() {
   $$('.t-banner').forEach(function (b) { b.remove(); });
   if (!F.target) return;
@@ -169,8 +169,8 @@ function renderTargetBanner() {
   var b = document.createElement('div'); b.className = 't-banner' + (far ? ' far' : '');
   b.innerHTML = ic('target') + '<div class="tbx"><b>' + (far ? 'Nothing in the Vault near this target' : 'Ranked by closeness to the target') + '</b><span>' +
     (near ? (far ? 'Nearest is ' + esc(displayPreset(near)) + ' · ' + Math.round((targetCloseness(near) || 0) * 100) + '% close' : esc(S.list.filter(function (d) { return targetCloseness(d) > 0.8; }).length) + ' designs are within 80%') : 'No design has both values') + '</span></div>' +
-    (near && far ? '<button class="sbtn" data-sweep="' + esc(near._id) + '">' + ic('sweep') + 'Explore around it in Sweep</button>' : '') +
-    (near && !far ? '<button class="mini" data-inspect="' + esc(near._id) + '">Inspect closest</button>' : '') +
+    (near && far ? '<button class="sbtn" data-act="aim-sweep" title="Open F13LD.sweep aimed at this target, from the design whose density trend runs closest to it">' + ic('sweep') + 'Aim Sweep here</button>' : '') +
+    (near && !far ? '<button class="mini" data-inspect="' + esc(near._id) + '">Inspect closest</button><button class="mini" data-act="aim-sweep" title="Open F13LD.sweep aimed at this target">' + ic('sweep') + 'Aim Sweep</button>' : '') +
     '<button class="x" data-untag="target" title="Clear the target" aria-label="Clear the target">' + gl('x') + '</button>';
   if (S.mobile) host.appendChild(b); else { b.classList.add('inline'); host.insertBefore(b, host.querySelector('.hsp')); }
 }

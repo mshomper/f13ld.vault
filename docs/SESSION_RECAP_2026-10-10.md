@@ -16,5 +16,6 @@
 
 ## Next session
 - **Wipe and re-seed** the Vault from fresh Sweep v0.29.1 exports (every family, Wave included). Old rows read 0 for curvature / topology on TPMS solid / shell, beam and foam — the re-seed replaces them. After it, re-check the density-exponent borrowing split (`_nexpLvl` / `_nexpSrc`) on the new data.
+- **Lab → Vault round trip** (scoped, its own session): Vault's *Open in Lab* will carry the row's content hash, and Lab-verified results come back through Ingest — a filter, inspector values beside Sweep's, a Sweep-vs-Lab gap metric. Scope: `f13ld.lab/docs/VAULT_ROUNDTRIP_SCOPE.md`.
 - **Bundle** previews and Aim Sweep once Sweep v0.30.0 adds the family (copy `geom/bundle.js` the same way).
 - Later: density exponent and bound efficiency as Sweep target metrics (`SWEEP_TARGET_KEYS` here and Sweep's `13-target.js`).

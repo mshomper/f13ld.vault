@@ -2,7 +2,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = { console, Math, Float32Array, Uint8Array, Int32Array, Float64Array, Array, Object, JSON, isFinite, Number };
 vm.createContext(ctx);
-['tpms', 'noise', 'grain', 'beam', 'foam', 'voxels', 'recipe', 'design'].forEach(f =>
+['tpms', 'noise', 'grain', 'beam', 'foam', 'wave', 'voxels', 'recipe', 'design'].forEach(f =>
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'geom', f + '.js'), 'utf8'), ctx, { filename: f + '.js' }));
 const N = +(process.argv[2] || 32), fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'recipes.json'), 'utf8'));
 let bad = 0;

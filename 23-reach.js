@@ -25,8 +25,8 @@
    Top-level code only defines things.
    ============================================================ */
 
-/* Families F13LD.sweep can sweep (its SWEEP_FAMILY_LIST, v0.28.0). */
-var SWEEP_FAMILIES_OK = ['tpms', 'noise', 'grain', 'beam', 'foam'];
+/* Families F13LD.sweep can sweep (its SWEEP_FAMILY_LIST, v0.29.0). */
+var SWEEP_FAMILIES_OK = ['tpms', 'noise', 'grain', 'beam', 'foam', 'wave'];
 
 /* Metrics Sweep can aim at (its 13-target.js TGT_METRICS — same names). */
 var SWEEP_TARGET_KEYS = ['volume_fraction', '_emax', 'ex_norm', 'ey_norm', 'ez_norm', 'stiffness_density_norm', '_perf',

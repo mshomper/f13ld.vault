@@ -177,13 +177,17 @@ function recolor() {
   if (mode.id === '_scar') ensureScarcity(F.domain);
   if (mode.prep) mode.prep();
   var pr = mode.type === 'cont' && !mode.abs ? pctOf(mode.id) : null;
+  /* v0.8.0 — a borrowed density exponent stays faded while n is on a plot axis, in any colour mode */
+  var nexpOnAxis = [S.ax2.x, S.ax2.y, S.ax3.x, S.ax3.y, S.ax3.z].indexOf('_nexp') >= 0;
   DB.all.forEach(function (d) {
-    if (mode.type === 'cat') { var c = hexRGB(catColor(mode.id, catValue(d, mode.id))); d._col = [c[0] / 255, c[1] / 255, c[2] / 255]; d._colHex = catColor(mode.id, catValue(d, mode.id)); }
+    if (mode.type === 'cat') { var c = hexRGB(catColor(mode.id, catValue(d, mode.id))), f = nexpOnAxis ? nexpDim(d) : 0;
+      if (f > 0) c = [c[0] + (84 - c[0]) * f, c[1] + (89 - c[1]) * f, c[2] + (115 - c[2]) * f];
+      d._col = [c[0] / 255, c[1] / 255, c[2] / 255]; d._colHex = f > 0 ? rgbHex(c[0], c[1], c[2]) : catColor(mode.id, catValue(d, mode.id)); }
     else { var p;
       if (mode.abs) { var av = mode.val ? mode.val(d) : d[mode.id]; p = isNum(av) ? clamp((av - mode.abs[0]) / (mode.abs[1] - mode.abs[0]), 0, 1) : NaN; }
       else p = pr[d._i];
       if (isNaN(p)) { d._col = [0.33, 0.35, 0.45]; d._colHex = '#555a73'; } else {
-        var r = COLOR_RAMP[Math.round(p * 31)], m = mode.dim ? mode.dim(d) : 0;
+        var r = COLOR_RAMP[Math.round(p * 31)], m = mode.dim ? mode.dim(d) : (nexpOnAxis ? nexpDim(d) : 0);
         if (m > 0) r = [r[0] + (0.33 - r[0]) * m, r[1] + (0.35 - r[1]) * m, r[2] + (0.45 - r[2]) * m];   /* faded toward the no-value grey */
         d._col = r; d._colHex = rgbHex(r[0] * 255, r[1] * 255, r[2] * 255); } }
   });

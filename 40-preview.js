@@ -65,7 +65,7 @@ function pvFrag() {
 }
 var PV_FAMILY_COLOR = { tpms: [0.369, 0.792, 0.647], noise: [0.918, 0.439, 0.314], grain: [0.659, 0.647, 0.604], beam: [0.722, 0.812, 0.314],
                         foam: [0.910, 0.831, 0.635], wave: [0.851, 0.467, 0.024], bundle: [0.482, 0.310, 0.620] };
-var PV_PERIODIC = { tpms: 1, beam: 1, foam: 1 };
+var PV_PERIODIC = { tpms: 1, beam: 1, foam: 1, wave: 1 };
 
 function pvInit() {
   try {

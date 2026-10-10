@@ -2,7 +2,7 @@
    F13LD.vault · geom/design.js
    A stored recipe → the margin function the preview raymarches.
 
-   The geometry files beside this one (tpms, noise, grain, beam, foam,
+   The geometry files beside this one (tpms, noise, grain, beam, foam, wave,
    voxels, recipe) are F13LD.sweep's geom/ folder copied unchanged, so a
    Vault thumbnail is built by the same code that Sweep solved and Mesh
    prints. Refresh them from F13LD.sweep, never edit them here.
@@ -12,7 +12,7 @@
    Loaded by worker/bake-worker.js only (no DOM).
    ============================================================ */
 
-var VAULT_KERNELS = { tpms: TpmsKernel, noise: NoiseKernel, grain: GrainKernel, beam: BeamKernel, foam: FoamKernel };
+var VAULT_KERNELS = { tpms: TpmsKernel, noise: NoiseKernel, grain: GrainKernel, beam: BeamKernel, foam: FoamKernel, wave: WaveKernel };
 var KERNELS = VAULT_KERNELS;   /* geom/recipe.js looks families up by this name */
 
 function designGeometry(recipe) {
@@ -38,6 +38,10 @@ function recipeCellScale(recipe, family) {
   if (family === 'tpms') {
     var d = g.cell_scale != null ? g.cell_scale : 1;
     return [g.cell_scale_x != null ? g.cell_scale_x : d, g.cell_scale_y != null ? g.cell_scale_y : d, g.cell_scale_z != null ? g.cell_scale_z : d];
+  }
+  if (family === 'wave') {   /* v0.8.0 — relative cell edges (F13LD.wave / F13LD.sweep v0.29.0 field.stretch) */
+    var st = (recipe.field || {}).stretch;
+    return Array.isArray(st) && st.length === 3 && st.every(function (v) { return isFinite(v) && v > 0; }) ? st.slice() : [1, 1, 1];
   }
   if (family === 'beam') {
     if (Array.isArray(g.scale_xyz)) return g.scale_xyz.slice();

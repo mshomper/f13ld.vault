@@ -216,9 +216,23 @@ Plot2D.prototype.drawOverlay = function (now, w, h, dpr) {
   /* Pareto front */
   if (S.pareto && FRONT.list.length > 1) {
     var fl = FRONT.list.filter(function (d) { return d._m; });
-    ctx.strokeStyle = 'rgba(200,245,66,0.75)'; ctx.lineWidth = 2; ctx.shadowColor = 'rgba(200,245,66,0.6)'; ctx.shadowBlur = 8;
-    ctx.beginPath(); fl.forEach(function (d, k) { var i = d._i; if (k) ctx.lineTo(self.px[i], self.py[i]); else ctx.moveTo(self.px[i], self.py[i]); }); ctx.stroke();
-    ctx.shadowBlur = 0; ctx.lineWidth = 1.4;
+    /* v0.8.0 — the front as one smooth curve through every front design
+       (monotone cubic, so it never swings inside the cloud between two of
+       them), run out to the plot edges along its end slopes, faded and
+       dashed where it is extrapolated. Its shape — a tight knee or an open
+       sweep — is what the engineer reads (Matt, 2026-10-10). */
+    var fc = paretoCurve(fl.map(function (d) { return [self.px[d._i], self.py[d._i]]; }), paretoDirs());
+    if (fc) {
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(200,245,66,0.35)'; ctx.lineWidth = 1.6; ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.moveTo(fc.ext[0][0][0], fc.ext[0][0][1]); ctx.lineTo(fc.ext[0][1][0], fc.ext[0][1][1]);
+      ctx.moveTo(fc.ext[1][0][0], fc.ext[1][0][1]); ctx.lineTo(fc.ext[1][1][0], fc.ext[1][1][1]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(200,245,66,0.8)'; ctx.lineWidth = 2.2; ctx.shadowColor = 'rgba(200,245,66,0.6)'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(fc.p[0][0], fc.p[0][1]);
+      fc.seg.forEach(function (c) { ctx.bezierCurveTo(c[0], c[1], c[2], c[3], c[4], c[5]); });
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(200,245,66,0.75)';
     fl.forEach(function (d) { var i = d._i; ctx.beginPath(); ctx.arc(self.px[i], self.py[i], 6, 0, 6.2832); ctx.stroke(); });
   }
   /* pins, hover */
@@ -375,6 +389,33 @@ function paretoDirs() {
   if (S.pareto && S.pareto !== 'auto') return { x: S.pareto.indexOf('xhi') >= 0 ? 1 : -1, y: S.pareto.indexOf('yhi') >= 0 ? 1 : -1 };
   var g = DOMAIN_GOALS[F.domain] || DOMAIN_GOALS.all, gx = g[S.ax2.x], gy = g[S.ax2.y];
   return { x: gx != null ? gx : (S.ax2.x === 'volume_fraction' ? -1 : 1), y: gy != null ? gy : 1 };
+}
+/* The front's curve in screen space: points sorted along x (designs within
+   1.5 px merged, keeping the one farther out), a monotone cubic Hermite
+   (Fritsch–Carlson) through them as Bézier segments, and the two end
+   extensions to the plot rectangle. Null for fewer than two points. */
+function paretoCurve(pts, dir) {
+  var P = pts.filter(function (q) { return isFinite(q[0]) && isFinite(q[1]); }).sort(function (a, b) { return a[0] - b[0]; });
+  var outY = function (a, b) { return dir.y > 0 ? Math.min(a, b) : Math.max(a, b); };   /* screen y grows downward */
+  var M = [];
+  P.forEach(function (q) { var l = M[M.length - 1]; if (l && q[0] - l[0] < 1.5) l[1] = outY(l[1], q[1]); else M.push([q[0], q[1]]); });
+  var n = M.length; if (n < 2) return null;
+  var h = [], dl = [], m = new Array(n);
+  for (var i = 0; i < n - 1; i++) { h[i] = M[i + 1][0] - M[i][0]; dl[i] = (M[i + 1][1] - M[i][1]) / h[i]; }
+  m[0] = dl[0]; m[n - 1] = dl[n - 2];
+  for (var k = 1; k < n - 1; k++) {
+    if (dl[k - 1] * dl[k] <= 0) { m[k] = 0; continue; }
+    var w1 = 2 * h[k] + h[k - 1], w2 = h[k] + 2 * h[k - 1];
+    m[k] = (w1 + w2) / (w1 / dl[k - 1] + w2 / dl[k]);
+  }
+  var seg = [];
+  for (var j = 0; j < n - 1; j++) seg.push([M[j][0] + h[j] / 3, M[j][1] + m[j] * h[j] / 3, M[j + 1][0] - h[j] / 3, M[j + 1][1] - m[j + 1] * h[j] / 3, M[j + 1][0], M[j + 1][1]]);
+  /* end extensions: along the end slope until the plot edge (or 2000 px) */
+  var ext = function (q, slope, sgn) {
+    var len = 2000, dx = sgn / Math.sqrt(1 + slope * slope), dy = slope * dx;
+    return [q, [q[0] + dx * len, q[1] + dy * len]];
+  };
+  return { p: M, seg: seg, ext: [ext(M[0], m[0], -1), ext(M[n - 1], m[n - 1], 1)] };
 }
 function computeFront() {
   FRONT.list = []; if (!S.pareto) return;

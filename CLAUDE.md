@@ -56,7 +56,7 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `20-filter.js` | one-pass bitmask filter engine, what-if counts, histograms, "why not" |
 | `21-actions.js` | views registry, point animation, select/step, setters, presets |
 | `23-reach.js` | v0.7: aiming F13LD.sweep at a 2D target — seed by reachability (density trend per family), the `&t=` payload, Voigt-bound physics warnings; `SWEEP_TARGET_KEYS` mirrors Sweep's `13-target.js` |
-| `24-aim.js` | v0.7.1: aimed runs (grouped from `solver.target` in Sweep v0.28+ exports) — Source filter, Aimed run colour, ghost targets / seed path in 2D (`aimOverlay2D` in `32-plot2d.js`); colour modes density exponent, bound efficiency, Pareto depth, similar to selected |
+| `24-aim.js` | v0.7.1: aimed runs (grouped from `solver.target` in Sweep v0.28+ exports) — Source filter, Aimed run colour, ghost targets / seed path in 2D (`aimOverlay2D` in `32-plot2d.js`); colour modes density exponent, bound efficiency, Pareto depth, similar to selected. v0.8.0: `_nexp` (computed at load in `11-data.js` `ingestRows`, before the stats) and `_beff` (`shapeDesign`) are also derived metrics — plot axes and range filters; a borrowed exponent is faded while `_nexp` is on any axis |
 | `30-points-gl.js` | WebGL1 point renderer (dim / glow / core), premultiplied alpha |
 | `31-hero3d.js` | 3D design space (ranked axes; orbit, pan, brush, label placer) |
 | `32-plot2d.js` | 2D plot (real values, log axes, box ranges, target, Pareto, gap map) |
@@ -95,3 +95,8 @@ npm run audit               # tests/render-audit.js — real Chrome, 4 sizes, sc
   render audit covers them.
 - Shaders must link on strict drivers (ANGLE/iOS): uniforms shared by both
   stages need the same precision.
+
+## Notes
+
+- Latest session recap: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed). Previous: `docs/SESSION_RECAP_2026-10-09.md`.
+- `32-plot2d.js` `paretoCurve`: the 2D front is drawn as a monotone cubic through the front designs (screen space), extended to the plot edges.

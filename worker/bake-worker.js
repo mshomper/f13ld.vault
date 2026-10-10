@@ -5,7 +5,7 @@
                                       or { type:'bake_error', key, message }
    ============================================================ */
 importScripts('../geom/tpms.js', '../geom/noise.js', '../geom/grain.js', '../geom/beam.js',
-              '../geom/foam.js', '../geom/voxels.js', '../geom/recipe.js', '../geom/design.js');
+              '../geom/foam.js', '../geom/wave.js', '../geom/voxels.js', '../geom/recipe.js', '../geom/design.js');
 
 self.addEventListener('message', function (e) {
   var m = e.data;

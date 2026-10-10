@@ -23,6 +23,13 @@ https://mshomper.github.io/f13ld.vault
   missing, the loader drops that one column and retries.
 - **Words**: never use "genuine" or "genuinely" in UI text or docs.
 - **Heavy checks run on Matt's machine**, not in the VM: hand him the command.
+- **Strain (v0.6)**: Vault rebuilds strain from stiffness (`11-data.js`
+  `strainCoefficients` / `applyLoadValues`). `microstrain_*_per_gpa` and
+  `u_compliance` hold *real* με and kJ/m³ under the Build target load, and are
+  empty without one, which hides strain everywhere. Sweep's stored values are
+  per GPa of stress for its own solid modulus (100 GPa unless the export
+  records `Es_ref_GPa`). The Biomedical score uses a Frost-style window
+  (default 1,000–3,500 με) and asks for load and cell size when they are missing.
 
 ## Layout
 

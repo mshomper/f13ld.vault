@@ -576,3 +576,25 @@ body.is-mobile .m-app{display:block;position:fixed;inset:0;overflow:hidden}
 .m-app .t-banner{top:auto;bottom:140px;left:10px;right:10px}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* v0.6 · Biomedical loading-case card */
+.bio-wrap{z-index:170}
+.bio-box .kbd-h .ic{width:24px;height:24px;flex-shrink:0;color:var(--neon)}
+.bio-box .kbd-h span{min-width:0}
+.bio-box{width:min(600px,calc(100% - 24px))}
+.bio-p{font:500 13.5px/1.5 'Exo 2';color:var(--t2);margin:0 0 14px}
+.bio-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+@media (max-width:520px){.bio-g{grid-template-columns:minmax(0,1fr)}}
+.bio-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.bio-f>span:first-child{font:600 12px var(--mono);letter-spacing:.04em;color:var(--t3)}
+.bio-f .in{display:flex;align-items:center;gap:8px;height:38px;border-radius:9px;border:1px solid var(--hair2);background:var(--s2);padding:0 10px;min-width:0}
+.bio-f .in:focus-within{border-color:var(--neon-ring)}
+.bio-f input,.bio-f select{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--t1);font:500 14px var(--mono)}
+.bio-f select{font-family:'Exo 2'}
+.bio-f select option{background:#10121c}
+.bio-f em{font:500 12px var(--mono);font-style:normal;color:var(--t3)}
+.bio-note{font:500 12px/1.45 var(--mono);color:var(--t3);margin:12px 0 14px}
+.bio-acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.tag.needs{border-color:var(--neon-ring);background:var(--neon-tint);color:var(--neon);cursor:pointer;padding-right:9px}
+.tag.needs .ic{width:16px;height:16px}
+.tag.needs .tv{color:var(--t1)}

@@ -44,11 +44,13 @@ const ALL_METRICS = [
   { group:'Thermal',    key:'thermal_anisotropy',      label:'Thermal anisotropy kα',     unit:'×'  },
 
   // Compliance — load-decoupled (NULL when linear_cap_active=true; treated as 0 in radar)
-  { group:'Compliance', key:'microstrain_x_per_gpa',   label:'μstrain X / GPa',           labelAbs:'μstrain X',        unit:'με/GPa', norm_kind:'compliance_per_stress' },
-  { group:'Compliance', key:'microstrain_y_per_gpa',   label:'μstrain Y / GPa',           labelAbs:'μstrain Y',        unit:'με/GPa', norm_kind:'compliance_per_stress' },
-  { group:'Compliance', key:'microstrain_z_per_gpa',   label:'μstrain Z / GPa',           labelAbs:'μstrain Z',        unit:'με/GPa', norm_kind:'compliance_per_stress' },
-  { group:'Compliance', key:'microstrain_avg_per_gpa', label:'μstrain avg / GPa',         labelAbs:'μstrain (avg)',    unit:'με/GPa', norm_kind:'compliance_per_stress' },
-  { group:'Compliance', key:'u_compliance',            label:'Compliance U/σ²',           labelAbs:'Strain energy U',  unit:'1/GPa',  norm_kind:'compliance_per_stress2'},
+  /* v0.6: these hold real values under the Build target load (11-data applyLoad);
+     with no load they are empty, so strain is hidden everywhere. */
+  { group:'Compliance', key:'microstrain_x_per_gpa',   label:'μstrain X',                 labelAbs:'μstrain X',        unit:'με',     norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'microstrain_y_per_gpa',   label:'μstrain Y',                 labelAbs:'μstrain Y',        unit:'με',     norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'microstrain_z_per_gpa',   label:'μstrain Z',                 labelAbs:'μstrain Z',        unit:'με',     norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'microstrain_avg_per_gpa', label:'μstrain (avg)',             labelAbs:'μstrain (avg)',    unit:'με',     norm_kind:'compliance_per_stress' },
+  { group:'Compliance', key:'u_compliance',            label:'Strain energy U',           labelAbs:'Strain energy U',  unit:'kJ/m³',  norm_kind:'compliance_per_stress2'},
 
   // Pore structure — cell-decoupled. v4: throat_efficiency dropped, throat_ratio added.
   { group:'Pore',       key:'pore_size_norm',          label:'Mean pore φ / cell',        labelAbs:'Mean pore φ',      unit:'',  norm_kind:'cell_length' },
@@ -103,6 +105,8 @@ var globalInputs = {
   density_gcc:    null,   // unlocks stiffness_density (with E)
   thermal_k_wmk:  null,   // unlocks thermal_ks metrics
   ref_stress_mpa: null,   // unlocks compliance_per_stress metrics
+  strain_lo:      1000,   // v0.6: bone-forming window (Frost-style), με
+  strain_hi:      3500,
 };
 // Restore from localStorage on load (tolerant to schema drift).
 try {
@@ -161,31 +165,15 @@ function resolveValue(rawNorm, key){
       return { value: k < 1 ? k.toFixed(3) : k.toFixed(2), unit: 'W/m·K', isResolved: true, rawValue: rawNorm };
     }
     case 'compliance_per_stress': {
-      // Stored value is μstrain per MPa applied at a baseline E_s = 1 GPa
-      // (FFT-CG solver runs non-dimensional; the field name "per_gpa" is a
-      // misnomer — empirical calibration confirms per-MPa). Real strain for
-      // the user's chosen material requires dividing by E_s in GPa:
-      //   ε_real = stored × σ_MPa / E_s_GPa
-      // Needs BOTH inputs — partial fill leaves the metric normalized.
-      const sigMpa = globalInputs.ref_stress_mpa;
-      const Es     = globalInputs.modulus_gpa;
-      if(sigMpa == null || Es == null || !isFinite(sigMpa) || !isFinite(Es) || sigMpa <= 0 || Es <= 0) return fallback;
-      const ustrain = rawNorm * sigMpa / Es;
-      return { value: ustrain.toFixed(0), unit: 'μstrain', isResolved: true, rawValue: rawNorm };
+      // v0.6: the value is already real microstrain under the Build target
+      // load (11-data applyLoad). Empty when no load is entered.
+      if(rawNorm == null || !isFinite(rawNorm)) return fallback;
+      return { value: Math.round(rawNorm).toLocaleString('en-US'), unit: 'με', isResolved: true, rawValue: rawNorm };
     }
     case 'compliance_per_stress2': {
-      // u_compliance = U/σ² stored at the same per-MPa baseline as above (the
-      // "1/GPa" unit label inherits the same misnomer). Real strain energy
-      // density U = σ²/(2·E_eff); recovering it from stored requires both
-      // σ and E_s, with σ entering squared:
-      //   U_real_MPa = stored × σ_MPa² / E_s_GPa
-      // Convert MPa→kJ/m³: 1 MPa = 1 MJ/m³ = 1000 kJ/m³.
-      const sigMpa = globalInputs.ref_stress_mpa;
-      const Es     = globalInputs.modulus_gpa;
-      if(sigMpa == null || Es == null || !isFinite(sigMpa) || !isFinite(Es) || sigMpa <= 0 || Es <= 0) return fallback;
-      const uMpa  = rawNorm * sigMpa * sigMpa / Es;        // MPa
-      const uKjm3 = uMpa * 1000;                            // kJ/m³
-      return { value: uKjm3 < 1 ? uKjm3.toFixed(3) : uKjm3.toFixed(1), unit: 'kJ/m³', isResolved: true, rawValue: rawNorm };
+      // v0.6: already real strain energy density, kJ/m³ (11-data applyLoad).
+      if(rawNorm == null || !isFinite(rawNorm)) return fallback;
+      return { value: rawNorm < 1 ? rawNorm.toFixed(3) : rawNorm.toFixed(1), unit: 'kJ/m³', isResolved: true, rawValue: rawNorm };
     }
     default:
       return fallback;
@@ -204,6 +192,25 @@ function resolveLabel(key, isResolved){
 
 // True when ANY input is set. Used to disable the global "reset" affordance
 // when nothing is to reset, and to gate the active-count badge.
+/* v0.6: strain needs both a load and a solid modulus */
+function hasLoad(){
+  var g = globalInputs; return isFinite(g.ref_stress_mpa) && g.ref_stress_mpa > 0 && isFinite(g.modulus_gpa) && g.modulus_gpa > 0;
+}
+/* The bone-forming window, in με (Build target; defaults 1,000–3,500). */
+function bioWindow(){
+  var lo = isFinite(globalInputs.strain_lo) && globalInputs.strain_lo > 0 ? globalInputs.strain_lo : 1000;
+  var hi = isFinite(globalInputs.strain_hi) && globalInputs.strain_hi > lo ? globalInputs.strain_hi : Math.max(3500, lo * 1.5);
+  return [lo, hi];
+}
+/* Frost-style window: full marks inside, a soft log-space fall-off outside
+   (half marks at about 1.6× beyond either edge). */
+function frostWindow(ue){
+  if(!isFinite(ue) || ue <= 0) return 0;
+  var w = bioWindow(), x = ue < w[0] ? Math.log(w[0] / ue) : ue > w[1] ? Math.log(ue / w[1]) : 0;
+  return Math.exp(-Math.pow(x / 0.55, 2));
+}
+/* Biomedical scoring wants a load (for strain) and the cell size you print at (for pore µm). */
+function needsBioInputs(){ return !hasLoad() || !(globalInputs.cell_size_mm > 0); }
 function hasAnyGlobalInput(){
   return globalInputs.cell_size_mm   != null
       || globalInputs.modulus_gpa    != null
@@ -294,37 +301,38 @@ const DOMAIN_Z_COMPOUND = {
   biomedical: {
     label: 'BONE-INGROWTH VIABILITY',
     formula: 'pore-window × strain-window × throat r',
-    needs: ['throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa'],
+    needs: ['throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa'],   // strain only counts once a load is entered
     compute(d, popStats){
       const p50  = d.pore_size_p50_norm;
-      const cell = d.cell_size_mm;
-      const mu   = d.microstrain_avg_per_gpa;
+      // v0.6: the cell size you print at (Build target) wins over the design's own
+      const cell = globalInputs.cell_size_mm || d.cell_size_mm;
       const tr   = popStats.throat_ratio?.get(d);
-      // linear_cap_active rows have NULL strain; degenerate rows are filtered upstream.
-      if(p50 == null || cell == null || mu == null || tr == null) return null;
+      if(p50 == null || cell == null || tr == null) return null;
 
       // Bone-ingrowth pore window — Gaussian on dimensional pore size (μm).
-      // Spec: μ=350 μm, σ=150 μm. Recover μm from p50_norm × cell_size_mm × 1000
-      // so populations with mixed cell sizes compare honestly (a 350 μm pore is
-      // 350 μm regardless of whether the cell is 1mm or 5mm).
+      // Spec: μ=350 μm, σ=150 μm.
       const p50_um = p50 * cell * 1000;
-      const pCenter = 350, pSigma = 150;
-      const pWindow = Math.exp(-Math.pow((p50_um - pCenter) / pSigma, 2));
+      const pWindow = Math.exp(-Math.pow((p50_um - 350) / 150, 2));
 
-      // Osteogenic strain window — Gaussian on microstrain_avg_per_gpa.
-      // Reference stress: 10 MPa (mid-range physiologic). Frost mechanostat
-      // osteogenic window 1500–3000 με under load → μ=100,000 με/GPa, σ=70,000.
-      const sCenter = 100000, sSigma = 70000;
-      const sWindow = Math.exp(-Math.pow((mu - sCenter) / sSigma, 2));
-
-      // Throat ratio (percentile-ranked) — open ingrowth pathway.
+      // v0.6: Frost-style bone-forming strain window on REAL microstrain under
+      // the user's load and material (11-data applyLoad). With no load the
+      // factor is left out (not guessed); a design that can't carry load
+      // (no strain at all) gets no score once a load is set.
+      let sWindow = 1;
+      if(hasLoad()){
+        const ue = d.microstrain_avg_per_gpa;
+        if(ue == null) return null;
+        sWindow = frostWindow(ue);
+      }
       return pWindow * sWindow * tr;
     },
     vector(d, popStats){
       const p50 = popStats.pore_size_p50_norm?.get(d);
-      const mu  = popStats.microstrain_avg_per_gpa?.get(d);
       const tr  = popStats.throat_ratio?.get(d);
-      if(p50 == null || mu == null || tr == null) return null;
+      if(p50 == null || tr == null) return null;
+      if(!hasLoad()) return [p50, tr];
+      const mu  = popStats.microstrain_avg_per_gpa?.get(d);
+      if(mu == null) return null;
       return [p50, mu, tr];
     }
   },
@@ -464,16 +472,14 @@ const METRIC_GLOSSARY = {
                             interp: '1.0× = isotropic conduction. Higher = directionally biased conduction (heat pipes, fins).' },
 
   // ─── Compliance (per-stress strain response) ───
-  microstrain_x_per_gpa:  { def: 'Microstrain produced along X per GPa of applied stress.',
-                            interp: 'Multiply by your reference stress to get actual strain. Bone-ingrowth target: ~1500–3000 με at physiologic load.' },
-  microstrain_y_per_gpa:  { def: 'Microstrain produced along Y per GPa of applied stress.',
-                            interp: 'Multiply by reference stress to get actual strain.' },
-  microstrain_z_per_gpa:  { def: 'Microstrain produced along Z per GPa of applied stress.',
-                            interp: 'Multiply by reference stress to get actual strain.' },
-  microstrain_avg_per_gpa:{ def: 'Average microstrain across X/Y/Z per GPa of applied stress.',
-                            interp: 'NULL if the design exceeded its yield strain at the reference load (linear_cap_active=true).' },
-  u_compliance:           { def: 'Strain energy per unit volume per applied stress squared. Inverse of stiffness density in energy units.',
-                            interp: 'Lower = stiffer overall. NULL when the linear elasticity assumption breaks (yielded designs).' },
+  microstrain_x_per_gpa:  { def: 'Microstrain along X under your applied stress and material (Build target).',
+                            interp: 'Hidden until you enter a load. Bone forms best at roughly 1,000–3,500 με (Frost); set the window in Build target.' },
+  microstrain_y_per_gpa:  { def: 'Microstrain along Y under your applied stress and material.', interp: 'Hidden until you enter a load.' },
+  microstrain_z_per_gpa:  { def: 'Microstrain along Z under your applied stress and material.', interp: 'Hidden until you enter a load.' },
+  microstrain_avg_per_gpa:{ def: 'Average microstrain over the axes that carry load, under your applied stress and material.',
+                            interp: 'The Biomedical score checks this against the bone-forming window. Empty for a design with no load path.' },
+  u_compliance:           { def: 'Strain energy stored per unit volume under your applied stress, in kJ/m³.',
+                            interp: 'Lower = stiffer overall. Hidden until you enter a load.' },
 
   // ─── Pore structure (cell-decoupled) ───
   pore_size_norm:         { def: 'Mean pore diameter as a fraction of cell size.',
@@ -664,10 +670,11 @@ function scoreFactors(d, dom, pop) {
   function f(label, v, txt) { out.push({ label: label, v: v == null ? null : clamp(v, 0, 1), txt: txt != null ? txt : (v == null ? '—' : v.toFixed(2)) }); }
   switch (dom) {
     case 'biomedical': {
-      var p50 = d.pore_size_p50_norm, cell = d.cell_size_mm, mu = d.microstrain_avg_per_gpa;
+      var p50 = d.pore_size_p50_norm, cell = globalInputs.cell_size_mm || d.cell_size_mm, mu = d.microstrain_avg_per_gpa, bw = bioWindow();
       var um = (p50 != null && cell != null) ? p50 * cell * 1000 : null;
       f('Pore window (P50 near 350 µm)', um == null ? null : Math.exp(-Math.pow((um - 350) / 150, 2)), um == null ? '—' : um.toFixed(0) + ' µm');
-      f('Strain window (osteogenic)', mu == null ? null : Math.exp(-Math.pow((mu - 100000) / 70000, 2)), mu == null ? 'yield cap' : fmtV(mu, 'microstrain_avg_per_gpa') + ' με/GPa');
+      if (!hasLoad()) { f('Strain window · needs load', null, 'Add load'); out[out.length - 1].act = 'bio-prompt'; }
+      else f('Strain window (' + bw[0].toLocaleString('en-US') + '–' + bw[1].toLocaleString('en-US') + ' με)', mu == null ? null : frostWindow(mu), mu == null ? 'no load path' : Math.round(mu).toLocaleString('en-US') + ' με');
       f('Throat ratio (rank)', g('throat_ratio'));
       how = 'multiplied'; break;
     }

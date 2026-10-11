@@ -102,5 +102,6 @@ npm run audit               # tests/render-audit.js — real Chrome, 4 sizes, sc
 
 ## Notes
 
-- Latest session recap: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed). Previous: `docs/SESSION_RECAP_2026-10-09.md`.
+- Latest session recap: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
+- **Noise revisions**: noise recipes carry `surface.noise_rev` (spec: F13LD.noise `docs/NOISE_REV2.md`). Vault noise is revision 2; keep mock and fixture noise recipes at revision 2.
 - `32-plot2d.js` `paretoCurve`: the 2D front is drawn as a monotone cubic through the front designs (screen space), extended to the plot edges.

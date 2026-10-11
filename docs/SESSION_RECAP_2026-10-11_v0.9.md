@@ -1,6 +1,6 @@
 # F13LD.vault — session recap, 2026-10-11 · v0.8.2 and v0.9.0
 
-Branches: `v0.8.2-axes` (fixes) and `v0.9.0` (built on it). Ships with F13LD.sweep v0.30.0 (`v0.30.0-metrics`), both before the wipe and reseed.
+`main` = **v0.9.0** (includes v0.8.2), merged 2026-10-11 after Matt's click-test, together with F13LD.sweep v0.30.0 — both before the wipe and reseed. F13LD.ingest unchanged; no database change.
 
 ## v0.8.2 — fixes
 - Picking a domain sets its axes again (as v0.4 did): 3D X / Y = the domain's first two `DOMAIN_DEFAULTS`, Z = domain score, 2D = its first `AXIS_PRESETS` pair. Biomedical: pore × strain with a load, pore × density without, upgraded automatically when a load arrives. A hand-picked axis ends the automatic switching until the next domain change; the toast offers Keep my axes. (`21-actions.js` `applyDomainAxes`.)
@@ -27,6 +27,18 @@ Rank correlation of every pickable metric over the filtered set; Similar (averag
 - Now: pore window = plateau on the **mean pore diameter** at your cell size, full marks 300–600 µm (Build target "Pore window from / to"), the strain window's soft log fall-off outside; third factor = soft **throat gate**, full marks at ≥ 100 µm (`BIO_THROAT_MIN_UM`), replacing throat ÷ pore (which stays a metric and in the oil & gas score). `plateauWindow()` is shared with the strain window.
 - P10 / P50 / P90 key text now says what they are (distance-field percentiles, not pore diameters).
 - Later: local thickness (BoneJ's micro-CT pore size) in Sweep's pores pass — noted in f13ld.sweep `docs/NEXT_STEPS.md`.
+
+## Until the reseed
+- Specific surface is blank on every current row (Sweep v0.30 only); surface efficiency falls back to the voxel-face count.
+- Stiffness-matrix metrics (ν, auxetic chips, directional E, A^U, Zener, K, HS, G/E) only on GPU-solved rows (Sweep v0.24+); automotive falls back to ortho contrast elsewhere; rows before Sweep v0.27.2 use Vault's solid-modulus estimate.
+- Old rows read 0 for curvature / topology on TPMS solid and shell, beam and foam, so the cell-scaled curvature and genus read 0 there. No noise rows since the wipe.
+- Coverage check, in the browser console on the live Vault: `pickableMetrics().map(m => [m.label, DB.all.filter(d => isNum(d[m.key]) && d[m.key] !== 0).length]).filter(r => r[1] < DB.N).sort((a, b) => a[1] - b[1]).forEach(r => console.log(r[1] + ' / ' + DB.N + '   ' + r[0]))`
+
+## Next
+1. **Wipe and reseed** from F13LD.sweep v0.30.0 Push to Vault (noise from F13LD.noise v0.12.0+; wipe with `delete from public.f13ld_designs;`). Then re-run the coverage check above, and re-check the density-exponent borrowing split (`_nexpLvl` / `_nexpSrc`) on the new data (carried from 2026-10-10).
+2. After the reseed: retire the voxel-face **surface complexity** from the pickers once every row has specific surface; drop the automotive ortho-contrast fallback if every row has a stiffness matrix.
+3. **Phase 5 — Lab results in Vault** (scoped 2026-10-10, still open): Lab's Push to Vault, yield / buckling / failure-mode columns, Lab-verified chip and colour mode, Sweep-vs-Lab gap metric.
+4. Later: **local thickness** pore size from Sweep (its `docs/NEXT_STEPS.md` §4) — then point the biomedical pore window at it; a **custom metric** builder (A ÷ B, A × B, log A) next to the correlation map; the **solved void-phase D_eff** to replace Bruggeman.
 
 ## Checks
 `npm test` (smoke + bake-check) 0 errors; `npm run audit` with `CHROME=/opt/google/chrome/chrome` (serve on :8765 first).

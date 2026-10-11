@@ -6,6 +6,19 @@
 
 var VIEWS = { h3: null, p2: null, m3: null, m2: null };
 function eachView(fn) { ['h3', 'p2', 'm3', 'm2'].forEach(function (k) { if (VIEWS[k]) fn(VIEWS[k]); }); }
+/* v0.9.0 — lime rings around the welcome guide's top designs, drawn in
+   rank order so the best sits on top; they grow in over about a second. */
+function drawSpot(ctx, now, at) {
+  var t = clamp((now - (S.spotT0 || 0)) / 900, 0, 1), e = 1 - Math.pow(1 - t, 3), k = 0;
+  ctx.save(); ctx.lineWidth = 1.6;
+  S.spot.forEach(function (d) {
+    var p = at(d); k++; if (!p || !isFinite(p[0])) return;
+    var lag = clamp(e * 1.6 - k / S.spot.size * 0.6, 0, 1);
+    ctx.strokeStyle = 'rgba(200,245,66,' + (0.9 * lag).toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(p[0], p[1], 4 + 3.5 * lag, 0, 6.2832); ctx.stroke();
+  });
+  ctx.restore();
+}
 function markViewsDirty() { eachView(function (v) { v.dirty = true; }); }
 
 /* Point animation shared by every view: positions ease to their targets

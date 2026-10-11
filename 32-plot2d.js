@@ -145,7 +145,7 @@ Plot2D.prototype.frame = function (now) {
   for (k = 0; k < 4; k++) { var dv = this.vT[k] - this.v[k]; if (Math.abs(dv) > 1e-5) { this.v[k] += dv * 0.2; busy = true; } }
   if (Math.abs(this.insetT - this.inset) > 0.5) { this.inset += (this.insetT - this.inset) * 0.14; busy = true; }
   var moving = _pointsMoving;
-  var overlayLive = ((!!S.sel || !!F.target) && pulseOn(now)) || !!this.hl || !!this.brush;
+  var overlayLive = ((!!S.sel || !!F.target) && pulseOn(now)) || !!this.hl || !!this.brush || (!!S.spot && now - S.spotT0 < 1200);
   if (!busy && !moving && !this.dirty && !overlayLive) return;
   var w = this.ocv.clientWidth, h = this.ocv.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2), m = this.mobile;
   var L = m ? 84 : 104, Rr = m ? 16 : 46, T = m ? 118 : 86, B = (m ? 70 : 88) + this.inset;
@@ -236,6 +236,7 @@ Plot2D.prototype.drawOverlay = function (now, w, h, dpr) {
     fl.forEach(function (d) { var i = d._i; ctx.beginPath(); ctx.arc(self.px[i], self.py[i], 6, 0, 6.2832); ctx.stroke(); });
   }
   /* pins, hover */
+  if (S.spot) drawSpot(ctx, now, function (d) { return d._m && d._h.has2 ? [self.px[d._i], self.py[d._i]] : null; });   /* v0.9.0 */
   S.pins.forEach(function (d, k) { var i = d._i; if (!d._h.has2) return; ctx.strokeStyle = PIN_COLORS[k]; ctx.lineWidth = 1.6; ctx.strokeRect(self.px[i] - 6, self.py[i] - 6, 12, 12);
     ctx.fillStyle = PIN_COLORS[k]; ctx.font = '700 12px "JetBrains Mono",monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(String(k + 1), self.px[i], self.py[i] - 11); });
   var hv = this.hover || this.hl;

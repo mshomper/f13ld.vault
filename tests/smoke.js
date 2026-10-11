@@ -48,6 +48,15 @@ JSDOM.fromFile(file, {
   const ev = (code) => { try { return w.eval(code); } catch (e) { errs.push('step "' + code.slice(0, 70) + '": ' + e.stack.split('\n').slice(0, 2).join(' | ')); } };
   const steps = [
     [3200, "DB.N + ' designs, ' + S.cnt + ' lit, sel ' + (S.sel && S.sel._id)"],
+    /* v0.9.0 welcome guide: opens on a first visit, domain → build (stress presets) → top 24 → filter; then retired */
+    [80, "WG.open + ' step ' + WG.step + ' · ' + document.querySelectorAll('#welDlg .wg-dom').length + ' domains · next disabled ' + document.querySelector('#welDlg [data-wg=next]').disabled"],
+    [80, "document.querySelector('#welDlg [data-wg-dom=biomedical]').click(); document.querySelector('#welDlg [data-wg=next]').click(); WG.step + ' ' + F.domain + ' · bio card open ' + document.querySelector('#bioDlg').classList.contains('open') + ' · chips ' + document.querySelectorAll('#welDlg .sp-chip').length"],
+    [80, "document.querySelector('#welDlg .sp-chip[data-stress=\"3.5\"]').click(); document.querySelector('#wgMat').value = 'ti6al4v'; document.querySelector('#wgMat').onchange(); document.querySelector('#wgCell').value = 2; document.querySelector('#wgSig').value + ' MPa · ' + document.querySelector('#welDlg .sp-help').textContent.slice(0, 30) + ' · on ' + document.querySelector('#welDlg .sp-chip.on b').textContent"],
+    [400, "document.querySelector('#welDlg [data-wg=next]').click(); WG.step + ' · spot ' + (S.spot && S.spot.size) + ' · load ' + hasLoad() + ' · docked ' + document.querySelector('#welDlg').classList.contains('dock') + ' · spot cards ' + document.querySelectorAll('.card.spot').length"],
+    [400, "var top24 = topForDomain(24).map(function (d) { return d._id; }); document.querySelector('#welDlg [data-wg=filter]').click(); refreshNow(); WG.open + ' · region ' + F.region.length + ' · lit ' + S.cnt + ' · retired ' + welcomeDone() + ' · same ' + (top24.join() === F.region.join())"],
+    [80, "clearAll(); btReset(); setDomain('all'); refreshNow(); S.cnt === DB.N"],
+    [80, "localStorage.removeItem(LS_WELCOME); openWelcome(); document.querySelector('#welDlg [data-wg=skip]').click(); WG.open + ' · retired ' + welcomeDone() + ' (skip without the box: comes back)'"],
+    [80, "openWelcome(); document.querySelector('#welDlg [data-wg=never]').click(); closeWelcome('skip'); welcomeDone() + ' (box ticked: retired)'"],
     [80, "setDomain('biomedical'); refreshNow(); F.domain + ' ' + S.cnt"],
     [80, "toggleChip('fam:tpms'); refreshNow(); S.cnt"],
     [80, "togglePerc('solid:z'); refreshNow(); S.cnt"],
@@ -112,7 +121,7 @@ JSDOM.fromFile(file, {
     [80, "btReset(); localStorage.removeItem(LS_BIO_SKIP); closeBioPrompt('close');"],
     [400, "hasMetric('microstrain_avg_per_gpa') + ' ' + DB.esRefGuess.toFixed(1)"],
     [80, "setDomain('all'); setDomain('biomedical');"],
-    [400, "document.querySelector('#bioDlg').classList.contains('open') + ' ' + document.querySelectorAll('#tags .tag.needs').length"],
+    [400, "document.querySelector('#bioDlg').classList.contains('open') + ' ' + document.querySelectorAll('#tags .tag.needs').length + ' · stress chips ' + document.querySelectorAll('#bioDlg .sp-chip').length"],
     [80, "document.querySelector('#bioMat').value = 'ti6al4v'; document.querySelector('#bioMat').onchange(); document.querySelector('#bioSig').value = 10; document.querySelector('#bioCell').value = 2; closeBioPrompt('apply');"],
     [500, "var d0 = DB.all.find(function (d) { return d.ex_norm > 0.01; }); hasMetric('microstrain_avg_per_gpa') + ' ' + Math.round(d0.microstrain_x_per_gpa) + ' vs ' + Math.round(1000 / d0.ex_norm * 10 / globalInputs.modulus_gpa) + ' · tags ' + document.querySelectorAll('#tags .tag.needs').length"],
     [80, "refreshNow(); var f = scoreFactors(S.list[0], 'biomedical', domainPop('biomedical')); f.factors[1].label + ' = ' + f.factors[1].txt"],

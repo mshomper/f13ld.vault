@@ -24,6 +24,7 @@ function cpActions() {
     ['View 3D only', 'view3d', function () { setHv('3d'); }, ''], ['View 3D and 2D side by side', 'split', function () { setHv('split'); }, ''], ['View 2D only', 'view2d', function () { setHv('2d'); }, ''],
     ['Build target (absolute units)', 'target', function () { openDrawer('target'); }, ''],
     ['Metric key', 'key', function () { openDrawer('key'); }, ''],
+    ['Welcome guide', 'guide', openWelcome, ''],
     ['Keyboard shortcuts', 'keyboard', showShortcuts, '?']
   ];
 }

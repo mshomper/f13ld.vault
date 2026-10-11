@@ -142,7 +142,7 @@ Hero3D.prototype.frame = function (now, dt, moving) {
   var avail = Math.max(140, h - this.inset - top - bot);
   this.S0 = Math.min(w * 0.92, avail) * (this.mobile ? 0.3 : 0.34) * this.zoom; this.cx = w / 2; this.cy = top + avail / 2;
   this.safe = [top - 34, h - this.inset - bot + 10];
-  var overlayLive = (!!S.sel && pulseOn(now)) || !!this.hl || !!this.brush;
+  var overlayLive = (!!S.sel && pulseOn(now)) || !!this.hl || !!this.brush || (!!S.spot && now - S.spotT0 < 1200);
   if (!busy && !this.dirty && !overlayLive) return;
   if (busy || this.dirty) {
     this.pts.fill(function (hh) { return [hh.x, hh.y, hh.z]; });
@@ -214,6 +214,7 @@ Hero3D.prototype.drawOverlay = function (now, w, h, dpr) {
     if (!this.mobile && S.near.length) { ctx.textAlign = 'center'; var nt = S.near.length + ' nearest', nx = sx[i0] + 52, ny = sy[i0] - 18;
       if (!place(nt, nx, ny, '500 12px "JetBrains Mono",monospace', 'rgba(169,205,245,0.95)')) place(nt, sx[i0] - 52, sy[i0] + 20, '500 12px "JetBrains Mono",monospace', 'rgba(169,205,245,0.95)'); }
   }
+  if (S.spot) drawSpot(ctx, now, function (d) { return d._m ? [sx[d._i], sy[d._i]] : null; });   /* v0.9.0 — the guide's top designs */
   S.pins.forEach(function (d, k) { var i = d._i; ctx.strokeStyle = PIN_COLORS[k]; ctx.lineWidth = 1.6; ctx.strokeRect(sx[i] - 6, sy[i] - 6, 12, 12);
     ctx.fillStyle = PIN_COLORS[k]; ctx.font = '700 12px "JetBrains Mono",monospace'; ctx.textAlign = 'center'; ctx.fillText(String(k + 1), sx[i], sy[i] - 15); });
   var hh = this.hover || this.hl;

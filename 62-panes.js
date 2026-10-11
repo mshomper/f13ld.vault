@@ -84,7 +84,7 @@ function strainInputsChanged() {
 /* ── v0.6: Biomedical asks for its loading case ────────────────────────
    Switching to Biomedical without a load or cell size opens this card.
    "Not now" is remembered; the dock tag and the score breakdown reopen it. */
-function bioPromptWanted() { return F.domain === 'biomedical' && needsBioInputs() && !Store.get(LS_BIO_SKIP, false); }
+function bioPromptWanted() { return F.domain === 'biomedical' && needsBioInputs() && !Store.get(LS_BIO_SKIP, false) && !(typeof WG !== 'undefined' && WG.open); }   /* v0.9.0: the welcome guide stands in for it while open */
 function openBioPrompt() {
   var el = $('#bioDlg'); if (!el) return;
   var g = globalInputs, w = bioWindow();
@@ -100,24 +100,20 @@ function openBioPrompt() {
       fld('bioCell', 'Cell size', g.cell_size_mm, 'mm', '0.1') +
       fld('bioLo', 'Bone window from', w[0], 'με', '100') +
       fld('bioHi', 'Bone window to', w[1], 'με', '100') +
-    '</div>' +
+    '</div>' + stressPresetsHTML('bioSig') +
     '<div class="bio-note">Full marks inside the window, soft fall-off outside it. Without a load, strain stays hidden and the score leaves it out.</div>' +
     '<div class="bio-acts"><button class="sbtn ghost" data-act="bio-skip">Not now</button><button class="sbtn prim" data-act="bio-apply">' + ic('target') + 'Apply</button></div></div>';
   el.classList.add('open');
   var first = ['#bioSig', '#bioCell', '#bioE'].map(function (q) { return $(q); }).filter(function (i) { return i && !i.value; })[0] || $('#bioSig');
   if (first) first.focus();
   $('#bioMat').onchange = function () { var m = MATERIAL_PRESETS[this.value]; if (m) $('#bioE').value = m.E; };
+  bindStressPresets(el);
 }
 function closeBioPrompt(how) {
   var el = $('#bioDlg'); if (!el || !el.classList.contains('open')) return;
   if (how === 'apply') {
     var num = function (q) { var v = parseFloat($(q).value); return isFinite(v) && v > 0 ? v : null; };
-    var mid = $('#bioMat').value, m = MATERIAL_PRESETS[mid];
-    globalInputs.material_id = mid;
-    if (m) { globalInputs.density_gcc = m.rho; globalInputs.thermal_k_wmk = m.k; }
-    globalInputs.modulus_gpa = num('#bioE'); globalInputs.ref_stress_mpa = num('#bioSig'); globalInputs.cell_size_mm = num('#bioCell');
-    globalInputs.strain_lo = num('#bioLo') || 1000; globalInputs.strain_hi = num('#bioHi') || 3500;
-    unitsChanged(); renderTargetPane();
+    applyBuild({ mid: $('#bioMat').value, E: num('#bioE'), sig: num('#bioSig'), cell: num('#bioCell'), lo: num('#bioLo'), hi: num('#bioHi') });   /* v0.9.0 — shared with the guide */
     toast(hasLoad() ? 'Strain on · bone window ' + bioWindow()[0].toLocaleString('en-US') + '–' + bioWindow()[1].toLocaleString('en-US') + ' με' : 'Saved · add a stress and modulus to turn strain on');
   }
   if (how === 'skip') { Store.set(LS_BIO_SKIP, true); toast('Strain window left out · reopen it from the dock tag'); }

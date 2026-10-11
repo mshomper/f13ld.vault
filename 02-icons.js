@@ -42,6 +42,7 @@ var ICONS = {
   thermal:    '<path d="M8 34V13M16 34V8M24 34V13M32 34V8"' + SV + '/><path d="M5 34H35"' + SV + ' opacity=".55"/><circle class="acc" cx="16" cy="8" r="2.8"/>',
   noPreview:  '<path d="M20 4L34 12V28L20 36L6 28V12Z"' + SV + ' stroke-dasharray="3 4"/><circle class="acc" cx="20" cy="20" r="3"/>',
   vault:      '<ellipse cx="20" cy="10" rx="13" ry="4.5"' + SV + '/><path d="M7 10V30A13 4.5 0 0 0 33 30V10"' + SV + '/><path d="M7 20A13 4.5 0 0 0 33 20"' + SV + ' opacity=".5"/><circle class="acc" cx="20" cy="27" r="3"/>',
+  guide:      '<circle cx="20" cy="20" r="15"' + SV + '/><path d="M15 16A5 5 0 1 1 22.5 20.3C21 21.2 20 22.3 20 24.5"' + SV + '/><circle class="acc" cx="20" cy="30" r="2.4"/>',
   keyboard:   '<rect x="4" y="10" width="32" height="20" rx="3"' + SV + '/><path d="M10 16H11M16 16H17M22 16H23M28 16H29M10 22H11M28 22H29M15 24H25"' + SV + '/><circle class="acc" cx="20" cy="17" r="1.8"/>'
 };
 var GLY = {

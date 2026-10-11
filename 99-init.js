@@ -17,8 +17,12 @@ function splashTick(now) {
   spans.forEach(function (s, i) { var lock = 420 + i * 190; if (t >= lock) { s.textContent = fin[i]; s.style.color = col[i]; } else s.textContent = G[Math.floor(Math.random() * G.length)]; });
   rippleMark($('#spMark svg'), t / 200);
   $('#spMsg').textContent = SPLASH.msg;
-  $('#spBar').style.width = Math.min(DB.loaded ? 100 : 86, t / 18) + '%';
-  if (DB.loaded && t > 1500) {
+  /* v0.8.2 — the bar tracks rows received once the total is known; the final
+     count holds about a second before the fade, so it can be read */
+  var real = SPLASH.tot ? 8 + 88 * Math.min(1, (SPLASH.got || 0) / SPLASH.tot) : 86;
+  $('#spBar').style.width = Math.min(DB.loaded ? 100 : real, t / 18) + '%';
+  if (DB.loaded && !SPLASH.doneAt) SPLASH.doneAt = now;
+  if (DB.loaded && t > 1500 && now - SPLASH.doneAt > 900) {
     SPLASH.done = true; sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 600);
     S.introT0 = performance.now() + 100;
     if (!S.mobile && !S.sel && S.list[0] && !S._linkSel) setTimeout(function () { if (!S.sel && S.list[0]) select(S.list[0], 'step-quiet'); }, 1500);
@@ -53,7 +57,7 @@ function boot() {
   if (MQ.addEventListener) MQ.addEventListener('change', applyMobile); else if (MQ.addListener) MQ.addListener(applyMobile);
   closeDrawer();
   $('#mFilters').inert = true;
-  loadVaultRows(function (n) { SPLASH.msg = 'loading ' + n.toLocaleString() + ' designs'; }).then(start).catch(loadFailed);
+  loadVaultRows(function (n, tot) { SPLASH.got = n; SPLASH.tot = tot; SPLASH.msg = 'loading ' + n.toLocaleString() + (tot ? ' of ' + tot.toLocaleString() : '') + ' designs'; }).then(start).catch(loadFailed);
   requestAnimationFrame(loop);
 }
 function start(rows) {

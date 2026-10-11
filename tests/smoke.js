@@ -122,6 +122,13 @@ JSDOM.fromFile(file, {
     [400, "var o = document.querySelector('#bioDlg').classList.contains('open'); closeBioPrompt('skip'); setDomain('all'); setDomain('biomedical'); o"],
     [400, "document.querySelector('#bioDlg').classList.contains('open') + ' (should be false: Not now remembered)'"],
     [80, "setDomain('all'); clearAll(); refreshNow(); S.cnt === DB.N"],
+    /* v0.8.2 — a domain sets its own 3D and 2D axes; Keep my axes puts them back; a load upgrades biomedical to pore vs strain */
+    [80, "setDomain('aerospace'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],
+    [80, "setDomain('thermal'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],
+    [80, "btReset(); setDomain('biomedical'); closeBioPrompt('skip'); [S.ax3.x, S.ax3.y, S.ax2.x, S.ax2.y].join(' ') + ' (no load: pore vs density)'"],
+    [80, "globalInputs.ref_stress_mpa = 10; globalInputs.modulus_gpa = 110; globalInputs.cell_size_mm = 2; strainInputsChanged(); [S.ax3.x, S.ax3.y, S.ax2.x, S.ax2.y].join(' ') + ' (load: pore vs strain)'"],
+    [80, "btReset(); setAxis3('x', 'volume_fraction'); setDomain('oilgas'); document.querySelector('#toast .toast-act').click(); S.ax3.x + ' (kept)'"],
+    [80, "setDomain('all'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],
     [80, "window.__phone = true; applyMobile(); S.mobile"],
     [200, "select(S.list[3], 'hero'); S.mInsp + ' ' + document.querySelector('#mBody').innerHTML.length"],
     [80, "act('m-back'); document.querySelectorAll('#mBody .card').length"],

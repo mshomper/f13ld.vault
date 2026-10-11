@@ -18,16 +18,21 @@ function vaultWantsMock() {
 }
 function fetchVaultPage(select, from, chunk) {
   var url = SUPABASE_URL + '/rest/v1/' + VAULT_TABLE + '?select=' + select + '&order=created_at.desc&offset=' + from + '&limit=' + chunk;
-  return fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }, mode: 'cors', cache: 'no-store', credentials: 'omit' })
+  var hd = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+  if (from === 0) hd.Prefer = 'count=exact';   /* v0.8.2 — the first page also reports the table's size */
+  return fetch(url, { headers: hd, mode: 'cors', cache: 'no-store', credentials: 'omit' })
     .then(function (res) {
-      if (res.ok) return res.json();
+      if (res.ok) {
+        if (from === 0) { var m = /\/(\d+)\s*$/.exec(res.headers.get('content-range') || ''); DB.total = m ? +m[1] : null; }
+        return res.json();
+      }
       return res.text().catch(function () { return ''; }).then(function (body) {
         var err = new Error('HTTP ' + res.status + ' ' + res.statusText + ' — ' + body.slice(0, 160)); err.status = res.status; throw err;
       });
     });
 }
 function loadVaultRows(onProgress) {
-  if (vaultWantsMock()) { DB.source = 'mock'; return Promise.resolve(mockRows(640)); }
+  if (vaultWantsMock()) { DB.source = 'mock'; DB.total = 640; return Promise.resolve(mockRows(640)); }
   /* Named columns only — never select=*, so contributor_contact is never fetched.
      If the table lacks a listed column, PostgREST names it in the 400 body:
      drop that one column and retry (a few times at most). */
@@ -44,7 +49,7 @@ function loadVaultRows(onProgress) {
       return new Promise(function (r) { setTimeout(r, 800); }).then(function () { return fetchVaultPage(cols.join(','), from, chunk); });   /* one retry for mobile blips */
     }).then(function (rows) {
       if (rows && rows.again) return rows.again;   /* the retried page already recursed */
-      all = all.concat(rows); if (onProgress) onProgress(all.length);
+      all = all.concat(rows); if (onProgress) onProgress(all.length, DB.total);
       return rows.length < chunk ? all : page(from + chunk);
     });
   }
@@ -181,6 +186,7 @@ function loadChanged() {
     ['x', 'y', 'z'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax3[a]) >= 0) S.ax3[a] = { x: '_perf', y: 'anisotropy', z: '_score' }[a]; });
     if (STRAIN_KEYS.indexOf(S.sort.k) >= 0) S.sort = { k: '_score', dir: -1 };
   }
+  if (S._domAxesAuto && F.domain === 'biomedical' && hasLoad()) applyDomainAxes('biomedical');   /* v0.8.2 — pore vs strain once strain exists */
   computeScores(F.domain);
   aimHits();   /* v0.7.1 — strain targets count only with a load */
 }

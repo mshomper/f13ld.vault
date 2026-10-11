@@ -83,10 +83,35 @@ function step(dir) {
 function setDomain(dom) {
   if (dom === F.domain) return;
   F.domain = dom;
+  var was = { a3: Object.assign({}, S.ax3), a2: Object.assign({}, S.ax2) };
+  var moved = applyDomainAxes(dom);   /* v0.8.2 — before domainChanged, so it ranks the new axes */
   domainChanged(false);
   changed('domain · ' + DOMAIN_SHORT[dom], true);
+  if (moved) toast('Axes for <b>' + esc(DOMAIN_SHORT[dom]) + '</b> · ' + esc(mShort(S.ax3.x)) + ' × ' + esc(mShort(S.ax3.y)) + ' (3D) · ' + esc(mShort(S.ax2.x)) + ' × ' + esc(mShort(S.ax2.y)) + ' (2D)',
+    { label: 'Keep my axes', icon: 'undo', run: function () { S._domAxesAuto = false; S.ax3 = was.a3; S.ax2 = was.a2; axesMoved(); } });
   if (bioPromptWanted()) setTimeout(openBioPrompt, 250);   /* v0.6 */
 }
+/* v0.8.2 — a domain sets its own axes, as v0.4 did: 3D X / Y to the domain's
+   first two headline metrics (biomedical: its first 2D preset, since P10 and
+   P90 rise together), Z back to the domain score, and the 2D plot to the
+   domain's first preset. A pair the data can't show (strain with no load)
+   falls through to the next preset. Returns whether anything moved. */
+function domainAxisPairs(dom) {
+  var ok = function (p) { return p && hasMetric(p[0]) && hasMetric(p[1]); };
+  var presets = (AXIS_PRESETS[dom] || AXIS_PRESETS.all).filter(ok), p2 = presets[0] || ['volume_fraction', '_emax'];
+  var d3 = dom === 'all' ? ['_perf', 'anisotropy'] : dom === 'biomedical' ? p2 : (DOMAIN_DEFAULTS[dom] || []).slice(0, 2);
+  if (!ok(d3)) d3 = presets[0] || ['_perf', 'anisotropy'];
+  return { a3: { x: d3[0], y: d3[1], z: '_score' }, a2: { x: p2[0], y: p2[1] } };
+}
+function applyDomainAxes(dom) {
+  var p = domainAxisPairs(dom), moved = ['x', 'y', 'z'].some(function (a) { return S.ax3[a] !== p.a3[a]; }) || ['x', 'y'].some(function (a) { return S.ax2[a] !== p.a2[a]; });
+  var nexp = [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y, p.a3.x, p.a3.y, p.a2.x, p.a2.y].indexOf('_nexp') >= 0;
+  S.ax3 = p.a3; S.ax2 = p.a2; S._domAxesAuto = true;
+  if (moved) { if (nexp) recolor(); VIEWS.p2 && VIEWS.p2.reset(); VIEWS.m2 && VIEWS.m2.reset(); savePrefs(); shareLinkSoon(); }
+  return moved;
+}
+/* Axes changed outside the axis menus (Keep my axes, a load arriving). */
+function axesMoved() { recolor(); setAxesTargets3D(); set2DTargets(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (S.sel) select(S.sel, 'axis'); }
 function domainChanged(quiet) {
   computeScores(F.domain);
   if (S.color === '_scar') ensureScarcity(F.domain);
@@ -99,8 +124,8 @@ function domainChanged(quiet) {
 function rangesChanged() { buildRangeRows(); }
 
 /* ── axes, colour, views ────────────────────────────────────────────── */
-function setAxis3(a, k) { var was = S.ax3[a]; S.ax3[a] = k; if (was === '_nexp' || k === '_nexp') recolor(); setAxesTargets3D(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (S.sel) select(S.sel, 'axis'); toast('3D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b> (rank)'); }
-function setAxis2(a, k, quiet) { var was = S.ax2[a]; S.ax2[a] = k; if (was === '_nexp' || k === '_nexp') recolor(); set2DTargets(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (!quiet) toast('2D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b>' + (plotScale(k).lg ? ' (log scale)' : '')); }
+function setAxis3(a, k) { S._domAxesAuto = false; var was = S.ax3[a]; S.ax3[a] = k; if (was === '_nexp' || k === '_nexp') recolor(); setAxesTargets3D(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (S.sel) select(S.sel, 'axis'); toast('3D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b> (rank)'); }
+function setAxis2(a, k, quiet) { if (!quiet) S._domAxesAuto = false; var was = S.ax2[a]; S.ax2[a] = k; if (was === '_nexp' || k === '_nexp') recolor(); set2DTargets(); renderAxisChips(); savePrefs(); shareLinkSoon(); if (!quiet) toast('2D ' + a.toUpperCase() + ' axis · <b>' + esc(mLabel(k)) + '</b>' + (plotScale(k).lg ? ' (log scale)' : '')); }
 function setColor(id) { S.color = id; recolor(); renderLegend(); savePrefs(); shareLinkSoon(); }
 function setView(v) { S.view = v; savePrefs(); renderResults(); }
 function setHv(hv) { S.hv = hv; var h = $('#pHero'); if (h) h.dataset.heroview = hv; $$('#dHv [data-hv]').forEach(function (b) { b.classList.toggle('on', b.dataset.hv === hv); }); savePrefs(); markViewsDirty(); requestAnimationFrame(placeSplits); }
@@ -111,7 +136,7 @@ function setTool2(t) { S.tool2 = t; $$('[data-tool2]').forEach(function (b) { b.
 function setPareto(mode) { S.pareto = mode; computeFront(); $$('[data-act="pareto"]').forEach(function (b) { b.classList.toggle('on', !!mode); }); markViewsDirty(); if (mode) toast('Pareto front · <b>' + FRONT.list.filter(function (d) { return d._m; }).length + '</b> designs', { label: 'Filter to them', icon: 'filters', run: filterToFront }); }
 function filterToFront() { if (!FRONT.list.length) return; F.region = FRONT.list.filter(function (d) { return d._m; }).map(function (d) { return d._id; }); changed('Pareto front · ' + F.region.length + ' designs', true); }
 function setGap(on) { S.gap = on; computeGapGrid(); $$('[data-act="gap"]').forEach(function (b) { b.classList.toggle('on', on); }); markViewsDirty(); if (on) toast('Shaded = designs in the Vault · dashed = holes · click a hole to target it'); }
-function applyPreset(x, y) { setAxis2('x', x, true); setAxis2('y', y, true); VIEWS.p2 && VIEWS.p2.reset(); toast('2D axes · <b>' + esc(mLabel(x)) + '</b> × <b>' + esc(mLabel(y)) + '</b>'); }
+function applyPreset(x, y) { S._domAxesAuto = false; setAxis2('x', x, true); setAxis2('y', y, true); VIEWS.p2 && VIEWS.p2.reset(); toast('2D axes · <b>' + esc(mLabel(x)) + '</b> × <b>' + esc(mLabel(y)) + '</b>'); }
 function clearAll() {
   var keep = F.rangeKeys; F = freshFilters(); F.rangeKeys = keep;
   domainChanged(true); rangesChanged();

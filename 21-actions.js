@@ -100,7 +100,7 @@ function setDomain(dom) {
   var moved = applyDomainAxes(dom);   /* v0.8.2 — before domainChanged, so it ranks the new axes */
   domainChanged(false);
   changed('domain · ' + DOMAIN_SHORT[dom], true);
-  if (moved) toast('Axes for <b>' + esc(DOMAIN_SHORT[dom]) + '</b> · ' + esc(mShort(S.ax3.x)) + ' × ' + esc(mShort(S.ax3.y)) + ' (3D) · ' + esc(mShort(S.ax2.x)) + ' × ' + esc(mShort(S.ax2.y)) + ' (2D)',
+  if (moved && !(typeof WG !== 'undefined' && WG.open)) toast('Axes for <b>' + esc(DOMAIN_SHORT[dom]) + '</b> · ' + esc(mShort(S.ax3.x)) + ' × ' + esc(mShort(S.ax3.y)) + ' (3D) · ' + esc(mShort(S.ax2.x)) + ' × ' + esc(mShort(S.ax2.y)) + ' (2D)',
     { label: 'Keep my axes', icon: 'undo', run: function () { S._domAxesAuto = false; S.ax3 = was.a3; S.ax2 = was.a2; axesMoved(); } });
   if (bioPromptWanted()) setTimeout(openBioPrompt, 250);   /* v0.6 */
 }

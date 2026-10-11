@@ -67,7 +67,7 @@ function closeWelcome(how) {
   if (!WG.open) return;
   WG.open = false;
   if (how === 'done' || WG.never) Store.set(LS_WELCOME, true);
-  var el = $('#welDlg'); el.classList.remove('open', 'dock'); el.innerHTML = '';
+  var el = $('#welDlg'); el.classList.remove('open', 'wg-docked'); el.innerHTML = '';
   if (how !== 'filter') setSpot(null);
   /* the guide stood in for the Biomedical card; if it closed early, the card takes over */
   if (how === 'skip' && bioPromptWanted()) setTimeout(openBioPrompt, 250);
@@ -84,7 +84,7 @@ function topForDomain(n) {
 
 function renderWelcome() {
   var el = $('#welDlg'), s = WG.step, dom = WG.dom, bio = dom === 'biomedical';
-  el.classList.toggle('dock', s === 2);
+  el.classList.toggle('wg-docked', s === 2);
   var bars = '<div class="wg-steps" aria-hidden="true">' + [0, 1, 2].map(function (k) { return '<i class="' + (k < s ? 'done' : k === s ? 'on' : '') + '"></i>'; }).join('') + '</div>';
   var never = '<button type="button" class="wg-chk' + (WG.never ? ' on' : '') + '" data-wg="never" role="checkbox" aria-checked="' + WG.never + '"><b></b>Don’t show this again</button>';
   var head = '<div class="wg-h">' + bars + '<button class="ibtn" data-wg="' + (s === 2 ? 'done' : 'skip') + '" aria-label="Close">' + gl('x') + '</button></div>';

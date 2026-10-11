@@ -57,6 +57,7 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `11-data.js` | Supabase paging, row shaping, stats, ranks, domain scores, scarcity, sample data |
 | `12-mock.js` | the fixture recipes behind `?mock` |
 | `13-state.js` | filters `F`, UI state `S`, prefs, undo/redo, share link `#v=` |
+| `14-elastic.js` | v0.9.0 metrics derived at load: from the 6×6 stiffness matrix (ν, directional E, A^U, Zener, K, HS, G/E) and from stored columns (throat ÷ pore, cell-scaled curvature, k efficiency, Gibson–Ashby C, specific surface) |
 | `20-filter.js` | one-pass bitmask filter engine, what-if counts, histograms, "why not" |
 | `21-actions.js` | views registry, point animation, select/step, setters, presets |
 | `23-reach.js` | v0.7: aiming F13LD.sweep at a 2D target — seed by reachability (density trend per family), the `&t=` payload, Voigt-bound physics warnings; `SWEEP_TARGET_KEYS` mirrors Sweep's `13-target.js` |
@@ -73,6 +74,8 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `62-panes.js` | Build target (absolute units) and the metric key |
 | `63-palette.js` | command palette (Ctrl K) and shortcuts sheet (?) |
 | `64-splits.js` | resizable splits, stored as fractions per layout |
+| `65-welcome.js` | v0.9.0 first-visit guide (domain → build → top 24); stress presets shared with the Biomedical card |
+| `66-trends.js` | v0.9.0 correlation map (rank ρ over the filtered set, click a pair → 2D) |
 | `70-handoff.js` | Mesh / Lab / Sweep (`#r=`; Sweep also `&t=` target + ranges), Queue |
 | `80-mobile.js` | phone layout: bottom sheet, gallery, inspector, filters |
 | `99-init.js` | boot, events, keyboard, loop |
@@ -102,6 +105,6 @@ npm run audit               # tests/render-audit.js — real Chrome, 4 sizes, sc
 
 ## Notes
 
-- Latest session recap: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
+- Latest session recap: `docs/SESSION_RECAP_2026-10-11_v0.9.md` (v0.8.2 axes + splash; v0.9.0 welcome guide, metrics audit, correlation map). Before it: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
 - **Noise revisions**: noise recipes carry `surface.noise_rev` (spec: F13LD.noise `docs/NOISE_REV2.md`). Vault noise is revision 2; keep mock and fixture noise recipes at revision 2.
 - `32-plot2d.js` `paretoCurve`: the 2D front is drawn as a monotone cubic through the front designs (screen space), extended to the plot edges.

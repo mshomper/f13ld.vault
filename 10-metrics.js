@@ -20,7 +20,7 @@ const ALL_METRICS = [
   { group:'Geometry',   key:'directionality',          label:'Directionality Ψ',          unit:''   },
   { group:'Geometry',   key:'ortho_contrast',          label:'Ortho contrast Ω',          unit:'',  retired:true },   /* v0.9.0: same three numbers as anisotropy; A^U replaces it */
   { group:'Geometry',   key:'aniso_efficiency',        label:'Aniso efficiency α/ρ',      unit:'',  retired:true },   /* v0.9.0: a ratio over density has no physical meaning */
-  { group:'Geometry',   key:'surface_complexity',      label:'Surface complexity',        unit:'',  displayMode:'rank' },
+  { group:'Geometry',   key:'surface_complexity',      label:'Surface complexity (voxel faces)', unit:'',  displayMode:'rank' },
 
   // Stiffness — Es-decoupled (norm = fraction of solid Young's modulus)
   { group:'Stiffness',  key:'ex_norm',                 label:'Stiffness Ex / Es',         labelAbs:'Stiffness Ex',     unit:'',  norm_kind:'modulus_es'        },
@@ -271,7 +271,9 @@ const DOMAIN_Z_COMPOUND = {
     formula: 'S_v / VF',
     needs: ['surface_complexity'],
     compute(d, popStats){
-      const sc = popStats.surface_complexity?.get(d);
+      // v0.9.0: true specific surface (Sweep ≥ 0.30) where the row has it,
+      // else the voxel-face count — both as ranks, until the reseed fills _sv.
+      const sc = popStats._sv?.get(d) ?? popStats.surface_complexity?.get(d);
       const vf = d.volume_fraction;
       if(sc == null || vf == null || vf <= 0) return null;
       // Surface area per cell volume (percentile-ranked) divided by volume
@@ -285,7 +287,7 @@ const DOMAIN_Z_COMPOUND = {
       return sc / (vf / 100);
     },
     vector(d, popStats){
-      const sc = popStats.surface_complexity?.get(d);
+      const sc = popStats._sv?.get(d) ?? popStats.surface_complexity?.get(d);
       const vf = d.volume_fraction;
       if(sc == null || vf == null || vf <= 0) return null;
       // Both inputs to the k-NN distance metric in [0, 1] range
@@ -497,7 +499,7 @@ const METRIC_GLOSSARY = {
                             interp: 'Low = uniform pore size (TPMS-like). High = mixed-scale pores (random foams, grain structures).' },
   throat_size_norm:       { def: 'Throat (narrowest channel) diameter as a fraction of cell size.',
                             interp: 'The rate-limiting bottleneck for fluid/cell transport between pores.' },
-  throat_ratio:           { def: 'As stored by Sweep up to v0.29: throat ÷ cell, the same number as Throat / cell. Inspector only since v0.9.0.',
+  throat_ratio:           { def: 'As stored: throat ÷ cell up to Sweep v0.29 (the same number as Throat / cell), throat ÷ pore from v0.30. Inspector only since v0.9.0 — Vault computes Throat ÷ pore for every row.',
                             interp: 'Use Throat ÷ pore, the constriction ratio this column was named for.' },
 
   // ─── Curvature ───
@@ -534,9 +536,9 @@ const METRIC_GLOSSARY = {
 const Z_COMPOUND_GLOSSARY = {   /* v0.9.0 — rewritten from DOMAIN_Z_COMPOUND; keep the two together */
   all: {
     label: 'SURFACE EFFICIENCY',
-    formula: 'surface complexity (rank) ÷ volume fraction',
+    formula: 'specific surface (rank) ÷ volume fraction',
     def: 'Interior surface per unit of solid spent. Orthogonal to stiffness, which rewards thick struts, so the 3D space keeps three independent axes.',
-    interp: 'High = lots of surface per unit material — cell attachment, heat exchange, catalytic area. Surface complexity is still a voxel-face count; true specific surface is coming from Sweep.'
+    interp: 'High = lots of surface per unit material — cell attachment, heat exchange, catalytic area. Uses the true specific surface (Sweep v0.30+); rows without it fall back to the voxel-face surface complexity.'
   },
   biomedical: {
     label: 'BONE-INGROWTH VIABILITY',
@@ -651,6 +653,7 @@ var DERIVED_METRICS = [
   { group:'Elastic tensor', key:'_kb',     label:'Bulk modulus K / Es',    labelAbs:'Bulk modulus K', unit:'', norm_kind:'modulus_es', short:'K' },
   { group:'Elastic tensor', key:'_hs',     label:'Hashin–Shtrikman efficiency', unit:'', short:'HS eff' },
   { group:'Elastic tensor', key:'_ge',     label:'Shear ÷ Young’s G/E',    unit:'', short:'G/E' },
+  { group:'Geometry',  key:'_sv',   label:'Specific surface S/V²ᐟ³',   unit:'', short:'S/V', displayMode:'rank' },
   { group:'Pore',      key:'_tp',   label:'Throat ÷ pore',              unit:'', short:'Throat/pore' },
   { group:'Thermal',   key:'_keff', label:'Conductivity efficiency',    unit:'', short:'k eff' },
   { group:'Curvature', key:'_hL',   label:'Mean curvature H̄·L (signed)', unit:'', short:'H̄L' },
@@ -680,7 +683,8 @@ var DERIVED_GLOSSARY = {
   _kb:    { def:'Bulk modulus (Hill average of Voigt and Reuss) as a fraction of the solid’s Young’s modulus.', interp:'Resistance to uniform compression. Pairs with shear for the Hashin–Shtrikman check.' },
   _hs:    { def:'Mean of K / K_HS and G / G_HS: bulk and shear moduli as shares of the Hashin–Shtrikman upper bounds for solid and void at the design’s solid fraction (solid ν 0.3).', interp:'1 = as stiff as any isotropic structure can be at that density. Sharper than Voigt efficiency, which flatters isotropic designs.' },
   _ge:    { def:'Shear modulus over Young’s modulus, both Hill averages.', interp:'0.385 for an isotropic solid at ν 0.3. Alongside n, it separates stretch-dominated from bending-dominated behaviour.' },
-  _tp:    { def:'Throat size divided by the median pore size (P50).', interp:'The constriction ratio: near 1 = open channels between pores; low = pores joined by narrow necks. Cell-size free. The biomedical and oil & gas scores use it.' },
+  _sv:    { def:'Interface area divided by the cell volume to the ⅔ — S·L/V for a cube — from the same area integral as the curvature (Sweep v0.30+).', interp:'The true specific surface: a single gyroid surface is about 3.1, a gyroid sheet about 6. The surface-efficiency score uses it where present.' },
+  _tp:    { def:'Throat size divided by the mean pore size (both inscribed diameters).', interp:'The constriction ratio: about 1 = uniform channels (a gyroid sits near 1); low = pores joined by narrow necks. Cell-size free. The biomedical and oil & gas scores use it.' },
   _keff:  { def:'Mean thermal conductivity over k_solid, divided by the solid fraction.', interp:'Conduction bought per unit of material (1 = straight solid paths). The heat-spreading score uses it.' },
   _hL:    { def:'Signed mean curvature times the cell size it was measured at.', interp:'Dimensionless, so designs from runs at different cell sizes compare. Near 0 = minimal-surface-like.' },
   _hLa:   { def:'Mean curvature magnitude times the cell size.', interp:'How curved the surface is overall, independent of cell size.' },
@@ -738,7 +742,7 @@ function scoreFactors(d, dom, pop) {
     case 'oilgas':     f('Void percolation κ', d.perc_idx); f('Diffusivity D max', d.d_eff_max_norm); f('Throat ÷ pore (scaled)', g('_tp'), d._tp == null ? '—' : d._tp.toFixed(2)); how = 'cube root of the product'; break;
     case 'thermal':    f('Best-axis conductivity', d.keff_max_norm); var ka = d.thermal_anisotropy; f('Directional bias (1 − 1/kα)', ka == null ? null : 1 - 1 / Math.max(ka, 1)); how = 'geometric mean'; break;
     case 'spread':     f('Conductivity efficiency', d._keff); var kb = d.thermal_anisotropy; f('Evenness (1/kα)', kb == null ? null : 1 / Math.max(kb, 1)); how = 'geometric mean'; break;
-    default:           f('Surface complexity (rank)', g('surface_complexity')); f('Material spent (VF)', d.volume_fraction == null ? null : d.volume_fraction / 100, d.volume_fraction == null ? '—' : d.volume_fraction.toFixed(0) + '%'); how = 'surface ÷ volume fraction';
+    default:           f(d._sv != null ? 'Specific surface (rank)' : 'Surface complexity (rank)', d._sv != null ? g('_sv') : g('surface_complexity')); f('Material spent (VF)', d.volume_fraction == null ? null : d.volume_fraction / 100, d.volume_fraction == null ? '—' : d.volume_fraction.toFixed(0) + '%'); how = 'surface ÷ volume fraction';
   }
   return { factors: out, how: how };
 }

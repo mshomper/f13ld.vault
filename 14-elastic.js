@@ -17,7 +17,8 @@
                bounds for solid + void at the design's solid fraction (ν_s 0.3)
      _ge       G / E (Hill): 0.385 for an isotropic solid at ν 0.3
    From the stored columns, every row:
-     _tp       throat ÷ pore (throat ÷ P50) — the constriction ratio
+     _sv       specific surface S ÷ V^(2/3), true interface area (Sweep ≥ 0.30)
+     _tp       throat ÷ mean pore — the constriction ratio (Sweep ≥ 0.30 stores it as throat_ratio)
      _hL · _hLa · _hsL · _kL2 · _mihL  curvature × the cell size it was
                measured at, so designs from different runs compare
      _keff     conductivity efficiency: k avg / (ks · solid fraction)
@@ -107,7 +108,8 @@ function elasticOf(d) {
 /* Derived from the stored columns — every row. */
 function derivedColumns(d) {
   var num = function (v) { return isNum(v) ? v : null; }, L = isNum(d.cell_size_mm) && d.cell_size_mm > 0 ? d.cell_size_mm : null, phi = isNum(d.volume_fraction) && d.volume_fraction > 0 ? d.volume_fraction / 100 : null;
-  d._tp = isNum(d.throat_size_norm) && isNum(d.pore_size_p50_norm) && d.pore_size_p50_norm > 0 ? d.throat_size_norm / d.pore_size_p50_norm : null;
+  d._sv = isNum((d.metrics_extended || {}).specific_surface) && d.metrics_extended.specific_surface > 0 ? d.metrics_extended.specific_surface : null;   /* Sweep ≥ 0.30 */
+  d._tp = isNum(d.throat_size_norm) && isNum(d.pore_size_norm) && d.pore_size_norm > 0 ? d.throat_size_norm / d.pore_size_norm : null;   /* mean pore, not P50 (P50 is the distance field's median, ~½ the pore) */
   d._hL = L && num(d.h_mean) != null ? d.h_mean * L : null;
   d._hLa = L && num(d.h_mean_abs) != null ? d.h_mean_abs * L : null;
   d._hsL = L && num(d.h_std) != null ? d.h_std * L : null;

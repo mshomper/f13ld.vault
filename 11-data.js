@@ -223,7 +223,7 @@ function popNorm(k) {
 }
 function domainPop(dom) {
   var z = DOMAIN_Z_COMPOUND[dom] || DOMAIN_Z_COMPOUND.all, pop = {};
-  (z.needs || []).concat(['ortho_contrast', 'directionality', 'tortuosity_min', 'throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa', 'thermal_anisotropy', 'surface_complexity', '_tp', '_au', '_keff'])
+  (z.needs || []).concat(['ortho_contrast', 'directionality', 'tortuosity_min', 'throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa', 'thermal_anisotropy', 'surface_complexity', '_sv', '_tp', '_au', '_keff'])
     .forEach(function (k) { pop[k] = popNorm(k); });
   return pop;
 }
@@ -312,7 +312,7 @@ function mockRows(n) {
       tortuosity_min: 1.05 + R() * 0.6, tortuosity_avg: 1.2 + R() * 0.8, d_eff_max_norm: (1 - v) * (0.4 + R() * 0.4), d_eff_avg_norm: (1 - v) * (0.3 + R() * 0.35),
       linear_cap_active: false, linear_cap_kind: null, degenerate: false, solver_validity: 'valid', cg_iters: 40 + Math.floor(R() * 200), cg_converged: true,
       metrics_extended: { connect_x: kap >= 0.33, connect_y: kap >= 0.67, connect_z: kap >= 0.99, perc_x: true, perc_y: true, perc_z: R() < 0.9,
-        Gyz_norm: Gm[0], Gxz_norm: Gm[1], Gxy_norm: Gm[2], C_GPa: mockC(E, Gm, fam === 'beam' && R() < 0.3 ? -0.15 - R() * 0.2 : 0.18 + R() * 0.16, R), Es_ref_GPa: 110,   /* v0.9.0 */
+        Gyz_norm: Gm[0], Gxz_norm: Gm[1], Gxy_norm: Gm[2], specific_surface: R() < 0.7 ? +((sheet ? 5.2 : 2.6) + R() * 1.4).toFixed(3) : undefined, C_GPa: mockC(E, Gm, fam === 'beam' && R() < 0.3 ? -0.15 - R() * 0.2 : 0.18 + R() * 0.16, R), Es_ref_GPa: 110,   /* v0.9.0 */
         stiffness_flag: flag, stiffness_flag_reasons: flag ? 'pore-limited ' + 'XYZ'[Math.floor(R() * 3)] : '', reference: i % 97 === 0 },
       recipe: Object.assign(recipe, { homogenization: { grid: R() < 0.7 ? 64 : 32 } })
     });

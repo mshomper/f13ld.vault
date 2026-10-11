@@ -52,7 +52,7 @@ JSDOM.fromFile(file, {
     [80, "WG.open + ' step ' + WG.step + ' · ' + document.querySelectorAll('#welDlg .wg-dom').length + ' domains · next disabled ' + document.querySelector('#welDlg [data-wg=next]').disabled"],
     [80, "document.querySelector('#welDlg [data-wg-dom=biomedical]').click(); document.querySelector('#welDlg [data-wg=next]').click(); WG.step + ' ' + F.domain + ' · bio card open ' + document.querySelector('#bioDlg').classList.contains('open') + ' · chips ' + document.querySelectorAll('#welDlg .sp-chip').length"],
     [80, "document.querySelector('#welDlg .sp-chip[data-stress=\"3.5\"]').click(); document.querySelector('#wgMat').value = 'ti6al4v'; document.querySelector('#wgMat').onchange(); document.querySelector('#wgCell').value = 2; document.querySelector('#wgSig').value + ' MPa · ' + document.querySelector('#welDlg .sp-help').textContent.slice(0, 30) + ' · on ' + document.querySelector('#welDlg .sp-chip.on b').textContent"],
-    [400, "document.querySelector('#welDlg [data-wg=next]').click(); WG.step + ' · spot ' + (S.spot && S.spot.size) + ' · load ' + hasLoad() + ' · docked ' + document.querySelector('#welDlg').classList.contains('dock') + ' · spot cards ' + document.querySelectorAll('.card.spot').length"],
+    [400, "document.querySelector('#welDlg [data-wg=next]').click(); WG.step + ' · spot ' + (S.spot && S.spot.size) + ' · load ' + hasLoad() + ' · docked ' + document.querySelector('#welDlg').classList.contains('wg-docked') + ' · spot cards ' + document.querySelectorAll('.card.spot').length"],
     [400, "var top24 = topForDomain(24).map(function (d) { return d._id; }); document.querySelector('#welDlg [data-wg=filter]').click(); refreshNow(); WG.open + ' · region ' + F.region.length + ' · lit ' + S.cnt + ' · retired ' + welcomeDone() + ' · same ' + (top24.join() === F.region.join())"],
     [80, "clearAll(); btReset(); setDomain('all'); refreshNow(); S.cnt === DB.N"],
     [80, "localStorage.removeItem(LS_WELCOME); openWelcome(); document.querySelector('#welDlg [data-wg=skip]').click(); WG.open + ' · retired ' + welcomeDone() + ' (skip without the box: comes back)'"],
@@ -140,6 +140,11 @@ JSDOM.fromFile(file, {
     [80, "setDomain('automotive'); var f = scoreFactors(S.list[0], 'automotive', domainPop('automotive')); f.factors.map(function (x) { return x.label; }).join(' | ')"],
     [80, "setDomain('oilgas'); var f = scoreFactors(S.list[0], 'oilgas', domainPop('oilgas')); f.factors.map(function (x) { return x.label; }).join(' | ')"],
     [80, "setDomain('all'); S.ax3.x + ' (default 3D X)'"],
+    /* v0.9.0 correlation map: opens over the filtered set; VF vs peak stiffness strongly positive; a row click plots the pair */
+    [200, "openTrends(); var ia = TR.keys.indexOf('volume_fraction'), ib = TR.keys.indexOf('_emax'), ic2 = TR.keys.indexOf('stiffness_density_norm'), id2 = TR.keys.indexOf('_beff'); TR.open + ' · ' + TR.keys.length + ' metrics · ' + TR.N + ' designs · ρ(VF, E*) ' + trFmt(TR.M[ia][ib]) + ' · ρ(Voigt avg, Voigt max) ' + trFmt(TR.M[ic2][id2]) + ' · order ' + TR.idx.length + ' · rows ' + document.querySelectorAll('#trSide .tr-row').length"],
+    [80, "document.querySelector('[data-tr-ord=group]') && document.querySelector('[data-tr-ord=group]').click(); TR.order + ' ' + TR.idx.length"],
+    [80, "var r = document.querySelector('#trSide .tr-row'); var p = r.dataset.trPair.split(',').map(Number); r.click(); TR.open + ' · 2D ' + S.ax2.x + ' × ' + S.ax2.y + ' = ' + TR.keys[p[0]] + ' × ' + TR.keys[p[1]]"],
+    [80, "toggleChip('fam:tpms'); refreshNow(); openTrends(); var n = TR.N; closeTrends(); toggleChip('fam:tpms'); refreshNow(); n + ' designs when filtered to TPMS · closed ' + !TR.open"],
     /* v0.8.2 — a domain sets its own 3D and 2D axes; Keep my axes puts them back; a load upgrades biomedical to pore vs strain */
     [80, "setDomain('aerospace'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],
     [80, "setDomain('thermal'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],

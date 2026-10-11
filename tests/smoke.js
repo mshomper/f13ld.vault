@@ -137,6 +137,11 @@ JSDOM.fromFile(file, {
     [80, "pickableMetrics().length + ' pickable of ' + metricsAll().length + ' · retired shown in picker: ' + pickableMetrics().filter(function (m) { return ['ortho_contrast', 'aniso_efficiency', 'u_compliance', '_perf', 'throat_ratio', 'mih'].indexOf(m.key) >= 0; }).length"],
     [80, "toggleChip('pois:auxetic'); refreshNow(); var a = S.cnt; toggleChip('pois:auxetic'); refreshNow(); a + ' auxetic · tag ' + (activeFilterList().length)"],
     [80, "setDomain('spread'); refreshNow(); DOMAIN_SHORT[F.domain] + ' · scored ' + DB.all.filter(function (d) { return isNum(d._score); }).length + ' · axes ' + [S.ax3.x, S.ax3.y, S.ax2.x, S.ax2.y].join(' ')"],
+    /* v0.9.0 biomedical: plateau on the mean pore (300–600 µm), throat gate at 100 µm; plateau maths */
+    [80, "[plateauWindow(450, 300, 600), plateauWindow(300, 300, 600), plateauWindow(600 * Math.exp(0.458), 300, 600), plateauWindow(150, 100, Infinity), plateauWindow(60, 100, Infinity)].map(function (v) { return v.toFixed(2); }).join(' ') + ' (1 1 0.50 1 low)'"],
+    [80, "globalInputs.cell_size_mm = 2; setDomain('biomedical'); closeBioPrompt('skip'); strainInputsChanged(); refreshNow(); var f = scoreFactors(S.list[0], 'biomedical', domainPop('biomedical')); f.factors.map(function (x) { return x.label + ' = ' + x.txt; }).join(' | ') + ' · scored ' + DB.all.filter(function (d) { return isNum(d._score); }).length"],
+    [80, "globalInputs.pore_lo = 500; globalInputs.pore_hi = 800; strainInputsChanged(); refreshNow(); var t0 = S.list[0]; var um = bioSizesUm(t0); 'window 500–800 · top design mean pore ' + Math.round(um.pore) + ' µm'"],
+    [80, "btReset(); setDomain('all'); globalInputs.pore_lo + '–' + globalInputs.pore_hi + ' after reset'"],
     [80, "setDomain('automotive'); var f = scoreFactors(S.list[0], 'automotive', domainPop('automotive')); f.factors.map(function (x) { return x.label; }).join(' | ')"],
     [80, "setDomain('oilgas'); var f = scoreFactors(S.list[0], 'oilgas', domainPop('oilgas')); f.factors.map(function (x) { return x.label; }).join(' | ')"],
     [80, "setDomain('all'); S.ax3.x + ' (default 3D X)'"],

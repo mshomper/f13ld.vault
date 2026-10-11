@@ -86,7 +86,7 @@ function start(rows) {
   if (DB.excluded) console.info('[F13LD.vault] ' + DB.excluded + ' degenerate or invalid-solver rows are kept out of the explorer.');
   S.ready = true; S.cntShown = 0;
   initHints();
-  _loadSig = [globalInputs.ref_stress_mpa, globalInputs.modulus_gpa, globalInputs.strain_lo, globalInputs.strain_hi, globalInputs.cell_size_mm].join('|');
+  _loadSig = [globalInputs.ref_stress_mpa, globalInputs.modulus_gpa, globalInputs.strain_lo, globalInputs.strain_hi, globalInputs.pore_lo, globalInputs.pore_hi, globalInputs.cell_size_mm].join('|');
   if (bioPromptWanted()) setTimeout(openBioPrompt, 1400);   /* v0.6: a saved Biomedical view asks too */
 }
 /* Gesture hints: shown until the first drag in that view, then they fade and

@@ -22,8 +22,11 @@ Full audit: the `F13LD.vault-metrics-audit.md` file from this session.
 ## v0.9.0 — correlation map (`66-trends.js`)
 Rank correlation of every pickable metric over the filtered set; Similar (average-linkage) or Group order; hover for ρ and n, click to plot the pair in 2D; side list of what moves with a metric and near-duplicates (|ρ| ≥ 0.95). Narrow screens stack the list under the grid; phones get the list only — no sideways scroll anywhere. 2D toolbar button, palette, phone menu.
 
-## Found, not changed
-- Biomedical's pore window uses P50, which Sweep computes as the median of the distance field over every void voxel — about half the inscribed pore size (gyroid sheet: P50 293 µm vs pore 611 µm). The 350 ± 150 µm window was written for pore diameter. Decision for Matt.
+## Biomedical pore window (Matt, 2026-10-11)
+- P50 is the median of the distance field over every void voxel (×2) — about half the inscribed pore (gyroid sheet: P50 293 µm vs pore 611 µm) — so the old 350 ± 150 µm Gaussian on P50 favoured ~700 µm pores.
+- Now: pore window = plateau on the **mean pore diameter** at your cell size, full marks 300–600 µm (Build target "Pore window from / to"), the strain window's soft log fall-off outside; third factor = soft **throat gate**, full marks at ≥ 100 µm (`BIO_THROAT_MIN_UM`), replacing throat ÷ pore (which stays a metric and in the oil & gas score). `plateauWindow()` is shared with the strain window.
+- P10 / P50 / P90 key text now says what they are (distance-field percentiles, not pore diameters).
+- Later: local thickness (BoneJ's micro-CT pore size) in Sweep's pores pass — noted in f13ld.sweep `docs/NEXT_STEPS.md`.
 
 ## Checks
 `npm test` (smoke + bake-check) 0 errors; `npm run audit` with `CHROME=/opt/google/chrome/chrome` (serve on :8765 first).

@@ -111,7 +111,7 @@ function renderWelcome() {
         fld('wgCell', 'Cell size you print at', g.cell_size_mm, 'mm', '0.1', !bio) +
         (bio ? fld('wgSig', 'Reference stress σ', g.ref_stress_mpa, 'MPa', '0.5') : '') +
       '</div>' + (bio ? stressPresetsHTML('wgSig') : '') +
-      '<p class="wg-note">' + (bio ? 'Scored against the bone-forming window, <b>' + bioWindow()[0].toLocaleString('en-US') + '–' + bioWindow()[1].toLocaleString('en-US') + ' με</b>. Change it later in Build target.' : 'These live in <b>Build target</b>, where you can change or clear them.') + '</p></div>' +
+      '<p class="wg-note">' + (bio ? 'Scored on mean pore <b>' + poreWindow()[0] + '–' + poreWindow()[1] + ' µm</b>, necks of at least <b>100 µm</b> and the bone-forming window <b>' + bioWindow()[0].toLocaleString('en-US') + '–' + bioWindow()[1].toLocaleString('en-US') + ' με</b>. Change them later in Build target.' : 'These live in <b>Build target</b>, where you can change or clear them.') + '</p></div>' +
       '<div class="wg-f">' + never + '<span class="wg-sp"></span><button class="sbtn ghost" data-wg="back">Back</button><button class="sbtn prim" data-wg="next">' + ic('target') + 'Show me the best</button></div>';
   } else {
     var n = S.spot ? S.spot.size : 0, dn = dom === 'all' ? 'all applications' : DOMAIN_SHORT[dom];

@@ -107,6 +107,8 @@ var globalInputs = {
   ref_stress_mpa: null,   // unlocks compliance_per_stress metrics
   strain_lo:      1000,   // v0.6: bone-forming window (Frost-style), με
   strain_hi:      3500,
+  pore_lo:        300,    // v0.9.0: bone-ingrowth pore window on the mean pore diameter, µm
+  pore_hi:        600,
 };
 // Restore from localStorage on load (tolerant to schema drift).
 try {
@@ -202,12 +204,28 @@ function bioWindow(){
   var hi = isFinite(globalInputs.strain_hi) && globalInputs.strain_hi > lo ? globalInputs.strain_hi : Math.max(3500, lo * 1.5);
   return [lo, hi];
 }
-/* Frost-style window: full marks inside, a soft log-space fall-off outside
-   (half marks at about 1.6× beyond either edge). */
-function frostWindow(ue){
-  if(!isFinite(ue) || ue <= 0) return 0;
-  var w = bioWindow(), x = ue < w[0] ? Math.log(w[0] / ue) : ue > w[1] ? Math.log(ue / w[1]) : 0;
+/* Plateau window: full marks inside [lo, hi], a soft log-space fall-off
+   outside (half marks at about 1.6× beyond either edge). hi = Infinity
+   makes it a one-sided gate. */
+function plateauWindow(v, lo, hi){
+  if(!isFinite(v) || v <= 0) return 0;
+  var x = v < lo ? Math.log(lo / v) : v > hi ? Math.log(v / hi) : 0;
   return Math.exp(-Math.pow(x / 0.55, 2));
+}
+/* Frost-style strain window */
+function frostWindow(ue){ var w = bioWindow(); return plateauWindow(ue, w[0], w[1]); }
+/* v0.9.0 — bone-ingrowth pore window on the mean pore diameter (Build target; defaults 300–600 µm) */
+function poreWindow(){
+  var lo = isFinite(globalInputs.pore_lo) && globalInputs.pore_lo > 0 ? globalInputs.pore_lo : 300;
+  var hi = isFinite(globalInputs.pore_hi) && globalInputs.pore_hi > lo ? globalInputs.pore_hi : Math.max(600, lo * 1.5);
+  return [lo, hi];
+}
+var BIO_THROAT_MIN_UM = 100;   /* interconnections cells and vessels can pass through */
+/* Mean pore and throat in µm at the cell size you print at (Build target wins over the design's own). */
+function bioSizesUm(d){
+  var cell = globalInputs.cell_size_mm || d.cell_size_mm;
+  if(!(cell > 0)) return null;
+  return { pore: isNum(d.pore_size_norm) ? d.pore_size_norm * cell * 1000 : null, throat: isNum(d.throat_size_norm) ? d.throat_size_norm * cell * 1000 : null };
 }
 /* Biomedical scoring wants a load (for strain) and the cell size you print at (for pore µm). */
 function needsBioInputs(){ return !hasLoad() || !(globalInputs.cell_size_mm > 0); }
@@ -246,7 +264,7 @@ function fmtV(v, key){
 /* ── from v0.4: domains, their default axes and compound scores ───────── */
 const DOMAIN_DEFAULTS = {   /* v0.9.0 — first two = the domain's 3D X / Y (21-actions.js domainAxisPairs) */
   all:        ['_beff','anisotropy','volume_fraction','pore_size_p50_norm','curvature_uniformity'],
-  biomedical: ['pore_size_p10_norm','pore_size_p90_norm','connect_idx','_tp','curvature_uniformity'],
+  biomedical: ['pore_size_norm','throat_size_norm','connect_idx','_tp','curvature_uniformity'],
   aerospace:  ['_beff','directionality','anisotropy','curvature_uniformity','volume_fraction'],
   automotive: ['stiffness_density_norm','_au','volume_fraction','anisotropy','directionality'],
   oilgas:     ['perc_idx','d_eff_max_norm','tortuosity_min','volume_fraction','_tp'],
@@ -296,40 +314,37 @@ const DOMAIN_Z_COMPOUND = {
   },
   biomedical: {
     label: 'BONE-INGROWTH VIABILITY',
-    formula: 'pore-window × strain-window × throat r',
-    needs: ['_tp', 'pore_size_p50_norm', 'microstrain_avg_per_gpa'],   // strain only counts once a load is entered
+    formula: 'pore window × strain window × throat gate',
+    needs: ['pore_size_norm', 'throat_size_norm', 'microstrain_avg_per_gpa'],   // strain only counts once a load is entered
     compute(d, popStats){
-      const p50  = d.pore_size_p50_norm;
-      // v0.6: the cell size you print at (Build target) wins over the design's own
-      const cell = globalInputs.cell_size_mm || d.cell_size_mm;
-      const tr   = popStats._tp?.get(d);   // v0.9.0: throat ÷ pore (was throat ÷ cell)
-      if(p50 == null || cell == null || tr == null) return null;
-
-      // Bone-ingrowth pore window — Gaussian on dimensional pore size (μm).
-      // Spec: μ=350 μm, σ=150 μm.
-      const p50_um = p50 * cell * 1000;
-      const pWindow = Math.exp(-Math.pow((p50_um - 350) / 150, 2));
-
-      // v0.6: Frost-style bone-forming strain window on REAL microstrain under
-      // the user's load and material (11-data applyLoad). With no load the
-      // factor is left out (not guessed); a design that can't carry load
-      // (no strain at all) gets no score once a load is set.
+      // v0.9.0 (Matt, 2026-10-11): the pore window is a plateau on the MEAN
+      // pore diameter (inscribed sphere — like-for-like with micro-CT pore
+      // sizes), full marks 300–600 µm by default; it used P50 (the distance
+      // field's median, ~½ the pore) with a Gaussian at 350 ± 150 µm. The
+      // third factor is a soft gate on throat size: full marks at ≥ 100 µm.
+      const um = bioSizesUm(d);
+      if(!um || um.pore == null || um.throat == null) return null;
+      const pw = poreWindow();
+      const pWindow = plateauWindow(um.pore, pw[0], pw[1]);
+      const tGate = plateauWindow(um.throat, BIO_THROAT_MIN_UM, Infinity);
+      // Frost-style bone-forming strain window on REAL microstrain under the
+      // user's load and material. With no load the factor is left out (not
+      // guessed); a design that can't carry load gets no score once a load is set.
       let sWindow = 1;
       if(hasLoad()){
         const ue = d.microstrain_avg_per_gpa;
         if(ue == null) return null;
         sWindow = frostWindow(ue);
       }
-      return pWindow * sWindow * tr;
+      return pWindow * sWindow * tGate;
     },
     vector(d, popStats){
-      const p50 = popStats.pore_size_p50_norm?.get(d);
-      const tr  = popStats._tp?.get(d);
-      if(p50 == null || tr == null) return null;
-      if(!hasLoad()) return [p50, tr];
-      const mu  = popStats.microstrain_avg_per_gpa?.get(d);
+      const p = popStats.pore_size_norm?.get(d), t = popStats.throat_size_norm?.get(d);
+      if(p == null || t == null) return null;
+      if(!hasLoad()) return [p, t];
+      const mu = popStats.microstrain_avg_per_gpa?.get(d);
       if(mu == null) return null;
-      return [p50, mu, tr];
+      return [p, mu, t];
     }
   },
   aerospace: {
@@ -487,14 +502,14 @@ const METRIC_GLOSSARY = {
                             interp: 'Lower = stiffer overall. Hidden until you enter a load.' },
 
   // ─── Pore structure (cell-decoupled) ───
-  pore_size_norm:         { def: 'Mean pore diameter as a fraction of cell size.',
-                            interp: 'Multiply by cell_size_mm × 1000 to recover μm.' },
-  pore_size_p10_norm:     { def: '10th percentile of the pore size distribution, as a fraction of cell size.',
-                            interp: 'The smallest pores that still get cells through. Bone-ingrowth needs this > ~100 μm.' },
-  pore_size_p50_norm:     { def: 'Median pore size, as a fraction of cell size.',
-                            interp: 'The "typical" pore. For bone ingrowth, 350 μm is the canonical sweet spot.' },
-  pore_size_p90_norm:     { def: '90th percentile of the pore size distribution, as a fraction of cell size.',
-                            interp: 'The largest pores. Bone-ingrowth target: < ~600 μm so cells don\'t lose mineralization scaffolding.' },
+  pore_size_norm:         { def: 'Mean inscribed pore diameter as a fraction of cell size.',
+                            interp: 'Like-for-like with micro-CT pore sizes. The Biomedical pore window (default 300–600 µm) scores this at your cell size.' },
+  pore_size_p10_norm:     { def: '10th percentile of the void’s distance-to-wall field (×2), as a fraction of cell size.',
+                            interp: 'Mostly the thin gaps next to walls and corners, not a pore diameter. For interconnection size use Throat / cell.' },
+  pore_size_p50_norm:     { def: 'Median of the void’s distance-to-wall field (×2) over every void voxel, as a fraction of cell size.',
+                            interp: 'Not a pore diameter: most void voxels sit near a wall, so it reads about half the mean pore. Use Mean pore for pore-size targets.' },
+  pore_size_p90_norm:     { def: '90th percentile of the void’s distance-to-wall field (×2), as a fraction of cell size.',
+                            interp: 'Close to the pore centres, so it sits near the mean pore. The spread from P10 to P90 shows how much of the void is near a wall.' },
   pore_size_cv:           { def: 'Coefficient of variation of pore sizes across the unit cell.',
                             interp: 'Low = uniform pore size (TPMS-like). High = mixed-scale pores (random foams, grain structures).' },
   throat_size_norm:       { def: 'Throat (narrowest channel) diameter as a fraction of cell size.',
@@ -542,8 +557,8 @@ const Z_COMPOUND_GLOSSARY = {   /* v0.9.0 — rewritten from DOMAIN_Z_COMPOUND; 
   },
   biomedical: {
     label: 'BONE-INGROWTH VIABILITY',
-    formula: 'pore window × strain window × throat ÷ pore (scaled)',
-    def: 'Pore window: Gaussian on the median pore in µm at your cell size (350 ± 150 µm). Strain window: full marks inside your bone-forming window (default 1,000–3,500 με, Frost), soft fall-off outside, from real strain under your load and material. Throat ÷ pore: open necks between pores.',
+    formula: 'pore window × strain window × throat gate',
+    def: 'Pore window: full marks when the mean pore diameter at your cell size is inside your window (default 300–600 µm), soft fall-off outside. Strain window: the same shape on real strain under your load and material (default 1,000–3,500 με, Frost). Throat gate: full marks when the necks between pores are at least 100 µm, so cells and vessels can pass.',
     interp: 'High = right-sized pores, mechanostat-aligned strain, open ingrowth paths. Without a load the strain factor is left out, not guessed.'
   },
   aerospace: {
@@ -729,12 +744,11 @@ function scoreFactors(d, dom, pop) {
   function f(label, v, txt) { out.push({ label: label, v: v == null ? null : clamp(v, 0, 1), txt: txt != null ? txt : (v == null ? '—' : v.toFixed(2)) }); }
   switch (dom) {
     case 'biomedical': {
-      var p50 = d.pore_size_p50_norm, cell = globalInputs.cell_size_mm || d.cell_size_mm, mu = d.microstrain_avg_per_gpa, bw = bioWindow();
-      var um = (p50 != null && cell != null) ? p50 * cell * 1000 : null;
-      f('Pore window (P50 near 350 µm)', um == null ? null : Math.exp(-Math.pow((um - 350) / 150, 2)), um == null ? '—' : um.toFixed(0) + ' µm');
+      var um = bioSizesUm(d), pw = poreWindow(), mu = d.microstrain_avg_per_gpa, bw = bioWindow();
+      f('Pore window (mean ' + pw[0] + '–' + pw[1] + ' µm)', um && um.pore != null ? plateauWindow(um.pore, pw[0], pw[1]) : null, um && um.pore != null ? um.pore.toFixed(0) + ' µm' : 'add cell size');
       if (!hasLoad()) { f('Strain window · needs load', null, 'Add load'); out[out.length - 1].act = 'bio-prompt'; }
       else f('Strain window (' + bw[0].toLocaleString('en-US') + '–' + bw[1].toLocaleString('en-US') + ' με)', mu == null ? null : frostWindow(mu), mu == null ? 'no load path' : Math.round(mu).toLocaleString('en-US') + ' με');
-      f('Throat ÷ pore (scaled)', g('_tp'), d._tp == null ? '—' : d._tp.toFixed(2));
+      f('Throat gate (≥ ' + BIO_THROAT_MIN_UM + ' µm)', um && um.throat != null ? plateauWindow(um.throat, BIO_THROAT_MIN_UM, Infinity) : null, um && um.throat != null ? um.throat.toFixed(0) + ' µm' : '—');
       how = 'multiplied'; break;
     }
     case 'aerospace':  f('Voigt efficiency (stiffest axis)', d._beff); f('Directionality (scaled)', g('directionality')); how = 'geometric mean'; break;
@@ -751,7 +765,7 @@ function scoreFactors(d, dom, pop) {
    +1 higher is better, −1 lower is better. Metrics not listed get no mark. */
 var DOMAIN_GOALS = {
   all:        { _score:1, _beff:1, stiffness_density_norm:1, _hs:1, _emax:1, volume_fraction:-1, anisotropy:-1, _au:-1, curvature_uniformity:1, surface_complexity:1 },
-  biomedical: { _score:1, _tp:1, connect_idx:1, curvature_uniformity:1, pore_size_p10_norm:1, _emax:-1, volume_fraction:-1 },
+  biomedical: { _score:1, throat_size_norm:1, _tp:1, connect_idx:1, curvature_uniformity:1, pore_size_p10_norm:1, _emax:-1, volume_fraction:-1 },
   aerospace:  { _score:1, _beff:1, stiffness_density_norm:1, _emax:1, _edmax:1, directionality:1, volume_fraction:-1 },
   automotive: { _score:1, stiffness_density_norm:1, _hs:1, _gmean:1, _au:-1, volume_fraction:-1 },
   oilgas:     { _score:1, perc_idx:1, d_eff_max_norm:1, tortuosity_min:-1, _tp:1 },
@@ -767,7 +781,7 @@ function compareKeys(dom) {
 /* One-click 2D axis pairs per domain (X, Y). */
 var AXIS_PRESETS = {
   all:        [['volume_fraction', '_emax', 'Stiffness vs density'], ['volume_fraction', 'stiffness_density_norm', 'Stiffness density vs density'], ['pore_size_p50_norm', 'throat_ratio', 'Pore vs throat'], ['anisotropy', '_beff', 'Efficiency vs anisotropy'], ['_numin', '_edmax', 'Poisson vs stiffest direction']],
-  biomedical: [['pore_size_p50_norm', 'microstrain_avg_per_gpa', 'Pore vs strain'], ['volume_fraction', 'pore_size_p50_norm', 'Pore vs density'], ['pore_size_p10_norm', 'pore_size_p90_norm', 'Pore spread P10 vs P90'], ['volume_fraction', '_emax', 'Stiffness vs density']],
+  biomedical: [['pore_size_norm', 'microstrain_avg_per_gpa', 'Pore vs strain'], ['volume_fraction', 'pore_size_norm', 'Pore vs density'], ['pore_size_norm', 'throat_size_norm', 'Pore vs throat'], ['pore_size_p10_norm', 'pore_size_p90_norm', 'Pore spread P10 vs P90'], ['volume_fraction', '_emax', 'Stiffness vs density']],
   aerospace:  [['volume_fraction', '_beff', 'Voigt efficiency vs density'], ['directionality', '_beff', 'Voigt efficiency vs directionality'], ['volume_fraction', '_emax', 'Stiffness vs density']],
   automotive: [['volume_fraction', '_gmean', 'Shear vs density'], ['_au', 'stiffness_density_norm', 'Specific stiffness vs anisotropy'], ['volume_fraction', '_emax', 'Stiffness vs density']],
   oilgas:     [['tortuosity_min', 'd_eff_max_norm', 'Diffusivity vs tortuosity'], ['pore_size_p50_norm', 'd_eff_max_norm', 'Diffusivity vs pore'], ['volume_fraction', 'perc_idx', 'Void percolation vs density']],

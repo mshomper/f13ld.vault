@@ -163,7 +163,8 @@
     "seed": 3,
     "octaves": 3,
     "center": 0,
-    "half_width": 0.15
+    "half_width": 0.15,
+    "noise_rev": 2
    },
    "geometry": {
     "mode": "sheet"
@@ -180,7 +181,8 @@
     "frequency": 0.25,
     "seed": 11,
     "octaves": 4,
-    "center": 0.35
+    "center": 0.35,
+    "noise_rev": 2
    },
    "geometry": {
     "mode": "half"

@@ -66,8 +66,11 @@ function start(rows) {
   SPLASH.msg = DB.N.toLocaleString() + ' designs · ' + DB.families.length + ' families';
   var linked = readShareLink();
   if (!DOMAIN_Z_COMPOUND[F.domain]) F.domain = 'all';
-  ['x', 'y', 'z'].forEach(function (a) { if (!hasMetric(S.ax3[a]) && S.ax3[a] !== '_score') S.ax3[a] = { x: '_perf', y: 'anisotropy', z: '_score' }[a]; });
-  ['x', 'y'].forEach(function (a) { if (!hasMetric(S.ax2[a])) S.ax2[a] = { x: 'volume_fraction', y: '_emax' }[a]; });
+  /* saved or linked axes on a metric that's missing or retired (v0.9.0) fall back to the defaults */
+  ['x', 'y', 'z'].forEach(function (a) { if ((!hasMetric(S.ax3[a]) && S.ax3[a] !== '_score') || isRetired(S.ax3[a])) S.ax3[a] = { x: '_beff', y: 'anisotropy', z: '_score' }[a]; });
+  ['x', 'y'].forEach(function (a) { if (!hasMetric(S.ax2[a]) || isRetired(S.ax2[a])) S.ax2[a] = { x: 'volume_fraction', y: '_emax' }[a]; });
+  if (S.color === '_perf') S.color = '_beff';
+  if (S.sort && isRetired(S.sort.k)) S.sort = { k: '_score', dir: -1 };
   computeScores(F.domain);
   buildFilters(); renderTargetPane(); buildKeyPane();
   setAxesTargets3D(); set2DTargets(); recolor(); renderAxisChips(); renderLegend(); renderTray();
@@ -189,7 +192,7 @@ function act(a, b, e) {
     case 'presets': openMenu(b, '<div class="mh">2D presets · ' + esc(DOMAIN_SHORT[F.domain]) + '</div>' + (AXIS_PRESETS[F.domain] || AXIS_PRESETS.all).concat(F.domain === 'all' ? [] : AXIS_PRESETS.all.slice(0, 1)).filter(function (p) { return hasMetric(p[0]) && hasMetric(p[1]); }).map(function (p) { return '<button data-preset="' + p[0] + '|' + p[1] + '"><span>' + esc(p[2]) + '</span><em>' + esc(mShort(p[0]) + ' × ' + mShort(p[1])) + '</em></button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
     case 'legend-more': openMenu(b, '<div class="mh">' + esc($('.colorName').textContent) + '</div><div class="lg-all">' + $$('#legend .lg-it').map(function (k) { var c = k.cloneNode(true); c.style.display = ''; return c.outerHTML; }).join('') + '</div>', { focus: true }); break;
     case 'color': openMenu(b, '<div class="mh">Colour points by</div>' + COLOR_MODE_LIST.map(function (m) { return '<button data-color="' + m.id + '" class="' + (S.color === m.id ? 'on' : '') + '">' + esc(m.label) + '</button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
-    case 'sort': openMenu(b, '<div class="mh">Sort results</div>' + (F.target ? [['_target:1', 'Closest to the target']] : []).concat([['_score:-1', domainZLabel()], ['_perf:-1', 'Stiffness efficiency'], ['volume_fraction:1', 'Lightest first'], ['_emax:-1', 'Stiffest first'], ['anisotropy:1', 'Most isotropic'], ['pore_size_p50_norm:-1', 'Largest pores'], ['keff_max_norm:-1', 'Best conductivity'], ['created_at:-1', 'Newest'], ['_name:1', 'Name']])
+    case 'sort': openMenu(b, '<div class="mh">Sort results</div>' + (F.target ? [['_target:1', 'Closest to the target']] : []).concat([['_score:-1', domainZLabel()], ['_beff:-1', 'Voigt efficiency'], ['volume_fraction:1', 'Lightest first'], ['_emax:-1', 'Stiffest first'], ['anisotropy:1', 'Most isotropic'], ['pore_size_p50_norm:-1', 'Largest pores'], ['keff_max_norm:-1', 'Best conductivity'], ['created_at:-1', 'Newest'], ['_name:1', 'Name']])
       .map(function (o) { return '<button data-sort="' + o[0] + '" class="' + (S.sort.k + ':' + S.sort.dir === o[0] ? 'on' : '') + '">' + esc(o[1]) + '</button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
     case 'm-menu': openMenu(b, '<div class="mh">View</div><button data-act="color">Colour points…</button><button data-act="m-presets">2D presets…</button><button data-act="reset-views">Reset views</button><button data-act="alive">' + (S.alive ? 'Stop' : 'Start') + ' ambient motion</button><button data-act="link">Copy a link to this view</button><button data-act="guide">Welcome guide</button>', { host: $('#mApp'), focus: true }); break;
     case 'm-presets': setMhv('2d'); act('presets', b, e); break;

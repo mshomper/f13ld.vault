@@ -112,8 +112,8 @@ function setDomain(dom) {
 function domainAxisPairs(dom) {
   var ok = function (p) { return p && hasMetric(p[0]) && hasMetric(p[1]); };
   var presets = (AXIS_PRESETS[dom] || AXIS_PRESETS.all).filter(ok), p2 = presets[0] || ['volume_fraction', '_emax'];
-  var d3 = dom === 'all' ? ['_perf', 'anisotropy'] : dom === 'biomedical' ? p2 : (DOMAIN_DEFAULTS[dom] || []).slice(0, 2);
-  if (!ok(d3)) d3 = presets[0] || ['_perf', 'anisotropy'];
+  var d3 = dom === 'all' ? ['_beff', 'anisotropy'] : dom === 'biomedical' ? p2 : (DOMAIN_DEFAULTS[dom] || []).slice(0, 2);
+  if (!ok(d3)) d3 = presets[0] || ['_beff', 'anisotropy'];
   return { a3: { x: d3[0], y: d3[1], z: '_score' }, a2: { x: p2[0], y: p2[1] } };
 }
 function applyDomainAxes(dom) {

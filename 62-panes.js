@@ -58,7 +58,7 @@ function renderKeyPane(q) {
   var comp = DOMAIN_IDS.filter(function (k) { var z = Z_COMPOUND_GLOSSARY[k]; return z && (hit(z.label) || hit(z.def) || hit(DOMAIN_SHORT[k])); }).map(function (k) {
     var z = Z_COMPOUND_GLOSSARY[k]; return '<div class="key-it comp"><b>' + ic(k) + esc(DOMAIN_SHORT[k]) + ' · ' + esc(domainZLabel(k)) + '</b><code>' + esc(z.formula) + '</code>' + esc(z.def) + '<i>' + esc(z.interp) + '</i></div>';
   }).join('');
-  var mets = pickableMetrics().filter(function (m) { var g = mGloss(m.key) || {}; return hit(m.label) || hit(m.key) || hit(g.def) || hit(mShort(m.key)); }).map(function (m) {
+  var mets = metricsAll().filter(function (m) { var g = mGloss(m.key) || {}; return hit(m.label) || hit(m.key) || hit(g.def) || hit(mShort(m.key)); }).map(function (m) {
     var g = mGloss(m.key) || {}; return '<div class="key-it"><b>' + esc(m.label) + ' <span>' + esc(mShort(m.key)) + '</span></b>' + esc(g.def || '') + (g.interp ? '<i>' + esc(g.interp) + '</i>' : '') + '</div>';
   }).join('');
   el.innerHTML = (comp ? '<div class="key-h">Domain compounds</div>' + comp : '') + (mets ? '<div class="key-h">Metrics</div>' + mets : '') || '<div class="cmp-empty">Nothing matches “' + esc(q) + '”.</div>';

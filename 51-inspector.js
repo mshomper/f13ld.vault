@@ -93,8 +93,8 @@ function provenanceHTML(d) {
     (d.contributor_notes ? '<div class="fhow">' + esc(d.contributor_notes) + '</div>' : '') + '</div>';
 }
 function allMetricsHTML(d) {
-  var groups = ['Derived', 'Geometry', 'Stiffness', 'Shear', 'Thermal', 'Compliance', 'Pore', 'Curvature', 'Topology', 'Transport'], by = {};
-  pickableMetrics().forEach(function (m) { (by[m.group] = by[m.group] || []).push(m); });
+  var groups = ['Derived', 'Geometry', 'Stiffness', 'Shear', 'Elastic tensor', 'Thermal', 'Compliance', 'Pore', 'Curvature', 'Topology', 'Transport'], by = {};
+  metricsAll().forEach(function (m) { (by[m.group] = by[m.group] || []).push(m); });
   var h = '<details class="isec more-m"><summary>' + gl('chev') + 'All metrics</summary>' + groups.filter(function (g) { return by[g]; }).map(function (g) {
     return '<div class="mg">' + esc(g) + '</div><div class="kv">' + by[g].map(function (m) { var v = d[m.key], r = resolveValue(v, m.key);
       return '<span title="' + esc((mGloss(m.key) || {}).def || '') + '">' + esc(resolveLabel(m.key, r.isResolved)) + '</span><b>' + (v == null ? '—' : esc(r.value + (r.unit ? ' ' + r.unit : ''))) + '</b>'; }).join('') + '</div>';

@@ -99,8 +99,10 @@ function ingestRows(rows) {
   DB.byId = new Map(DB.all.map(function (d) { return [d._id, d]; }));
   DB.stats = {}; DB.sorted = {}; DB.log = {}; _pctCache = {}; _popCache = {};
   strainCoefficients(); applyLoadValues();   /* v0.6 */
+  DB.all.forEach(function (d) { derivedColumns(d); elasticOf(d); });   /* v0.9.0 — 14-elastic.js */
   resetColorCaches(); ensureNexp();          /* v0.8.0 — density exponent at load: an axis and a range filter, not only a colour */
-  pickableMetrics().forEach(function (m) { computeStat(m.key); });
+  gibsonAshby();                             /* v0.9.0 — needs n */
+  metricsAll().forEach(function (m) { computeStat(m.key); });
   var fam = {}, con = {}, grd = {};
   DB.all.forEach(function (d) {
     fam[d.family] = (fam[d.family] || 0) + 1;
@@ -183,7 +185,7 @@ function loadChanged() {
     STRAIN_KEYS.forEach(function (k) { delete F.ranges[k]; });
     F.rangeKeys = F.rangeKeys.filter(function (k) { return STRAIN_KEYS.indexOf(k) < 0; });
     ['x', 'y'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax2[a]) >= 0) S.ax2[a] = { x: 'volume_fraction', y: '_emax' }[a]; });
-    ['x', 'y', 'z'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax3[a]) >= 0) S.ax3[a] = { x: '_perf', y: 'anisotropy', z: '_score' }[a]; });
+    ['x', 'y', 'z'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax3[a]) >= 0) S.ax3[a] = { x: '_beff', y: 'anisotropy', z: '_score' }[a]; });
     if (STRAIN_KEYS.indexOf(S.sort.k) >= 0) S.sort = { k: '_score', dir: -1 };
   }
   if (S._domAxesAuto && F.domain === 'biomedical' && hasLoad()) applyDomainAxes('biomedical');   /* v0.8.2 — pore vs strain once strain exists */
@@ -221,7 +223,7 @@ function popNorm(k) {
 }
 function domainPop(dom) {
   var z = DOMAIN_Z_COMPOUND[dom] || DOMAIN_Z_COMPOUND.all, pop = {};
-  (z.needs || []).concat(['ortho_contrast', 'directionality', 'tortuosity_min', 'throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa', 'thermal_anisotropy', 'surface_complexity'])
+  (z.needs || []).concat(['ortho_contrast', 'directionality', 'tortuosity_min', 'throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa', 'thermal_anisotropy', 'surface_complexity', '_tp', '_au', '_keff'])
     .forEach(function (k) { pop[k] = popNorm(k); });
   return pop;
 }
@@ -291,6 +293,7 @@ function mockRows(n) {
     var kx = E.map(function (e) { return clamp(v * (0.45 + R() * 0.35) * (e / emean), 0.005, 0.95); });
     var mu = Math.min(1e6, (1e4 / E[0] + 1e4 / E[1] + 1e4 / E[2]) / 3);
     var flag = R() < (v < 0.18 ? 0.24 : 0.06);
+    var Gm = [base * (0.28 + R() * 0.12), base * (0.28 + R() * 0.12), base * (0.28 + R() * 0.12)];
     rows.push({
       id: 1040 + i, created_at: new Date(Date.UTC(2026, 9, 1 + Math.floor(R() * 9), Math.floor(R() * 24))).toISOString(),
       content_hash: 'mock' + i, schema_version: '0.27.1', family: fam, source_tool: 'f13ld.sweep', source_version: '0.27.1', exported_at: new Date(Date.UTC(2026, 9, 1 + Math.floor(R() * 8))).toISOString(),
@@ -309,13 +312,20 @@ function mockRows(n) {
       tortuosity_min: 1.05 + R() * 0.6, tortuosity_avg: 1.2 + R() * 0.8, d_eff_max_norm: (1 - v) * (0.4 + R() * 0.4), d_eff_avg_norm: (1 - v) * (0.3 + R() * 0.35),
       linear_cap_active: false, linear_cap_kind: null, degenerate: false, solver_validity: 'valid', cg_iters: 40 + Math.floor(R() * 200), cg_converged: true,
       metrics_extended: { connect_x: kap >= 0.33, connect_y: kap >= 0.67, connect_z: kap >= 0.99, perc_x: true, perc_y: true, perc_z: R() < 0.9,
-        Gyz_norm: base * (0.28 + R() * 0.12), Gxz_norm: base * (0.28 + R() * 0.12), Gxy_norm: base * (0.28 + R() * 0.12),
+        Gyz_norm: Gm[0], Gxz_norm: Gm[1], Gxy_norm: Gm[2], C_GPa: mockC(E, Gm, fam === 'beam' && R() < 0.3 ? -0.15 - R() * 0.2 : 0.18 + R() * 0.16, R), Es_ref_GPa: 110,   /* v0.9.0 */
         stiffness_flag: flag, stiffness_flag_reasons: flag ? 'pore-limited ' + 'XYZ'[Math.floor(R() * 3)] : '', reference: i % 97 === 0 },
       recipe: Object.assign(recipe, { homogenization: { grid: R() < 0.7 ? 64 : 32 } })
     });
   }
   mockAimedRuns(rows, R);
   return rows;
+}
+/* v0.9.0 — an orthotropic 6×6 stiffness (GPa at 110 GPa solid) from the mock moduli */
+function mockC(E, G, nu, R) {
+  var Es = 110, e = E.map(function (x) { return x * Es; }), g = G.map(function (x) { return x * Es; }), n = [nu, nu + (R() - 0.5) * 0.06, nu + (R() - 0.5) * 0.06];
+  var Sm = [[1 / e[0], -n[0] / e[0], -n[1] / e[0], 0, 0, 0], [-n[0] / e[0], 1 / e[1], -n[2] / e[1], 0, 0, 0], [-n[1] / e[0], -n[2] / e[1], 1 / e[2], 0, 0, 0],
+    [0, 0, 0, 1 / g[0], 0, 0], [0, 0, 0, 0, 1 / g[1], 0], [0, 0, 0, 0, 0, 1 / g[2]]];
+  var C = inv6(Sm); return C ? C.map(function (r) { return r.map(function (x) { return +x.toPrecision(5); }); }) : null;
 }
 /* v0.7.1 — two aimed runs in the sample data, as F13LD.sweep v0.28 exports them */
 function mockAimedRuns(rows, R) {

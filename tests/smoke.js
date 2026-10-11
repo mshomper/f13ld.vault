@@ -131,6 +131,15 @@ JSDOM.fromFile(file, {
     [400, "var o = document.querySelector('#bioDlg').classList.contains('open'); closeBioPrompt('skip'); setDomain('all'); setDomain('biomedical'); o"],
     [400, "document.querySelector('#bioDlg').classList.contains('open') + ' (should be false: Not now remembered)'"],
     [80, "setDomain('all'); clearAll(); refreshNow(); S.cnt === DB.N"],
+    /* v0.9.0 metrics audit: tensor math on an isotropic solid (E 1, ν 0.3) must read A^U 0 · Zener 1 · G/E 0.385 · E dir 1 · ν 0.3 · HS 1 at full density */
+    [80, "var e = 1, n = 0.3, l = e * n / ((1 + n) * (1 - 2 * n)), mu = e / (2 * (1 + n)), C = [[l + 2 * mu, l, l, 0, 0, 0], [l, l + 2 * mu, l, 0, 0, 0], [l, l, l + 2 * mu, 0, 0, 0], [0, 0, 0, mu, 0, 0], [0, 0, 0, 0, mu, 0], [0, 0, 0, 0, 0, mu]]; var t = { volume_fraction: 100, metrics_extended: { C_GPa: C, Es_ref_GPa: 1 } }; elasticOf(t); [t._au, t._zener, t._ge, t._edmax, t._edmin, t._numin, t._hs, t._kb].map(function (v) { return v.toFixed(3); }).join(' ') + ' ' + t._pois"],
+    [80, "['_numin', '_edmax', '_au', '_zener', '_kb', '_hs', '_ge', '_tp', '_keff', '_hL', '_kL2', '_ga'].map(function (k) { return k + ' ' + (hasMetric(k) ? fmtNum(DB.stats[k].min) + '…' + fmtNum(DB.stats[k].max) : 'MISSING'); }).join(' · ')"],
+    [80, "pickableMetrics().length + ' pickable of ' + metricsAll().length + ' · retired shown in picker: ' + pickableMetrics().filter(function (m) { return ['ortho_contrast', 'aniso_efficiency', 'u_compliance', '_perf', 'throat_ratio', 'mih'].indexOf(m.key) >= 0; }).length"],
+    [80, "toggleChip('pois:auxetic'); refreshNow(); var a = S.cnt; toggleChip('pois:auxetic'); refreshNow(); a + ' auxetic · tag ' + (activeFilterList().length)"],
+    [80, "setDomain('spread'); refreshNow(); DOMAIN_SHORT[F.domain] + ' · scored ' + DB.all.filter(function (d) { return isNum(d._score); }).length + ' · axes ' + [S.ax3.x, S.ax3.y, S.ax2.x, S.ax2.y].join(' ')"],
+    [80, "setDomain('automotive'); var f = scoreFactors(S.list[0], 'automotive', domainPop('automotive')); f.factors.map(function (x) { return x.label; }).join(' | ')"],
+    [80, "setDomain('oilgas'); var f = scoreFactors(S.list[0], 'oilgas', domainPop('oilgas')); f.factors.map(function (x) { return x.label; }).join(' | ')"],
+    [80, "setDomain('all'); S.ax3.x + ' (default 3D X)'"],
     /* v0.8.2 — a domain sets its own 3D and 2D axes; Keep my axes puts them back; a load upgrades biomedical to pore vs strain */
     [80, "setDomain('aerospace'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],
     [80, "setDomain('thermal'); [S.ax3.x, S.ax3.y, S.ax3.z, S.ax2.x, S.ax2.y].join(' ')"],

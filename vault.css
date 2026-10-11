@@ -619,7 +619,7 @@ body.is-mobile .m-app{display:block;position:fixed;inset:0;overflow:hidden}
 .wg-c h2{font:600 20px 'Exo 2';color:var(--t1);margin:0 0 4px}
 .wg-wrap.dock .wg-c h2{font-size:16px}
 .wg-sub{font:500 13.5px/1.5 'Exo 2';color:var(--t2);margin:0 0 14px}
-.wg-doms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wg-doms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .wg-dom{text-align:left;border:1px solid var(--hair);border-radius:12px;padding:10px;background:var(--s2);display:grid;gap:4px;min-width:0;transition:border-color .2s,background .2s}
 .wg-dom:hover{border-color:var(--hair2);background:var(--s3)}
 .wg-dom.on{border-color:var(--vault);background:var(--vault-tint)}

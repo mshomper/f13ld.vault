@@ -90,9 +90,9 @@ function renderWelcome() {
   var head = '<div class="wg-h">' + bars + '<button class="ibtn" data-wg="' + (s === 2 ? 'done' : 'skip') + '" aria-label="Close">' + gl('x') + '</button></div>';
   var html;
   if (s === 0) {
-    var doms = ['biomedical', 'aerospace', 'automotive', 'oilgas', 'thermal', 'all'];
+    var doms = ['biomedical', 'aerospace', 'automotive', 'oilgas', 'thermal', 'spread', 'all'];
     var blurb = { biomedical: 'Bone ingrowth: pore size, bone-forming strain, open throats', aerospace: 'Stiff along one load path for the least material',
-      automotive: 'Balanced stiffness in every direction', oilgas: 'Open, straight flow paths through the void', thermal: 'Conduction along a chosen direction', all: 'Surface efficiency across every family' };
+      automotive: 'Balanced stiffness in every direction', oilgas: 'Open, straight flow paths through the void', thermal: 'Conduction along a chosen direction', spread: 'Conduction per unit material, every direction', all: 'Surface efficiency across every family' };
     html = head + '<div class="wg-c"><h2 id="wgT">Welcome to F13LD.vault</h2>' +
       '<p class="wg-sub">A community library of solved metamaterial unit cells — ' + DB.N.toLocaleString('en-US') + ' designs across ' + DB.families.length + ' families. What are you designing for? Vault ranks every design for that use.</p>' +
       '<div class="wg-doms">' + doms.map(function (k) {

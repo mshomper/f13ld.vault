@@ -31,7 +31,7 @@ function cardHTML(d, opts) {
   opts = opts || {};
   var pin = S.pins.indexOf(d), isNew = !_seenCards.has(d._id); _seenCards.add(d._id);
   var mk = opts.small ? [] : cardMetrics();
-  return '<div class="card' + (S.sel === d ? ' sel' : '') + (isNew ? ' new' : '') + (d._m ? '' : ' out') + '" data-id="' + esc(d._id) + '" tabindex="0" role="button" aria-label="' + esc(displayPreset(d) + ', ' + (FAMILY_NAME[d.family] || d.family)) + '">' +
+  return '<div class="card' + (S.sel === d ? ' sel' : '') + (isNew ? ' new' : '') + (d._m ? '' : ' out') + (S.spot && S.spot.has(d) ? ' spot' : '') + '" data-id="' + esc(d._id) + '" tabindex="0" role="button" aria-label="' + esc(displayPreset(d) + ', ' + (FAMILY_NAME[d.family] || d.family)) + '">' +
     '<div class="th"><canvas data-th="' + esc(d._id) + '" width="' + THUMB_W + '" height="' + THUMB_H + '"></canvas><div class="shim"></div>' + ringSVG(d) +
     '<button class="cpin' + (pin >= 0 ? ' on' : '') + '" data-pin="' + esc(d._id) + '" title="' + (pin >= 0 ? 'Unpin' : 'Pin to compare') + ' (P)" aria-label="Pin to compare"' + (pin >= 0 ? ' style="color:' + PIN_COLORS[pin] + ';border-color:' + PIN_COLORS[pin] + '"' : '') + '>' + gl('pin') + '</button>' +
     (d._stiff_flag === 'flagged' ? '<span class="cflag" title="Stiffness may read high' + (d._flag_reasons ? ' — ' + esc(d._flag_reasons) : '') + '">' + gl('flag') + 'flag</span>' : '') + '</div>' +

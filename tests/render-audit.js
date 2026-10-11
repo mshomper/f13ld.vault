@@ -82,6 +82,13 @@ async function clickSweep(p, n) {
     const p = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1, isMobile: ph, hasTouch: ph });
     const errs = []; p.on('pageerror', e => errs.push('pageerror ' + e.message)); p.on('console', m => { if (m.type() === 'error' && !/fonts\.g|ERR_TUNNEL|ERR_INTERNET/.test(m.text())) errs.push('console ' + m.text()); if (m.type() === 'warning' && /F13LD/.test(m.text())) errs.push('warn ' + m.text()); });
     await p.goto(URL); await p.waitForTimeout(5500);
+    /* v0.9.0 — the welcome guide opens on a first visit: audit its three steps, then retire it */
+    for (const [k, js] of [['0', ''], ['1', "document.querySelector('#welDlg [data-wg-dom=biomedical]').click(); document.querySelector('#welDlg [data-wg=next]').click()"], ['2', "document.querySelector('#wgSig').value = 3.5; document.querySelector('#wgCell').value = 2; document.querySelector('#welDlg [data-wg=next]').click()"]]) {
+      if (js) await p.evaluate(js); await p.waitForTimeout(700);
+      await p.screenshot({ path: OUT + '/' + n + '-guide' + k + '.png' });
+      const g = await p.evaluate(AUDIT); console.log(' guide ' + k, 'open', await p.evaluate('WG.open'), 'small', g.small.length, g.small.slice(0, 6), 'overlap', g.overlap.slice(0, 6), 'hscroll', g.hscroll);
+    }
+    await p.evaluate("closeWelcome('done'); clearAll(); btReset(); setDomain('all')"); await p.waitForTimeout(600);
     await p.screenshot({ path: OUT + '/' + n + '.png' });
     const st = await p.evaluate('({webgl2: PV.ok, points: !!(VIEWS.h3.pts && VIEWS.h3.pts.ok), sel: S.sel && S.sel._id, mobile: S.mobile})');
     const a = await p.evaluate(AUDIT);

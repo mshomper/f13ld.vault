@@ -19,6 +19,8 @@ function renderTargetPane() {
     fld('btSig', 'Applied stress σ', 'ref_stress_mpa', 'MPa', 'With E: strain in µε, strain energy and the Biomedical strain window', '1') +
     fld('btLo', 'Bone window from', 'strain_lo', 'με', 'Biomedical: full marks from here…', '100') +
     fld('btHi', 'Bone window to', 'strain_hi', 'με', '…to here (Frost-style, soft edges)', '100') +
+    fld('btPLo', 'Pore window from', 'pore_lo', 'µm', 'Biomedical: mean pore diameter, full marks from here…', '10') +   /* v0.9.0 */
+    fld('btPHi', 'Pore window to', 'pore_hi', 'µm', '…to here (soft edges; throats need ≥ 100 µm)', '10') +
     '<div class="bt-status">' + (hasAnyGlobalInput() ? ic('target') + '<span>Absolute units <b>on</b> — every card, tile, slider and tag now reads in real units.</span>' : ic('target') + '<span>Showing normalised values. Fill any field to read absolute units.</span>') +
     '<button class="mini" data-act="bt-reset"' + (hasAnyGlobalInput() ? '' : ' disabled') + '>' + gl('x') + 'Reset all</button></div>' +
     '<div class="bt-status pv">' + ic('cell') + '<span id="pvStat">' + pvStatText() + '</span></div>' +
@@ -39,7 +41,7 @@ function btMaterial(id) {
   var m = MATERIAL_PRESETS[id]; if (m) { globalInputs.modulus_gpa = m.E; globalInputs.density_gcc = m.rho; globalInputs.thermal_k_wmk = m.k; }
   unitsChanged(); renderTargetPane();
 }
-function btReset() { Object.keys(globalInputs).forEach(function (k) { globalInputs[k] = k === 'material_id' ? 'custom' : k === 'strain_lo' ? 1000 : k === 'strain_hi' ? 3500 : null; }); unitsChanged(); renderTargetPane(); }
+function btReset() { Object.keys(globalInputs).forEach(function (k) { globalInputs[k] = k === 'material_id' ? 'custom' : k === 'strain_lo' ? 1000 : k === 'strain_hi' ? 3500 : k === 'pore_lo' ? 300 : k === 'pore_hi' ? 600 : null; }); unitsChanged(); renderTargetPane(); }
 var unitsChanged = debounce(function () {
   persistGlobalInputs();
   strainInputsChanged(); updateFilterUI(); renderTags(); renderLists(); renderInspector();
@@ -58,7 +60,7 @@ function renderKeyPane(q) {
   var comp = DOMAIN_IDS.filter(function (k) { var z = Z_COMPOUND_GLOSSARY[k]; return z && (hit(z.label) || hit(z.def) || hit(DOMAIN_SHORT[k])); }).map(function (k) {
     var z = Z_COMPOUND_GLOSSARY[k]; return '<div class="key-it comp"><b>' + ic(k) + esc(DOMAIN_SHORT[k]) + ' · ' + esc(domainZLabel(k)) + '</b><code>' + esc(z.formula) + '</code>' + esc(z.def) + '<i>' + esc(z.interp) + '</i></div>';
   }).join('');
-  var mets = pickableMetrics().filter(function (m) { var g = mGloss(m.key) || {}; return hit(m.label) || hit(m.key) || hit(g.def) || hit(mShort(m.key)); }).map(function (m) {
+  var mets = metricsAll().filter(function (m) { var g = mGloss(m.key) || {}; return hit(m.label) || hit(m.key) || hit(g.def) || hit(mShort(m.key)); }).map(function (m) {
     var g = mGloss(m.key) || {}; return '<div class="key-it"><b>' + esc(m.label) + ' <span>' + esc(mShort(m.key)) + '</span></b>' + esc(g.def || '') + (g.interp ? '<i>' + esc(g.interp) + '</i>' : '') + '</div>';
   }).join('');
   el.innerHTML = (comp ? '<div class="key-h">Domain compounds</div>' + comp : '') + (mets ? '<div class="key-h">Metrics</div>' + mets : '') || '<div class="cmp-empty">Nothing matches “' + esc(q) + '”.</div>';
@@ -74,7 +76,7 @@ function buildKeyPane() {
    changes; with no load it disappears from every list, axis and slider. */
 var _loadSig = '';
 function strainInputsChanged() {
-  var g = globalInputs, sig = [g.ref_stress_mpa, g.modulus_gpa, g.strain_lo, g.strain_hi, g.cell_size_mm].join('|');
+  var g = globalInputs, sig = [g.ref_stress_mpa, g.modulus_gpa, g.strain_lo, g.strain_hi, g.pore_lo, g.pore_hi, g.cell_size_mm].join('|');
   if (sig === _loadSig) return; _loadSig = sig;
   loadChanged();
   buildRangeRows(); setAxesTargets3D(); set2DTargets(); renderAxisChips();
@@ -84,7 +86,7 @@ function strainInputsChanged() {
 /* ── v0.6: Biomedical asks for its loading case ────────────────────────
    Switching to Biomedical without a load or cell size opens this card.
    "Not now" is remembered; the dock tag and the score breakdown reopen it. */
-function bioPromptWanted() { return F.domain === 'biomedical' && needsBioInputs() && !Store.get(LS_BIO_SKIP, false); }
+function bioPromptWanted() { return F.domain === 'biomedical' && needsBioInputs() && !Store.get(LS_BIO_SKIP, false) && !(typeof WG !== 'undefined' && WG.open); }   /* v0.9.0: the welcome guide stands in for it while open */
 function openBioPrompt() {
   var el = $('#bioDlg'); if (!el) return;
   var g = globalInputs, w = bioWindow();
@@ -100,24 +102,20 @@ function openBioPrompt() {
       fld('bioCell', 'Cell size', g.cell_size_mm, 'mm', '0.1') +
       fld('bioLo', 'Bone window from', w[0], 'με', '100') +
       fld('bioHi', 'Bone window to', w[1], 'με', '100') +
-    '</div>' +
-    '<div class="bio-note">Full marks inside the window, soft fall-off outside it. Without a load, strain stays hidden and the score leaves it out.</div>' +
+    '</div>' + stressPresetsHTML('bioSig') +
+    '<div class="bio-note">Pores are scored on the mean pore diameter, ' + poreWindow()[0] + '–' + poreWindow()[1] + ' µm (Build target), with necks of at least 100 µm. Full marks inside the window, soft fall-off outside it. Without a load, strain stays hidden and the score leaves it out.</div>' +
     '<div class="bio-acts"><button class="sbtn ghost" data-act="bio-skip">Not now</button><button class="sbtn prim" data-act="bio-apply">' + ic('target') + 'Apply</button></div></div>';
   el.classList.add('open');
   var first = ['#bioSig', '#bioCell', '#bioE'].map(function (q) { return $(q); }).filter(function (i) { return i && !i.value; })[0] || $('#bioSig');
   if (first) first.focus();
   $('#bioMat').onchange = function () { var m = MATERIAL_PRESETS[this.value]; if (m) $('#bioE').value = m.E; };
+  bindStressPresets(el);
 }
 function closeBioPrompt(how) {
   var el = $('#bioDlg'); if (!el || !el.classList.contains('open')) return;
   if (how === 'apply') {
     var num = function (q) { var v = parseFloat($(q).value); return isFinite(v) && v > 0 ? v : null; };
-    var mid = $('#bioMat').value, m = MATERIAL_PRESETS[mid];
-    globalInputs.material_id = mid;
-    if (m) { globalInputs.density_gcc = m.rho; globalInputs.thermal_k_wmk = m.k; }
-    globalInputs.modulus_gpa = num('#bioE'); globalInputs.ref_stress_mpa = num('#bioSig'); globalInputs.cell_size_mm = num('#bioCell');
-    globalInputs.strain_lo = num('#bioLo') || 1000; globalInputs.strain_hi = num('#bioHi') || 3500;
-    unitsChanged(); renderTargetPane();
+    applyBuild({ mid: $('#bioMat').value, E: num('#bioE'), sig: num('#bioSig'), cell: num('#bioCell'), lo: num('#bioLo'), hi: num('#bioHi') });   /* v0.9.0 — shared with the guide */
     toast(hasLoad() ? 'Strain on · bone window ' + bioWindow()[0].toLocaleString('en-US') + '–' + bioWindow()[1].toLocaleString('en-US') + ' με' : 'Saved · add a stress and modulus to turn strain on');
   }
   if (how === 'skip') { Store.set(LS_BIO_SKIP, true); toast('Strain window left out · reopen it from the dock tag'); }

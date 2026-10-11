@@ -34,7 +34,8 @@ var SWEEP_TARGET_KEYS = ['volume_fraction', '_emax', 'ex_norm', 'ey_norm', 'ez_n
   'thermal_anisotropy', 'microstrain_avg_per_gpa', 'microstrain_x_per_gpa', 'microstrain_y_per_gpa', 'microstrain_z_per_gpa',
   'anisotropy', 'directionality', 'ortho_contrast', 'aniso_efficiency', 'connect_idx', 'perc_idx',
   'pore_size_p50_norm', 'pore_size_p10_norm', 'pore_size_p90_norm', 'pore_size_norm', 'throat_size_norm', 'throat_ratio',
-  'tortuosity_min', 'tortuosity_avg', 'd_eff_max_norm', 'd_eff_avg_norm', 'curvature_uniformity', 'genus_per_cell'];
+  'tortuosity_min', 'tortuosity_avg', 'd_eff_max_norm', 'd_eff_avg_norm', 'curvature_uniformity', 'genus_per_cell',
+  '_beff', '_tp', '_keff'];   /* v0.9.0 — Sweep v0.30.0 aims at these too */
 function sweepCanAim(k) { return SWEEP_TARGET_KEYS.indexOf(k) >= 0; }
 
 /* Voigt bounds as a function of the solid fraction p (0–1), same as Sweep's.
@@ -46,7 +47,7 @@ function reachBound(k) {
   var strainMin = function (p) { return hasLoad() ? 1000 / p * globalInputs.ref_stress_mpa / globalInputs.modulus_gpa : null; };
   var B = {
     _emax: ['max', lin], ex_norm: ['max', lin], ey_norm: ['max', lin], ez_norm: ['max', lin],
-    stiffness_density_norm: ['max', function () { return 1; }], _perf: ['max', function () { return Math.sqrt(3); }],
+    stiffness_density_norm: ['max', function () { return 1; }], _perf: ['max', function () { return Math.sqrt(3); }], _beff: ['max', function () { return 1; }],
     _gmean: ['max', shear], gyz_norm: ['max', shear], gxz_norm: ['max', shear], gxy_norm: ['max', shear],
     keff_max_norm: ['max', kk], keff_avg_norm: ['max', kk], keff_x_norm: ['max', kk], keff_y_norm: ['max', kk], keff_z_norm: ['max', kk],
     d_eff_max_norm: ['max', function (p) { return 1 - p; }], d_eff_avg_norm: ['max', function (p) { return 1 - p; }],

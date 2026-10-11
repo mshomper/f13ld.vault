@@ -40,8 +40,11 @@ var ICONS = {
   automotive: '<circle cx="20" cy="20" r="14"' + SV + '/><circle cx="20" cy="20" r="5"' + SV + '/><path d="M20 6V15M20 25V34M6 20H15M25 20H34"' + SV + ' opacity=".55"/><circle class="acc" cx="20" cy="20" r="2.2"/>',
   oilgas:     '<path d="M20 4C14 13 9 19 9 25A11 11 0 0 0 31 25C31 19 26 13 20 4Z"' + SV + '/><path d="M15 26A5 5 0 0 0 20 31"' + SV + ' opacity=".6"/><circle class="acc" cx="24" cy="22" r="2.4"/>',
   thermal:    '<path d="M8 34V13M16 34V8M24 34V13M32 34V8"' + SV + '/><path d="M5 34H35"' + SV + ' opacity=".55"/><circle class="acc" cx="16" cy="8" r="2.8"/>',
+  spread:     '<circle cx="20" cy="20" r="5"' + SV + '/><path d="M20 6V10M20 30V34M6 20H10M30 20H34M10.1 10.1L12.9 12.9M27.1 27.1L29.9 29.9M10.1 29.9L12.9 27.1M27.1 12.9L29.9 10.1"' + SV + ' opacity=".6"/><circle class="acc" cx="20" cy="20" r="2.2"/>',   /* v0.9.0 heat spreading */
   noPreview:  '<path d="M20 4L34 12V28L20 36L6 28V12Z"' + SV + ' stroke-dasharray="3 4"/><circle class="acc" cx="20" cy="20" r="3"/>',
   vault:      '<ellipse cx="20" cy="10" rx="13" ry="4.5"' + SV + '/><path d="M7 10V30A13 4.5 0 0 0 33 30V10"' + SV + '/><path d="M7 20A13 4.5 0 0 0 33 20"' + SV + ' opacity=".5"/><circle class="acc" cx="20" cy="27" r="3"/>',
+  trends:     '<rect x="6" y="6" width="8" height="8" rx="1.5"' + SV + '/><rect x="16" y="6" width="8" height="8" rx="1.5"' + SV + ' opacity=".5"/><rect x="26" y="6" width="8" height="8" rx="1.5"' + SV + ' opacity=".3"/><rect x="6" y="16" width="8" height="8" rx="1.5"' + SV + ' opacity=".5"/><rect x="16" y="16" width="8" height="8" rx="1.5"' + SV + '/><rect x="26" y="16" width="8" height="8" rx="1.5"' + SV + ' opacity=".5"/><rect x="6" y="26" width="8" height="8" rx="1.5"' + SV + ' opacity=".3"/><rect x="16" y="26" width="8" height="8" rx="1.5"' + SV + ' opacity=".5"/><circle class="acc" cx="30" cy="30" r="3.2"/>',   /* v0.9.0 correlation map */
+  guide:      '<circle cx="20" cy="20" r="15"' + SV + '/><path d="M15 16A5 5 0 1 1 22.5 20.3C21 21.2 20 22.3 20 24.5"' + SV + '/><circle class="acc" cx="20" cy="30" r="2.4"/>',
   keyboard:   '<rect x="4" y="10" width="32" height="20" rx="3"' + SV + '/><path d="M10 16H11M16 16H17M22 16H23M28 16H29M10 22H11M28 22H29M15 24H25"' + SV + '/><circle class="acc" cx="20" cy="17" r="1.8"/>'
 };
 var GLY = {

@@ -23,6 +23,19 @@ var VAR_FN = { abs: 1, sqrt: 1, log10: 1, ln: 1, rank: 1, scale: 1, min: -1, max
 var VAR_FN_INFO = [['abs', 'Size, ignoring sign'], ['sqrt', 'Square root'], ['log10', 'Log, base 10'], ['ln', 'Natural log'],
   ['min', 'Smallest of several'], ['max', 'Largest of several'], ['mean', 'Average of several'],
   ['rank', '0–1 rank across the Vault'], ['scale', '0–1 between the Vault’s min and max']];
+/* v0.10.1 — a template input the loaded designs don't have falls back to the
+   first of these that they do (older Sweep runs have no specific surface or
+   shear); a template with an input that has no fallback is hidden. */
+var VAR_ALTS = { _sv: ['surface_complexity'], _gmean: ['gxy_norm', 'gyz_norm', 'gxz_norm'], keff_avg_norm: ['keff_max_norm'], _emax: ['ex_norm'] };
+function varTemplateFormula(t) {
+  var ok = true;
+  var f = t.f.replace(/\[([^\]]+)\]/g, function (all, k) {
+    var c = [k].concat(VAR_ALTS[k] || []).filter(hasMetric)[0];
+    if (!c) { ok = false; return all; }
+    return '[' + c + ']';
+  });
+  return ok ? f : null;
+}
 var VAR_TEMPLATES = [
   { n: 'Ratio', f: '[_gmean] / [_emax]', name: 'Shear to stiffness' },
   { n: 'Per material', f: '[_sv] / ([volume_fraction] / 100)', name: 'Surface per material' },
@@ -76,7 +89,7 @@ function varParse(toks, selfKey) {
     if (t.t === 'm') {
       if (selfKey && (t.v === selfKey || varUses(t.v, selfKey))) err('A variable cannot use itself', t);
       if (VAR_NOT_INPUT[t.v]) err(mLabel(t.v) + ' changes with the domain, so it can’t go in a variable', t);
-      if (!varInputOK(t.v)) err('“' + (METRIC_MAP[t.v] ? mShort(t.v) : t.v) + '” is not a metric with data', t);
+      if (!varInputOK(t.v)) err(METRIC_MAP[t.v] ? '“' + mShort(t.v) + '” has no values in the Vault yet' : '“' + t.v + '” is not a metric', t);
       return { key: t.v };
     }
     if (t.t === 'fn') {

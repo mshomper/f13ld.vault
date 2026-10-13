@@ -121,11 +121,12 @@ Plot2D.prototype.bind = function () {
     var tUp = performance.now(), second = !g.moved && tUp - (self._lastUp || -1e9) < 320; if (!g.moved) self._lastUp = second ? -1e9 : tUp;   /* 2nd click of a double-click resets, never picks */
     if (g.moved || self._dbl || second) return;
     /* v0.7.1 — a ghost target (colour by aimed run) picks its run */
-    var gh = g.mode !== 'target' && (self.ghosts || []).filter(function (q) { return Math.hypot(q.x - p[0], q.y - p[1]) < (self.mobile ? 20 : 13); })[0];
+    var tgt = g.mode === 'target' || (self.mobile && S.tool2 === 'target');   /* v0.10.1 — on the phone a drag pans, so a tap with the Target tool on drops the target */
+    var gh = !tgt && (self.ghosts || []).filter(function (q) { return Math.hypot(q.x - p[0], q.y - p[1]) < (self.mobile ? 20 : 13); })[0];
     if (gh) { selectAimRun(gh.id); return; }
     var d = self.pick(p[0], p[1], self.mobile ? 24 : 13, false);
-    if (d && g.mode !== 'target') { select(d, 'plot'); return; }
-    if ((g.mode === 'target' || (S.gap && !d)) && self.inPlot(p[0], p[1])) { var f = self.toF(p[0], p[1]); setTarget(S.ax2.x, S.ax2.y, plotScale(S.ax2.x).inv(f[0]), plotScale(S.ax2.y).inv(f[1])); return; }
+    if (d && !tgt) { select(d, 'plot'); return; }
+    if ((tgt || (S.gap && !d)) && self.inPlot(p[0], p[1])) { var f = self.toF(p[0], p[1]); setTarget(S.ax2.x, S.ax2.y, plotScale(S.ax2.x).inv(f[0]), plotScale(S.ax2.y).inv(f[1])); return; }
     if (d) select(d, 'plot');
   }
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);

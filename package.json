@@ -1,6 +1,6 @@
 {
   "name": "f13ld.vault",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "description": "F13LD.vault — browse, filter and hand off the community metamaterial library. Static site; these packages are only for the local checks.",
   "license": "MIT",

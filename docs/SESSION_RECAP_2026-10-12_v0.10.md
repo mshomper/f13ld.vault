@@ -68,3 +68,22 @@ Design docs from this session: `docs/VARIABLE_CONSTRUCTOR_PROPOSAL.md`,
 - Run `npm run audit` locally.
 - Phase 2 ideas: send a variable's formula to Sweep so it can be aimed at;
   community variables with a review queue.
+
+## v0.10.1 — phone fixes (2026-10-13, from Matt's click-test)
+- **Templates on the live Vault**: live designs predate Sweep v0.30, so specific
+  surface (S/V) has no values. Templates now fall back per input (`VAR_ALTS`:
+  S/V → surface complexity; mean shear → a shear axis; k avg → k max; E* → Ex)
+  and hide when an input has neither. A missing input reads "“S/V” has no
+  values in the Vault yet".
+- **Tour on the phone**: stops that point at the top bar or the plot lower the
+  results sheet first (`tourTop`); no ring around a control something else
+  covers; the ring finds and scrolls back to its control when the list
+  re-renders.
+- **Phone 2D toolbar** next to the 3D / 2D switch (2D only): Target and gap
+  map. Pareto front added to the phone view menu. A tap with Target on drops
+  the target (on the phone a drag always pans, so Target never worked there).
+  The tour's gap and aim stops point at these buttons; on the aim stop the
+  Aim Sweep banner moves above the tour card and gets the ring once a target
+  is set.
+- **Gap map text corrected**: blue = where designs are, dashed outlines = holes
+  inside the cloud (the tour said shading meant few or no designs).

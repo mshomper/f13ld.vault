@@ -51,7 +51,7 @@ function renderVarsPane() {
   var seg = function (id, opts, cur) { return '<div class="seg vb-seg" data-vbseg="' + id + '">' + opts.map(function (o) { return '<button data-v="' + o[0] + '" class="' + (String(cur) === String(o[0]) ? 'on' : '') + '">' + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
   h.innerHTML = '<div class="vb-cols">' +
     '<section class="dr-col vb-build"><div class="dr-h"><span class="ico">' + ic('vars') + '</span>' + (ed ? 'Edit · ' + esc(ed.label) : 'New variable') + '<span>a formula over any metric</span></div>' +
-      '<div class="vb-tpl"><span class="lbl">Start from</span>' + VAR_TEMPLATES.map(function (t, i) { return '<button class="chip vb-tp' + (VB.tpl === i ? ' on' : '') + '" data-vbtpl="' + i + '" title="' + esc(varPretty(t.f)) + '">' + esc(t.n) + '</button>'; }).join('') + '</div>' +
+      '<div class="vb-tpl"><span class="lbl">Start from</span>' + VAR_TEMPLATES.map(function (t, i) { var tf = varTemplateFormula(t); return tf ? '<button class="chip vb-tp' + (VB.tpl === i ? ' on' : '') + '" data-vbtpl="' + i + '" title="' + esc(varPretty(tf)) + '">' + esc(t.n) + '</button>' : ''; }).join('') + '</div>' +
       '<div class="vb-fbar" id="vbBar"><div class="vb-line" id="vbLine"></div><div class="vb-tools">' +
         '<button class="vb-tb pri" data-vbadd="metric" data-menu>' + gl('plus') + 'Metric</button><span class="vb-sep"></span>' +
         [['+', 'Plus', '+'], ['-', 'Minus', '−'], ['*', 'Times', '×'], ['/', 'Divide', '÷'], ['^', 'Power', '^'], ['(', 'Open bracket', '('], [')', 'Close bracket', ')']].map(function (o) { return '<button class="vb-tb op" data-vbk="' + o[0] + '" title="' + o[1] + '" aria-label="' + o[1] + '">' + o[2] + '</button>'; }).join('') +
@@ -96,7 +96,7 @@ function vbBind(h) {
   h.onclick = function (e) {
     var b = e.target.closest('button,[data-vbi]'); if (!b || !h.contains(b)) return;
     var d = b.dataset;
-    if (d.vbtpl != null) { var t = VAR_TEMPLATES[+d.vbtpl]; VB.tpl = +d.vbtpl; VB.f = t.f; if (!VB.edit) { VB.label = t.name; VB.short = ''; $('#vbName').value = t.name; $('#vbShort').value = ''; } $$('.vb-tp', h).forEach(function (x) { x.classList.toggle('on', x === b); }); vbRefresh(); return; }
+    if (d.vbtpl != null) { var t = VAR_TEMPLATES[+d.vbtpl], tf = varTemplateFormula(t); if (!tf) return; VB.tpl = +d.vbtpl; VB.f = tf; if (!VB.edit) { VB.label = t.name; VB.short = ''; $('#vbName').value = t.name; $('#vbShort').value = ''; } $$('.vb-tp', h).forEach(function (x) { x.classList.toggle('on', x === b); }); vbRefresh(); return; }
     if (d.vbk) { vbAppend(d.vbk); return; }
     if (d.vbadd === 'metric') { vbMetricPop(b, 'Search ' + vbInputs().length + ' metrics', null, function (k) { vbAppend('[' + k + ']'); }); return; }
     if (d.vbadd === 'x') { vbMetricPop(b, 'Plot against…', VB.xk, function (k) { VB.xk = k; $('#vbXl').textContent = mLabel(k); vbShape(); }, true); return; }

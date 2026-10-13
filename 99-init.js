@@ -72,6 +72,12 @@ function start(rows) {
   ['x', 'y'].forEach(function (a) { if (!hasMetric(S.ax2[a]) || isRetired(S.ax2[a])) S.ax2[a] = { x: 'volume_fraction', y: '_emax' }[a]; });
   if (S.color === '_perf') S.color = '_beff';
   if (S.sort && isRetired(S.sort.k)) S.sort = { k: '_score', dir: -1 };
+  /* v0.11.0 — metrics trimmed at the reseed: saved or linked views that point at one fall back */
+  if (S.sort && S.sort.k && S.sort.k.charAt(0) !== '_' && !METRIC_MAP[S.sort.k]) S.sort = { k: '_score', dir: -1 };
+  if (S.sort && /^_(perf|kL2)$/.test(S.sort.k)) S.sort = { k: '_score', dir: -1 };
+  Object.keys(F.ranges).forEach(function (k) { if (!METRIC_MAP[k]) delete F.ranges[k]; });
+  F.rangeKeys = F.rangeKeys.filter(function (k) { return !!METRIC_MAP[k]; });
+  if (!F.cflag) F.cflag = [];
   computeScores(F.domain);
   buildFilters(); renderTargetPane(); buildKeyPane();
   setAxesTargets3D(); set2DTargets(); recolor(); renderAxisChips(); renderLegend(); renderTray();

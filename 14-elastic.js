@@ -17,10 +17,19 @@
                bounds for solid + void at the design's solid fraction (ν_s 0.3)
      _ge       G / E (Hill): 0.385 for an isotropic solid at ν 0.3
    From the stored columns, every row:
-     _sv       specific surface S ÷ V^(2/3), true interface area (Sweep ≥ 0.30)
+     _sv       surface area per cell A/L², true interface area (Sweep ≥ 0.30);
+               shown as S_V = A/V (BS/TV, mm⁻¹) at the build cell size
+     _bsbv     A/(L²·φ): surface per solid volume (BS/BV at the build cell size) — v0.11.0
      _tp       throat ÷ mean pore — the constriction ratio (Sweep ≥ 0.30 stores it as throat_ratio)
-     _hL · _hLa · _hsL · _kL2 · _mihL  curvature × the cell size it was
+     _hL · _hLa · _hsL · _mihL  curvature × the cell size it was
                measured at, so designs from different runs compare
+               (v0.11.0: K·L² trimmed — the mean of K is fixed by topology)
+     _cfneg · _cfsad · _ck2m · _ck2sd · _ck2med · _crad · _ckneg
+               v0.11.0: the principal-curvature profile, Sweep ≥ 0.33
+               (metrics_extended.curv_*); _crad = 1 / |median concave κ₂·L|
+     tortuosity_min / tortuosity_avg  v0.11.0: rebuilt over the OPEN axes
+               from metrics_extended.tortuosity_x/y/z (Sweep stores 10 for a
+               blocked axis, which the stored average counted in)
      _keff     conductivity efficiency: k avg / (ks · solid fraction)
      _ga       Gibson–Ashby prefactor C in E/Es = C·ρⁿ (with the design's n)
    ============================================================ */
@@ -113,9 +122,26 @@ function derivedColumns(d) {
   d._hL = L && num(d.h_mean) != null ? d.h_mean * L : null;
   d._hLa = L && num(d.h_mean_abs) != null ? d.h_mean_abs * L : null;
   d._hsL = L && num(d.h_std) != null ? d.h_std * L : null;
-  d._kL2 = L && num(d.k_gauss_mean) != null ? d.k_gauss_mean * L * L : null;
   d._mihL = L && num(d.mih) != null ? d.mih / L : null;
   d._keff = phi && isNum(d.keff_avg_norm) ? d.keff_avg_norm / phi : null;
+  /* v0.11.0 — surface per solid volume, and the curvature profile */
+  var ext = d.metrics_extended || {};
+  d._bsbv = d._sv != null && phi ? d._sv / phi : null;
+  d._cfneg = num(ext.curv_f_neg); d._cfsad = num(ext.curv_f_sad);
+  d._ck2m = num(ext.curv_k2_mean); d._ck2sd = num(ext.curv_k2_sd);
+  d._ck2med = num(ext.curv_k2_neg_med); d._ckneg = num(ext.curv_k_neg_int);
+  d._crad = d._ck2med != null && d._ck2med < 0 ? 1 / Math.abs(d._ck2med) : null;
+  d._cgb = num(ext.curv_gb_resid);
+  /* v0.11.0 — tortuosity over the axes the pores connect along: Sweep stores
+     10 (its cap) on a blocked axis and sets that axis's bit in
+     tortuosity_nonperc (1 = x, 2 = y, 4 = z); the stored average counted it */
+  var T = [ext.tortuosity_x, ext.tortuosity_y, ext.tortuosity_z];
+  if (T.every(isNum)) {
+    var bits = isNum(ext.tortuosity_nonperc) ? ext.tortuosity_nonperc : 0;
+    var open = T.filter(function (t, i) { return !(bits & (1 << i)) && t < 9.99; });
+    d.tortuosity_min = open.length ? Math.min.apply(null, open) : null;
+    d.tortuosity_avg = open.length ? open.reduce(function (a, b) { return a + b; }, 0) / open.length : null;
+  }
 }
 /* After ensureNexp: the prefactor that goes with each design's own n. */
 function gibsonAshby() {

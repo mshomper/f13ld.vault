@@ -26,7 +26,7 @@ var VAR_FN_INFO = [['abs', 'Size, ignoring sign'], ['sqrt', 'Square root'], ['lo
 /* v0.10.1 — a template input the loaded designs don't have falls back to the
    first of these that they do (older Sweep runs have no specific surface or
    shear); a template with an input that has no fallback is hidden. */
-var VAR_ALTS = { _sv: ['surface_complexity'], _gmean: ['gxy_norm', 'gyz_norm', 'gxz_norm'], keff_avg_norm: ['keff_max_norm'], _emax: ['ex_norm'] };
+var VAR_ALTS = { _gmean: ['gxy_norm', 'gyz_norm', 'gxz_norm'], keff_avg_norm: ['keff_max_norm'], _emax: ['ex_norm'] };
 function varTemplateFormula(t) {
   var ok = true;
   var f = t.f.replace(/\[([^\]]+)\]/g, function (all, k) {
@@ -38,7 +38,7 @@ function varTemplateFormula(t) {
 }
 var VAR_TEMPLATES = [
   { n: 'Ratio', f: '[_gmean] / [_emax]', name: 'Shear to stiffness' },
-  { n: 'Per material', f: '[_sv] / ([volume_fraction] / 100)', name: 'Surface per material' },
+  { n: 'Per material', f: '[_gmean] / ([volume_fraction] / 100)', name: 'Shear per material' },   /* v0.11.0: surface per material is BS/BV now */
   { n: 'Density-scaled', f: '[_emax] / ([volume_fraction] / 100) ^ 2', name: 'Stiffness past ρ²' },
   { n: 'Weakest axis', f: 'min([ex_norm], [ey_norm], [ez_norm]) / ([volume_fraction] / 100)', name: 'Weakest-axis efficiency' },
   { n: 'Rank blend', f: '0.6 * rank([_sv]) + 0.4 * rank([keff_avg_norm])', name: 'Surface and conduction' },

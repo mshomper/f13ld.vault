@@ -12,15 +12,13 @@
 const ALL_METRICS = [
   // Geometry & connectivity (rollups; per-axis booleans live in metrics_extended)
   // v4: load_path_eff dropped (sweep v0.13 — redundant with stiffness_density_norm).
-  // surface_complexity is now uncapped raw — vault percentile-ranks at display time.
+  // v0.11.0 (reseed): ortho contrast, aniso efficiency and the voxel-face surface
+  // complexity trimmed — A^U and the true surface area replace them.
   { group:'Geometry',   key:'volume_fraction',         label:'Volume fraction',           unit:'%'  },
   { group:'Geometry',   key:'connect_idx',             label:'Solid connectivity κ',      unit:''   },
   { group:'Geometry',   key:'perc_idx',                label:'Void percolation',          unit:''   },
   { group:'Geometry',   key:'anisotropy',              label:'Axial anisotropy',          unit:'×'  },
   { group:'Geometry',   key:'directionality',          label:'Directionality Ψ',          unit:''   },
-  { group:'Geometry',   key:'ortho_contrast',          label:'Ortho contrast Ω',          unit:'',  retired:true },   /* v0.9.0: same three numbers as anisotropy; A^U replaces it */
-  { group:'Geometry',   key:'aniso_efficiency',        label:'Aniso efficiency α/ρ',      unit:'',  retired:true },   /* v0.9.0: a ratio over density has no physical meaning */
-  { group:'Geometry',   key:'surface_complexity',      label:'Surface complexity (voxel faces)', unit:'',  displayMode:'rank' },
 
   // Stiffness — Es-decoupled (norm = fraction of solid Young's modulus)
   { group:'Stiffness',  key:'ex_norm',                 label:'Stiffness Ex / Es',         labelAbs:'Stiffness Ex',     unit:'',  norm_kind:'modulus_es'        },
@@ -50,25 +48,18 @@ const ALL_METRICS = [
   { group:'Compliance', key:'microstrain_y_per_gpa',   label:'μstrain Y',                 labelAbs:'μstrain Y',        unit:'με',     norm_kind:'compliance_per_stress' },
   { group:'Compliance', key:'microstrain_z_per_gpa',   label:'μstrain Z',                 labelAbs:'μstrain Z',        unit:'με',     norm_kind:'compliance_per_stress' },
   { group:'Compliance', key:'microstrain_avg_per_gpa', label:'μstrain (avg)',             labelAbs:'μstrain (avg)',    unit:'με',     norm_kind:'compliance_per_stress' },
-  { group:'Compliance', key:'u_compliance',            label:'Strain energy U',           labelAbs:'Strain energy U',  unit:'kJ/m³',  norm_kind:'compliance_per_stress2', retired:true },   /* v0.9.0: σε/2 — strain in other units */
 
-  // Pore structure — cell-decoupled. v4: throat_efficiency dropped, throat_ratio added.
+  // Pore structure — cell-decoupled. v0.11.0: the stored throat_ratio trimmed (Throat ÷ pore, _tp, is the same number).
   { group:'Pore',       key:'pore_size_norm',          label:'Mean pore φ / cell',        labelAbs:'Mean pore φ',      unit:'',  norm_kind:'cell_length' },
   { group:'Pore',       key:'pore_size_p10_norm',      label:'Pore P10 / cell',           labelAbs:'Pore P10',         unit:'',  norm_kind:'cell_length' },
   { group:'Pore',       key:'pore_size_p50_norm',      label:'Pore P50 / cell',           labelAbs:'Pore P50',         unit:'',  norm_kind:'cell_length' },
   { group:'Pore',       key:'pore_size_p90_norm',      label:'Pore P90 / cell',           labelAbs:'Pore P90',         unit:'',  norm_kind:'cell_length' },
   { group:'Pore',       key:'pore_size_cv',            label:'Pore size CV',              unit:''   },
   { group:'Pore',       key:'throat_size_norm',        label:'Throat / cell',             labelAbs:'Throat size',      unit:'',  norm_kind:'cell_length' },
-  { group:'Pore',       key:'throat_ratio',            label:'Throat ratio (stored)',     unit:'',  retired:true },   /* v0.9.0: Sweep ≤ 0.29 stores throat ÷ cell here; _tp is throat ÷ pore */
 
-  // Curvature. v4: h_mean is now SIGNED (>0 convex-outward); h_mean_abs / h_std are new raw fields.
-  // curvature_uniformity is smooth (1/(1+σ/⟨|H|⟩)), never floors.
-  { group:'Curvature',  key:'h_mean',                  label:'Mean curvature H̄ (signed)', unit:'mm⁻¹'  , retired:true },
-  { group:'Curvature',  key:'h_mean_abs',              label:'Mean curvature |H̄|',        unit:'mm⁻¹'  , retired:true },
-  { group:'Curvature',  key:'h_std',                   label:'Curvature std σ(H)',        unit:'mm⁻¹'  , retired:true },
-  { group:'Curvature',  key:'k_gauss_mean',            label:'Gaussian curvature K',      unit:'mm⁻²'  , retired:true },
+  // Curvature. v0.11.0: the mm-unit columns (H̄, |H̄|, σ(H), K, MIH) trimmed — the ×L versions and
+  // the principal-curvature profile (derived metrics) replace them. curvature_uniformity is smooth (1/(1+σ/⟨|H|⟩)).
   { group:'Curvature',  key:'curvature_uniformity',    label:'Curvature uniformity',      unit:''      },
-  { group:'Curvature',  key:'mih',                     label:'Mean integrated curvature', unit:'mm', retired:true },
 
   // Topology
   { group:'Topology',   key:'genus_per_cell',          label:'Genus per cell',            unit:''  },
@@ -172,10 +163,12 @@ function resolveValue(rawNorm, key){
       if(rawNorm == null || !isFinite(rawNorm)) return fallback;
       return { value: Math.round(rawNorm).toLocaleString('en-US'), unit: 'με', isResolved: true, rawValue: rawNorm };
     }
-    case 'compliance_per_stress2': {
-      // v0.6: already real strain energy density, kJ/m³ (11-data applyLoad).
-      if(rawNorm == null || !isFinite(rawNorm)) return fallback;
-      return { value: rawNorm < 1 ? rawNorm.toFixed(3) : rawNorm.toFixed(1), unit: 'kJ/m³', isResolved: true, rawValue: rawNorm };
+    case 'per_cell_length': {
+      // v0.11.0: a dimensionless area ratio (A/L², A/(L²·φ)) → per mm at the build cell size
+      const cs = globalInputs.cell_size_mm;
+      if(cs == null || !isFinite(cs) || cs <= 0) return fallback;
+      const v = rawNorm / cs;
+      return { value: v < 10 ? v.toFixed(2) : v.toFixed(1), unit: 'mm⁻¹', isResolved: true, rawValue: rawNorm };
     }
     default:
       return fallback;
@@ -264,7 +257,7 @@ function fmtV(v, key){
 /* ── from v0.4: domains, their default axes and compound scores ───────── */
 const DOMAIN_DEFAULTS = {   /* v0.9.0 — first two = the domain's 3D X / Y (21-actions.js domainAxisPairs) */
   all:        ['_beff','anisotropy','volume_fraction','pore_size_p50_norm','curvature_uniformity'],
-  biomedical: ['pore_size_norm','throat_size_norm','connect_idx','_tp','curvature_uniformity'],
+  biomedical: ['pore_size_norm','throat_size_norm','connect_idx','_tp','_cfneg'],   /* v0.11.0: concave area in for curvature uniformity */
   aerospace:  ['_beff','directionality','anisotropy','curvature_uniformity','volume_fraction'],
   automotive: ['stiffness_density_norm','_au','volume_fraction','anisotropy','directionality'],
   oilgas:     ['perc_idx','d_eff_max_norm','tortuosity_min','volume_fraction','_tp'],
@@ -287,11 +280,11 @@ const DOMAIN_Z_COMPOUND = {
   all: {
     label: 'SURFACE EFFICIENCY',
     formula: 'S_v / VF',
-    needs: ['surface_complexity'],
+    needs: ['_sv'],
     compute(d, popStats){
-      // v0.9.0: true specific surface (Sweep ≥ 0.30) where the row has it,
-      // else the voxel-face count — both as ranks, until the reseed fills _sv.
-      const sc = popStats._sv?.get(d) ?? popStats.surface_complexity?.get(d);
+      // v0.11.0: the true surface area per cell (Sweep ≥ 0.30), as a rank —
+      // the voxel-face count is gone after the reseed.
+      const sc = popStats._sv?.get(d);
       const vf = d.volume_fraction;
       if(sc == null || vf == null || vf <= 0) return null;
       // Surface area per cell volume (percentile-ranked) divided by volume
@@ -305,7 +298,7 @@ const DOMAIN_Z_COMPOUND = {
       return sc / (vf / 100);
     },
     vector(d, popStats){
-      const sc = popStats._sv?.get(d) ?? popStats.surface_complexity?.get(d);
+      const sc = popStats._sv?.get(d);
       const vf = d.volume_fraction;
       if(sc == null || vf == null || vf <= 0) return null;
       // Both inputs to the k-NN distance metric in [0, 1] range
@@ -368,21 +361,20 @@ const DOMAIN_Z_COMPOUND = {
   automotive: {
     label: 'OMNIDIRECTIONAL STIFFNESS',
     formula: '√(Voigt efficiency (mean axis) × (1 − A^U rank))',
-    needs: ['_au', 'ortho_contrast'],
+    needs: ['_au'],
     compute(d, popStats){
-      // v0.9.0: balance from the universal anisotropy index (shear included);
-      // designs without a stiffness matrix (CPU solves) fall back to the
-      // axial ortho contrast. Linear-elastic stand-in until Lab's yield and
-      // buckling reach Vault.
+      // v0.9.0: balance from the universal anisotropy index (shear included).
+      // v0.11.0: the ortho-contrast fallback is gone — every reseeded row has
+      // the stiffness matrix; a row without one gets no score. Linear-elastic
+      // stand-in until Lab's yield and buckling reach Vault.
       const sd = d.stiffness_density_norm;
       const au = popStats._au?.get(d);
-      const oc = au == null ? popStats.ortho_contrast?.get(d) : null;
-      const bal = au != null ? 1 - au : oc != null ? 1 - oc : null;
+      const bal = au != null ? 1 - au : null;
       if(sd == null || bal == null) return null;
       return Math.sqrt(sd * bal);
     },
     vector(d, popStats){
-      const sd = d.stiffness_density_norm, au = popStats._au?.get(d) ?? popStats.ortho_contrast?.get(d);
+      const sd = d.stiffness_density_norm, au = popStats._au?.get(d);
       if(sd == null || au == null) return null;
       return [sd, au];
     }
@@ -460,12 +452,6 @@ const METRIC_GLOSSARY = {
                             interp: '1.0× = equal along the axes. Ignores shear and the diagonals: a gyroid reads 1.0× yet is not isotropic. For full anisotropy use A^U.' },
   directionality:         { def: 'Fraction of total stiffness carried on the strongest axis (max/sum across X, Y, Z).',
                             interp: '0.333 = perfectly isotropic. 1.0 = all stiffness on one axis (1D fiber). Always defined, even when one or two axes have zero stiffness — replaces v0.13 axial_dominance which went NaN for 1D designs.' },
-  ortho_contrast:         { def: 'Coefficient of variation of stiffness across X/Y/Z axes. Retired from the pickers in v0.9.0 (built from the same three numbers as anisotropy and directionality); A^U replaces it.',
-                            interp: 'Low = balanced response in all directions. High = strongly asymmetric.' },
-  aniso_efficiency:       { def: 'Anisotropy ratio divided by solid fraction. Retired from the pickers in v0.9.0: a ratio over density mostly rewards low density.',
-                            interp: 'Catches designs that achieve high anisotropy without using excess material.' },
-  surface_complexity:     { def: 'Surface area per cell volume, raw (uncapped). Vault percentile-ranks for display.',
-                            interp: 'High = topologically intricate (TPMS sheets, fine grains). Low = simple smooth boundary.' },
 
   // ─── Stiffness (normalized to solid Young\'s modulus) ───
   ex_norm:                { def: 'Effective stiffness along X as a fraction of solid material stiffness.',
@@ -498,8 +484,6 @@ const METRIC_GLOSSARY = {
   microstrain_z_per_gpa:  { def: 'Microstrain along Z under your applied stress and material.', interp: 'Hidden until you enter a load.' },
   microstrain_avg_per_gpa:{ def: 'Average microstrain over the axes that carry load, under your applied stress and material.',
                             interp: 'The Biomedical score checks this against the bone-forming window. Empty for a design with no load path.' },
-  u_compliance:           { def: 'Strain energy stored per unit volume under your applied stress, in kJ/m³ (σε/2). Inspector only since v0.9.0.',
-                            interp: 'Lower = stiffer overall. Hidden until you enter a load.' },
 
   // ─── Pore structure (cell-decoupled) ───
   pore_size_norm:         { def: 'Mean inscribed pore diameter as a fraction of cell size.',
@@ -514,22 +498,10 @@ const METRIC_GLOSSARY = {
                             interp: 'Low = uniform pore size (TPMS-like). High = mixed-scale pores (random foams, grain structures).' },
   throat_size_norm:       { def: 'Throat (narrowest channel) diameter as a fraction of cell size.',
                             interp: 'The rate-limiting bottleneck for fluid/cell transport between pores.' },
-  throat_ratio:           { def: 'As stored: throat ÷ cell up to Sweep v0.29 (the same number as Throat / cell), throat ÷ pore from v0.30. Inspector only since v0.9.0 — Vault computes Throat ÷ pore for every row.',
-                            interp: 'Use Throat ÷ pore, the constriction ratio this column was named for.' },
 
   // ─── Curvature ───
-  h_mean:                 { def: 'Signed mean curvature of the solid surface. In mm units at the run’s cell size; inspector only since v0.9.0 (the ×L versions compare across runs). Positive = convex outward, negative = concave inward.',
-                            interp: 'Near zero = minimal-surface-like (TPMS gyroid). Strongly positive = sphere-like cellular foam.' },
-  h_mean_abs:             { def: 'Magnitude of mean curvature, ignoring sign. In mm units at the run’s cell size; inspector only since v0.9.0 (the ×L versions compare across runs).',
-                            interp: 'How "curved" the surface is overall, without caring about which way it bows.' },
-  h_std:                  { def: 'Standard deviation of mean curvature across the surface. In mm units at the run’s cell size; inspector only since v0.9.0 (the ×L versions compare across runs).',
-                            interp: 'Pairs with h_mean_abs to compute custom uniformity formulas.' },
-  k_gauss_mean:           { def: 'Mean Gaussian curvature of the solid surface. In mm units at the run’s cell size; inspector only since v0.9.0 (the ×L versions compare across runs).',
-                            interp: 'Negative = saddle-dominant (TPMS). Zero = developable. Positive = sphere-like.' },
   curvature_uniformity:   { def: 'How consistently curved the surface is. Smooth formula 1/(1+σ/⟨|H|⟩), bounded (0,1].',
                             interp: 'Near 1.0 = ideal minimal surfaces (gyroid, Schwarz P). Lower = curvature varies across the surface.' },
-  mih:                    { def: 'Integrated mean curvature ∫H dA over the cell, in mm at the run’s cell size. Inspector only since v0.9.0 — use ∫H dA ÷ L.',
-                            interp: 'Useful for identifying highly-folded structures vs simple flat-ish boundaries.' },
 
   // ─── Topology ───
   genus_per_cell:         { def: 'Number of independent loops (handles) of the interface in one periodic cell.',
@@ -537,9 +509,9 @@ const METRIC_GLOSSARY = {
 
   // ─── Transport ───
   tortuosity_min:         { def: 'Tortuosity along the most-permeable axis. Ratio of actual path length to straight-line distance.',
-                            interp: '1.0 = perfectly straight channels. Higher = more winding paths, slower transport.' },
-  tortuosity_avg:         { def: 'Tortuosity averaged across X/Y/Z.',
-                            interp: 'Overall transport difficulty regardless of direction.' },
+                            interp: '1.0 = perfectly straight channels. Higher = more winding paths, slower transport. Empty when no axis is open.' },
+  tortuosity_avg:         { def: 'Tortuosity averaged over the axes the pores connect along (blocked axes are left out).',
+                            interp: 'Overall transport difficulty along the open directions. Empty when no axis is open.' },
   d_eff_max_norm:         { def: 'Effective diffusivity along the best axis over free diffusion — a Bruggeman estimate, porosity ÷ tortuosity².',
                             interp: 'Set entirely by volume fraction and tortuosity, so it adds no information of its own; a solved void-phase value will replace it.' },
   d_eff_avg_norm:         { def: 'Effective diffusivity averaged across X/Y/Z, normalized to free-space diffusion.',
@@ -551,9 +523,9 @@ const METRIC_GLOSSARY = {
 const Z_COMPOUND_GLOSSARY = {   /* v0.9.0 — rewritten from DOMAIN_Z_COMPOUND; keep the two together */
   all: {
     label: 'SURFACE EFFICIENCY',
-    formula: 'specific surface (rank) ÷ volume fraction',
+    formula: 'surface area per cell (rank) ÷ volume fraction',
     def: 'Interior surface per unit of solid spent. Orthogonal to stiffness, which rewards thick struts, so the 3D space keeps three independent axes.',
-    interp: 'High = lots of surface per unit material — cell attachment, heat exchange, catalytic area. Uses the true specific surface (Sweep v0.30+); rows without it fall back to the voxel-face surface complexity.'
+    interp: 'High = lots of surface per unit material — cell attachment, heat exchange, catalytic area. Uses the true surface area per cell (Sweep v0.30+); the ratio is surface per solid volume (BS/BV) in rank form.'
   },
   biomedical: {
     label: 'BONE-INGROWTH VIABILITY',
@@ -649,7 +621,6 @@ const CAT_PALETTES = {
 var DERIVED_METRICS = [
   { group:'Derived', key:'_emax',  label:'Peak stiffness E* / Es', labelAbs:'Peak stiffness E*', unit:'', norm_kind:'modulus_es', short:'E*' },
   { group:'Derived', key:'_gmean', label:'Mean shear G / Es',      labelAbs:'Mean shear G',      unit:'', norm_kind:'modulus_es', short:'G*' },
-  { group:'Derived', key:'_perf',  label:'Stiffness efficiency |E|/VF', unit:'', short:'|E|/VF', retired:true },   /* v0.9.0 → Voigt efficiency */
   { group:'Derived', key:'_score', label:'Domain score',          unit:'', short:'Score' },
   { group:'Derived', key:'_scar',  label:'Domain scarcity',       unit:'', short:'Rare' },
   /* v0.8.0 — the v0.7.1 colour modes, now axes and range filters too (computed at load) */
@@ -668,20 +639,30 @@ var DERIVED_METRICS = [
   { group:'Elastic tensor', key:'_kb',     label:'Bulk modulus K / Es',    labelAbs:'Bulk modulus K', unit:'', norm_kind:'modulus_es', short:'K' },
   { group:'Elastic tensor', key:'_hs',     label:'Hashin–Shtrikman efficiency', unit:'', short:'HS eff' },
   { group:'Elastic tensor', key:'_ge',     label:'Shear ÷ Young’s G/E',    unit:'', short:'G/E' },
-  { group:'Geometry',  key:'_sv',   label:'Specific surface S/V²ᐟ³',   unit:'', short:'S/V', displayMode:'rank' },
+  /* v0.11.0 — true surface area (Sweep's area integral, within 0.3 % of the textbook minimal-surface areas):
+     stored per cell face area, shown per mm at the build cell size — the micro-CT pair BS/TV and BS/BV */
+  { group:'Geometry',  key:'_sv',   label:'Surface area per cell A/L²', labelAbs:'Specific surface S_V (BS/TV)', unit:'', norm_kind:'per_cell_length', short:'A/L²', displayMode:'rank' },
+  { group:'Geometry',  key:'_bsbv', label:'Surface per solid A/(L²·φ)', labelAbs:'Surface per solid volume (BS/BV)', unit:'', norm_kind:'per_cell_length', short:'BS/BV' },
   { group:'Pore',      key:'_tp',   label:'Throat ÷ pore',              unit:'', short:'Throat/pore' },
   { group:'Thermal',   key:'_keff', label:'Conductivity efficiency',    unit:'', short:'k eff' },
   { group:'Curvature', key:'_hL',   label:'Mean curvature H̄·L (signed)', unit:'', short:'H̄L' },
   { group:'Curvature', key:'_hLa',  label:'Mean curvature |H̄|·L',       unit:'', short:'|H̄|L' },
   { group:'Curvature', key:'_hsL',  label:'Curvature spread σ(H)·L',    unit:'', short:'σH·L' },
-  { group:'Curvature', key:'_kL2',  label:'Gaussian curvature K·L²',    unit:'', short:'KL²' },
-  { group:'Curvature', key:'_mihL', label:'Integrated curvature ∫H dA ÷ L', unit:'', short:'MIH/L' }
+  { group:'Curvature', key:'_mihL', label:'Integrated curvature ∫H dA ÷ L', unit:'', short:'MIH/L' },
+  /* v0.11.0 — principal-curvature profile (Sweep v0.33+, fixed curvature grid; Matt's 2026-10-13 notes after
+     Callens et al. 2023): bone cells pattern where the smaller principal curvature κ₂ < 0 */
+  { group:'Curvature', key:'_cfneg', label:'Concave area fraction (κ₂ < 0)', unit:'', short:'Concave' },
+  { group:'Curvature', key:'_cfsad', label:'Saddle area fraction (K < 0)',   unit:'', short:'Saddle' },
+  { group:'Curvature', key:'_ck2med', label:'Median concave curvature κ₂·L', unit:'', short:'κ₂L concave' },
+  { group:'Curvature', key:'_crad',  label:'Median concave radius / cell', labelAbs:'Median concave radius', unit:'', norm_kind:'cell_length', short:'R concave' },
+  { group:'Curvature', key:'_ck2m',  label:'Mean κ₂·L',                     unit:'', short:'κ₂L mean' },
+  { group:'Curvature', key:'_ck2sd', label:'Spread of κ₂·L (SD)',           unit:'', short:'κ₂L SD' },
+  { group:'Curvature', key:'_ckneg', label:'Saddle curvature ∫K⁻ dA ÷ A ·L²', unit:'', short:'K⁻L²' }
 ];
 DERIVED_METRICS.forEach(function (m) { METRIC_MAP[m.key] = m; });
 var DERIVED_GLOSSARY = {
   _emax:  { def:'Largest of Ex, Ey, Ez — the stiffness along the stiffest axis, as a fraction of the solid.', interp:'The Ashby-style stiffness to plot against volume fraction.' },
   _gmean: { def:'Mean of the three shear moduli Gyz, Gxz, Gxy, as a fraction of the solid modulus.', interp:'Empty for designs solved before Sweep v0.24 (no shear moduli recorded).' },
-  _perf:  { def:'Length of the stiffness vector (Ex, Ey, Ez) divided by volume fraction.', interp:'Stiffness bought per unit of material; the default X axis of the design space.' },
   _score: { def:'The active domain\'s compound score (see Domain compounds below).', interp:'Drives the Z axis and the score ring on every card.' },
   _scar:  { def:'Mean distance to the 5 nearest designs in the active domain\'s compound inputs.', interp:'High = few designs like this one in the Vault for that domain.' },
   _nexp:  { def:'n in E ∝ ρⁿ: how stiffness grows with density, fitted across designs of the same family, topology and preset (the geometric mean of Ex, Ey, Ez; peak stiffness where an axis carries no load).', interp:'About 1 = stretch-dominated, about 2 = bending-dominated, above 2 = worse. Designs whose type is too small or too narrow in density borrow the trend of their family and are drawn faded.' },
@@ -698,25 +679,32 @@ var DERIVED_GLOSSARY = {
   _kb:    { def:'Bulk modulus (Hill average of Voigt and Reuss) as a fraction of the solid’s Young’s modulus.', interp:'Resistance to uniform compression. Pairs with shear for the Hashin–Shtrikman check.' },
   _hs:    { def:'Mean of K / K_HS and G / G_HS: bulk and shear moduli as shares of the Hashin–Shtrikman upper bounds for solid and void at the design’s solid fraction (solid ν 0.3).', interp:'1 = as stiff as any isotropic structure can be at that density. Sharper than Voigt efficiency, which flatters isotropic designs.' },
   _ge:    { def:'Shear modulus over Young’s modulus, both Hill averages.', interp:'0.385 for an isotropic solid at ν 0.3. Alongside n, it separates stretch-dominated from bending-dominated behaviour.' },
-  _sv:    { def:'Interface area divided by the cell volume to the ⅔ — S·L/V for a cube — from the same area integral as the curvature (Sweep v0.30+).', interp:'The true specific surface: a single gyroid surface is about 3.1, a gyroid sheet about 6. The surface-efficiency score uses it where present.' },
+  _sv:    { def:'Solid–void interface area in one cell divided by the cell face area (A/L²), from the area integral beside the curvature (Sweep v0.30+). With a cell size it shows as the specific surface S_V = A/V (BS/TV, mm⁻¹), the micro-CT measure.', interp:'A true area: within 0.3 % of the textbook values (gyroid 3.09, Schwarz P 2.35, diamond 3.84); a gyroid sheet about 6. The voxel-face count it replaced read 55–62 % high. The surface-efficiency score uses it.' },
+  _bsbv:  { def:'Interface area per solid volume: A/L² divided by the solid fraction. With a cell size it shows as BS/BV (mm⁻¹), the micro-CT surface-to-bone-volume ratio.', interp:'Surface bought per unit of material — higher for thin walls and fine struts. The ratio the All applications score ranks.' },
+  _cfneg: { def:'Share of the surface area where the smaller principal curvature κ₂ is negative (concave in at least one direction, seen from the pore side), on Sweep’s fixed curvature grid. A radius over two cells counts as flat.', interp:'Callens et al. 2023: bone cells pattern concave and saddle regions. Minimal surfaces read about 1 (saddle everywhere); convex struts read low. Check it against volume fraction, and the curvature flag, before trusting a ranking.' },
+  _cfsad: { def:'Share of the surface area with negative Gaussian curvature K (saddle-shaped), on the fixed curvature grid.', interp:'The saddle part of the concave area. Trabecular bone is mostly saddle; TPMS read about 1.' },
+  _ck2med:{ def:'Area-weighted median of κ₂ × cell size over the concave area only.', interp:'How sharply the concave surface curves, scale-free. Its inverse is the median concave radius.' },
+  _crad:  { def:'Cell size ÷ |median concave κ₂·L| — the typical radius of the concave surface, as a fraction of the cell.', interp:'In µm at your build cell size. Callens et al. saw cells avoid concave features below about 90 µm radius; trabecular surfaces sit around 100–300 µm.' },
+  _ck2m:  { def:'Area-weighted mean of κ₂ × cell size over the whole surface.', interp:'Signed: read it with the spread. Mixed signs cancel, so a mean near 0 can hide two populations.' },
+  _ck2sd: { def:'Area-weighted standard deviation of κ₂ × cell size.', interp:'High relative to the mean = a surface with two kinds of region (concave pockets and convex struts).' },
+  _ckneg: { def:'∫ min(K, 0) dA ÷ A × cell size² — the saddle curvature, weighted by how sharp it is.', interp:'More negative = stronger saddles. Unlike the mean of K, it is not fixed by topology.' },
   _tp:    { def:'Throat size divided by the mean pore size (both inscribed diameters).', interp:'The constriction ratio: about 1 = uniform channels (a gyroid sits near 1); low = pores joined by narrow necks. Cell-size free. The biomedical and oil & gas scores use it.' },
   _keff:  { def:'Mean thermal conductivity over k_solid, divided by the solid fraction.', interp:'Conduction bought per unit of material (1 = straight solid paths). The heat-spreading score uses it.' },
   _hL:    { def:'Signed mean curvature times the cell size it was measured at.', interp:'Dimensionless, so designs from runs at different cell sizes compare. Near 0 = minimal-surface-like.' },
   _hLa:   { def:'Mean curvature magnitude times the cell size.', interp:'How curved the surface is overall, independent of cell size.' },
   _hsL:   { def:'Standard deviation of mean curvature times the cell size.', interp:'How much the curvature varies across the surface.' },
-  _kL2:   { def:'Mean Gaussian curvature times the cell size squared.', interp:'Negative = saddle-dominant (TPMS). Tied to genus by Gauss–Bonnet.' },
   _mihL:  { def:'∫H dA over the cell divided by the cell size.', interp:'Total bending of the surface, scale-free.' }
 };
 
 /* Short names for tight places (tiles, table headers, tags). */
 var METRIC_SHORT = {
-  volume_fraction:'VF', connect_idx:'κ solid', perc_idx:'κ void', anisotropy:'Axial aniso', directionality:'Dir Ψ', ortho_contrast:'Ortho Ω',
-  aniso_efficiency:'α/ρ', surface_complexity:'Surface', ex_norm:'Ex', ey_norm:'Ey', ez_norm:'Ez', stiffness_density_norm:'Voigt avg',
+  volume_fraction:'VF', connect_idx:'κ solid', perc_idx:'κ void', anisotropy:'Axial aniso', directionality:'Dir Ψ',
+  ex_norm:'Ex', ey_norm:'Ey', ez_norm:'Ez', stiffness_density_norm:'Voigt avg',
   gyz_norm:'Gyz', gxz_norm:'Gxz', gxy_norm:'Gxy', keff_x_norm:'kx', keff_y_norm:'ky', keff_z_norm:'kz', keff_max_norm:'k max',
   keff_avg_norm:'k avg', thermal_anisotropy:'k aniso', microstrain_x_per_gpa:'με x', microstrain_y_per_gpa:'με y',
-  microstrain_z_per_gpa:'με z', microstrain_avg_per_gpa:'με avg', u_compliance:'U/σ²', pore_size_norm:'Pore', pore_size_p10_norm:'P10',
-  pore_size_p50_norm:'P50', pore_size_p90_norm:'P90', pore_size_cv:'Pore CV', throat_size_norm:'Throat', throat_ratio:'Throat r',
-  h_mean:'H̄', h_mean_abs:'|H̄|', h_std:'σH', k_gauss_mean:'K', curvature_uniformity:'Curv unif', mih:'MIH', genus_per_cell:'Genus',
+  microstrain_z_per_gpa:'με z', microstrain_avg_per_gpa:'με avg', pore_size_norm:'Pore', pore_size_p10_norm:'P10',
+  pore_size_p50_norm:'P50', pore_size_p90_norm:'P90', pore_size_cv:'Pore CV', throat_size_norm:'Throat',
+  curvature_uniformity:'Curv unif', genus_per_cell:'Genus',
   tortuosity_min:'τ min', tortuosity_avg:'τ avg', d_eff_max_norm:'D max', d_eff_avg_norm:'D avg'
 };
 function mShort(k) { var m = METRIC_MAP[k]; return (m && m.short) || METRIC_SHORT[k] || (m ? m.label : k); }
@@ -754,11 +742,11 @@ function scoreFactors(d, dom, pop) {
       how = 'multiplied'; break;
     }
     case 'aerospace':  f('Voigt efficiency (stiffest axis)', d._beff); f('Directionality (scaled)', g('directionality')); how = 'geometric mean'; break;
-    case 'automotive': f('Voigt efficiency (mean axis)', d.stiffness_density_norm); var au = g('_au'), oc = au == null ? g('ortho_contrast') : null; f(au != null ? 'Balance (1 − A^U rank)' : 'Balance (1 − ortho contrast) · no stiffness matrix', au != null ? 1 - au : oc == null ? null : 1 - oc); how = 'geometric mean'; break;
+    case 'automotive': f('Voigt efficiency (mean axis)', d.stiffness_density_norm); var au = g('_au'); f(au != null ? 'Balance (1 − A^U rank)' : 'Balance · no stiffness matrix', au != null ? 1 - au : null); how = 'geometric mean'; break;
     case 'oilgas':     f('Void percolation κ', d.perc_idx); f('Diffusivity D max', d.d_eff_max_norm); f('Throat ÷ pore (scaled)', g('_tp'), d._tp == null ? '—' : d._tp.toFixed(2)); how = 'cube root of the product'; break;
     case 'thermal':    f('Best-axis conductivity', d.keff_max_norm); var ka = d.thermal_anisotropy; f('Directional bias (1 − 1/kα)', ka == null ? null : 1 - 1 / Math.max(ka, 1)); how = 'geometric mean'; break;
     case 'spread':     f('Conductivity efficiency', d._keff); var kb = d.thermal_anisotropy; f('Evenness (1/kα)', kb == null ? null : 1 / Math.max(kb, 1)); how = 'geometric mean'; break;
-    default:           f(d._sv != null ? 'Specific surface (rank)' : 'Surface complexity (rank)', d._sv != null ? g('_sv') : g('surface_complexity')); f('Material spent (VF)', d.volume_fraction == null ? null : d.volume_fraction / 100, d.volume_fraction == null ? '—' : d.volume_fraction.toFixed(0) + '%'); how = 'surface ÷ volume fraction';
+    default:           f('Surface area per cell (rank)', g('_sv')); f('Material spent (VF)', d.volume_fraction == null ? null : d.volume_fraction / 100, d.volume_fraction == null ? '—' : d.volume_fraction.toFixed(0) + '%'); how = 'surface ÷ volume fraction';
   }
   return { factors: out, how: how };
 }
@@ -766,12 +754,12 @@ function scoreFactors(d, dom, pop) {
 /* Which way is better, per domain — used by Compare to mark the best of a set.
    +1 higher is better, −1 lower is better. Metrics not listed get no mark. */
 var DOMAIN_GOALS = {
-  all:        { _score:1, _beff:1, stiffness_density_norm:1, _hs:1, _emax:1, volume_fraction:-1, anisotropy:-1, _au:-1, curvature_uniformity:1, surface_complexity:1 },
-  biomedical: { _score:1, throat_size_norm:1, _tp:1, connect_idx:1, curvature_uniformity:1, pore_size_p10_norm:1, _emax:-1, volume_fraction:-1 },
+  all:        { _score:1, _beff:1, stiffness_density_norm:1, _hs:1, _emax:1, volume_fraction:-1, anisotropy:-1, _au:-1, curvature_uniformity:1, _sv:1 },
+  biomedical: { _score:1, throat_size_norm:1, _tp:1, connect_idx:1, curvature_uniformity:1, _cfneg:1, _cfsad:1, pore_size_p10_norm:1, _emax:-1, volume_fraction:-1 },
   aerospace:  { _score:1, _beff:1, stiffness_density_norm:1, _emax:1, _edmax:1, directionality:1, volume_fraction:-1 },
   automotive: { _score:1, stiffness_density_norm:1, _hs:1, _gmean:1, _au:-1, volume_fraction:-1 },
   oilgas:     { _score:1, perc_idx:1, d_eff_max_norm:1, tortuosity_min:-1, _tp:1 },
-  thermal:    { _score:1, keff_max_norm:1, thermal_anisotropy:1, d_eff_max_norm:1, surface_complexity:1 },
+  thermal:    { _score:1, keff_max_norm:1, thermal_anisotropy:1, d_eff_max_norm:1, _sv:1 },
   spread:     { _score:1, _keff:1, keff_avg_norm:1, thermal_anisotropy:-1, volume_fraction:-1 }
 };
 function compareKeys(dom) {
@@ -782,12 +770,12 @@ function compareKeys(dom) {
 
 /* One-click 2D axis pairs per domain (X, Y). */
 var AXIS_PRESETS = {
-  all:        [['volume_fraction', '_emax', 'Stiffness vs density'], ['volume_fraction', 'stiffness_density_norm', 'Stiffness density vs density'], ['pore_size_p50_norm', 'throat_ratio', 'Pore vs throat'], ['anisotropy', '_beff', 'Efficiency vs anisotropy'], ['_numin', '_edmax', 'Poisson vs stiffest direction']],
-  biomedical: [['pore_size_norm', 'microstrain_avg_per_gpa', 'Pore vs strain'], ['volume_fraction', 'pore_size_norm', 'Pore vs density'], ['pore_size_norm', 'throat_size_norm', 'Pore vs throat'], ['pore_size_p10_norm', 'pore_size_p90_norm', 'Pore spread P10 vs P90'], ['volume_fraction', '_emax', 'Stiffness vs density']],
+  all:        [['volume_fraction', '_emax', 'Stiffness vs density'], ['volume_fraction', 'stiffness_density_norm', 'Stiffness density vs density'], ['pore_size_norm', '_tp', 'Pore vs throat ÷ pore'], ['anisotropy', '_beff', 'Efficiency vs anisotropy'], ['_numin', '_edmax', 'Poisson vs stiffest direction']],
+  biomedical: [['pore_size_norm', 'microstrain_avg_per_gpa', 'Pore vs strain'], ['volume_fraction', 'pore_size_norm', 'Pore vs density'], ['pore_size_norm', 'throat_size_norm', 'Pore vs throat'], ['pore_size_p10_norm', 'pore_size_p90_norm', 'Pore spread P10 vs P90'], ['volume_fraction', '_cfneg', 'Concave area vs density'], ['_crad', 'pore_size_norm', 'Concave radius vs pore'], ['volume_fraction', '_emax', 'Stiffness vs density']],
   aerospace:  [['volume_fraction', '_beff', 'Voigt efficiency vs density'], ['directionality', '_beff', 'Voigt efficiency vs directionality'], ['volume_fraction', '_emax', 'Stiffness vs density']],
   automotive: [['volume_fraction', '_gmean', 'Shear vs density'], ['_au', 'stiffness_density_norm', 'Specific stiffness vs anisotropy'], ['volume_fraction', '_emax', 'Stiffness vs density']],
   oilgas:     [['tortuosity_min', 'd_eff_max_norm', 'Diffusivity vs tortuosity'], ['pore_size_p50_norm', 'd_eff_max_norm', 'Diffusivity vs pore'], ['volume_fraction', 'perc_idx', 'Void percolation vs density']],
-  thermal:    [['volume_fraction', 'keff_max_norm', 'Conductivity vs density'], ['thermal_anisotropy', 'keff_max_norm', 'Conductivity vs directional bias'], ['surface_complexity', 'keff_avg_norm', 'Conductivity vs surface']],
+  thermal:    [['volume_fraction', 'keff_max_norm', 'Conductivity vs density'], ['thermal_anisotropy', 'keff_max_norm', 'Conductivity vs directional bias'], ['_sv', 'keff_avg_norm', 'Conductivity vs surface']],
   spread:     [['volume_fraction', 'keff_avg_norm', 'Conductivity vs density'], ['thermal_anisotropy', '_keff', 'Efficiency vs directional bias'], ['volume_fraction', '_keff', 'Efficiency vs density']]
 };
 
@@ -874,4 +862,6 @@ var KAPPA_CLASSES = [
   { key:'diamond', v:0,    label:'Isolated',        desc:'κ = 0 · no load path' }
 ];
 var FLAG_VALUES = [['clean', 'Clean'], ['flagged', 'May read high'], ['not recorded', 'Not recorded']];
+/* v0.11.0 — Sweep's Gauss–Bonnet check on the curvature grid (Sweep v0.33+) */
+var CFLAG_VALUES = [['clean', 'Resolved'], ['flagged', 'Grid can’t hold it'], ['not recorded', 'Not recorded']];
 var POIS_VALUES = [['auxetic', 'Auxetic (ν < 0)'], ['conventional', 'Conventional'], ['not recorded', 'No stiffness matrix']];   /* v0.9.0 */

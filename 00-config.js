@@ -7,7 +7,7 @@
    same or a lower-numbered file.
    ============================================================ */
 
-var VAULT_VERSION = '0.10.1';
+var VAULT_VERSION = '0.11.0';
 
 var SUPABASE_URL = 'https://axinljpecycnvfncyhfs.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_DAlrNLqbUZiwkaA6wPSMIw_YUNY85LX';
@@ -30,12 +30,12 @@ var HANDOFF_URL_MAX = 2000000;            /* past this a recipe is copied instea
 var VAULT_COLUMNS = [
   'id', 'created_at', 'content_hash', 'schema_version', 'family', 'source_tool', 'source_version', 'exported_at', 'preset', 'solver',
   'contributor_name', 'contributor_notes', 'domain', 'material', 'e_solid_gpa', 'sigma_ref_gpa', 'cell_size_mm',
-  'volume_fraction', 'connect_idx', 'perc_idx', 'stiff_axis', 'anisotropy', 'directionality', 'ortho_contrast', 'aniso_efficiency', 'surface_complexity',
+  'volume_fraction', 'connect_idx', 'perc_idx', 'stiff_axis', 'anisotropy', 'directionality',
   'ex_norm', 'ey_norm', 'ez_norm', 'stiffness_density_norm',
   'keff_x_norm', 'keff_y_norm', 'keff_z_norm', 'keff_max_norm', 'keff_avg_norm', 'thermal_anisotropy',
-  'microstrain_x_per_gpa', 'microstrain_y_per_gpa', 'microstrain_z_per_gpa', 'microstrain_avg_per_gpa', 'u_compliance',
-  'pore_size_norm', 'pore_size_p10_norm', 'pore_size_p50_norm', 'pore_size_p90_norm', 'pore_size_cv', 'throat_size_norm', 'throat_ratio',
-  'h_mean', 'h_mean_abs', 'h_std', 'k_gauss_mean', 'curvature_uniformity', 'mih', 'genus_per_cell',
+  'microstrain_x_per_gpa', 'microstrain_y_per_gpa', 'microstrain_z_per_gpa', 'microstrain_avg_per_gpa',
+  'pore_size_norm', 'pore_size_p10_norm', 'pore_size_p50_norm', 'pore_size_p90_norm', 'pore_size_cv', 'throat_size_norm',
+  'h_mean', 'h_mean_abs', 'h_std', 'curvature_uniformity', 'mih', 'genus_per_cell',   /* h_* and mih feed the ×L curvature (14-elastic.js) */
   'tortuosity_min', 'tortuosity_avg', 'd_eff_max_norm', 'd_eff_avg_norm',
   'linear_cap_active', 'linear_cap_kind', 'degenerate', 'solver_validity', 'cg_iters', 'cg_converged',
   'metrics_extended', 'recipe'

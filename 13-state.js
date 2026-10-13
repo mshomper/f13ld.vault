@@ -7,7 +7,7 @@
    ============================================================ */
 
 function freshFilters() {
-  return { domain: 'all', fam: [], kappa: [], grid: [], flag: [], pois: [], contrib: [], src: [], aim: [], solid: [], void: [],
+  return { domain: 'all', fam: [], kappa: [], grid: [], flag: [], cflag: [], pois: [], contrib: [], src: [], aim: [], solid: [], void: [],
            ranges: {}, rangeKeys: ['volume_fraction', 'stiffness_density_norm', 'pore_size_p50_norm'],
            region: null, target: null };
 }

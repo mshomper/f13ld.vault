@@ -136,10 +136,14 @@ var COLOR_MODE_LIST = [
   { id: 'stiff_axis', label: 'Stiffest axis', type: 'cat' },
   { id: 'topology', label: 'Topology', type: 'cat' },
   { id: '_stiff_flag', label: 'Stiffness flag', type: 'cat' },
+  { id: '_curv_flag', label: 'Curvature check', type: 'cat' },   /* v0.11.0 */
   { id: 'volume_fraction', label: 'Volume fraction', type: 'cont' },
   { id: '_score', label: 'Domain score', type: 'cont' },
   { id: '_pois', label: 'Poisson (auxetic)', type: 'cat' },   /* v0.9.0 — was stiffness efficiency; Voigt efficiency is below */
   { id: 'anisotropy', label: 'Anisotropy', type: 'cont' },
+  /* v0.11.0 — principal-curvature profile (Sweep v0.33+) */
+  { id: '_cfneg', label: 'Concave area', type: 'cont', abs: [0, 1], lo: '0 %', hi: '100 %',
+    tip: 'Share of the surface that is concave in at least one direction (smaller principal curvature below zero), where bone cells prefer to grow (Callens et al. 2023). Minimal surfaces read near 100 %. Grey: no curvature profile (Sweep before v0.33).' },
   { id: '_scar', label: 'Domain scarcity', type: 'cont' },
   /* v0.7.1 (24-aim.js) — absolute scales: abs = [value at the low end, value at the high end] */
   { id: 'aim', label: 'Aimed run', type: 'cat' },
@@ -164,6 +168,7 @@ function catValue(d, id) {
   if (id === 'kappa') return d._kappa;
   if (id === 'stiff_axis') return d.stiff_axis || 'none';
   if (id === '_stiff_flag') return d._stiff_flag;
+  if (id === '_curv_flag') return d._curv_flag;
   if (id === '_pois') return d._pois;
   if (id === 'aim') return aimCatValue(d);
   if (id === 'topology') { var g = (d.recipe && d.recipe.geometry) || {}; return String(g.mode || g.topology || 'other').replace(/^(grain|noise)-/, ''); }
@@ -174,6 +179,7 @@ function catColor(id, v) {
   if (id === 'kappa') return CAT_PALETTES.kappa[v] || '#9a9fb7';
   if (id === 'stiff_axis') return CAT_PALETTES.stiff_axis[v] || '#666666';
   if (id === '_stiff_flag') return FLAG_COLORS[v] || '#5f6582';
+  if (id === '_curv_flag') return FLAG_COLORS[v] || '#5f6582';
   if (id === '_pois') return POIS_COLORS[v] || '#5f6582';
   if (id === 'topology') return CAT_PALETTES.topology[v] || '#9a9fb7';
   if (id === 'aim') return aimCatColor(v);

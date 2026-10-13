@@ -6,7 +6,7 @@
    A design is the table row itself plus underscore fields:
      _i index · _id string id · _kappa connectivity class · _sp/_vp solid
      and void percolation per axis · _grid_N · _stiff_flag · _reference
-     _emax · _gmean · _perf · _score · _scar · _h view animation state
+     _emax · _gmean · _score · _scar · _h view animation state
    ============================================================ */
 
 var DB = { all: [], byId: new Map(), N: 0, stats: {}, sorted: {}, log: {}, families: [], contributors: [], grids: [],
@@ -73,6 +73,8 @@ function shapeDesign(d, i) {
   d._stiff_flag = ext.stiffness_flag === true ? 'flagged' : ext.stiffness_flag === false ? 'clean' : 'not recorded';
   d._flag_reasons = typeof ext.stiffness_flag_reasons === 'string' ? ext.stiffness_flag_reasons : '';
   d._reference = ext.reference === true;
+  /* v0.11.0 — Sweep's curvature check (Gauss–Bonnet on the fixed curvature grid, Sweep v0.33+) */
+  d._curv_flag = ext.curv_flag === true ? 'flagged' : ext.curv_flag === false ? 'clean' : 'not recorded';
   d._sp = [!!ext.connect_x, !!ext.connect_y, !!ext.connect_z];
   d._vp = [!!ext.perc_x, !!ext.perc_y, !!ext.perc_z];
   d._hasPerc = ('connect_x' in ext) || ('perc_x' in ext);
@@ -81,8 +83,6 @@ function shapeDesign(d, i) {
   d._emax = E.length ? Math.max.apply(null, E) : null;
   var G = [d.gyz_norm, d.gxz_norm, d.gxy_norm].filter(isNum);
   d._gmean = G.length ? G.reduce(function (a, b) { return a + b; }, 0) / G.length : null;
-  var mag = Math.sqrt((d.ex_norm || 0) * (d.ex_norm || 0) + (d.ey_norm || 0) * (d.ey_norm || 0) + (d.ez_norm || 0) * (d.ez_norm || 0));
-  d._perf = isNum(d.volume_fraction) && d.volume_fraction > 0 ? mag / (d.volume_fraction / 100) : null;
   d._beff = isNum(d._emax) && isNum(d.volume_fraction) && d.volume_fraction > 0 ? d._emax / (d.volume_fraction / 100) : null;   /* v0.8.0 (24-aim.js beffOf) */
   d._nexp = null;
   d._score = null; d._scar = null;
@@ -139,7 +139,7 @@ function hasMetric(k) { return !!DB.stats[k]; }
    c comes from E* when E* is precise (≥ 0.01, or an export that records
    Es_ref_GPa); otherwise from Sweep's stored strain (unrounded E), using
    Es_ref from the row, or estimated from the rows where both are good. */
-var STRAIN_KEYS = ['microstrain_x_per_gpa', 'microstrain_y_per_gpa', 'microstrain_z_per_gpa', 'microstrain_avg_per_gpa', 'u_compliance'];
+var STRAIN_KEYS = ['microstrain_x_per_gpa', 'microstrain_y_per_gpa', 'microstrain_z_per_gpa', 'microstrain_avg_per_gpa'];   /* v0.11.0: strain energy trimmed */
 function strainCoefficients() {
   var est = [], AX = ['x', 'y', 'z'];
   DB.all.forEach(function (d) {
@@ -163,7 +163,7 @@ function strainCoefficients() {
     d._msc = c.concat([avg]);
   });
 }
-/* Real strain (με) and strain energy (kJ/m³) under the Build target load;
+/* Real strain (με) under the Build target load;
    empty without a load, so every list, axis and slider hides them. */
 function applyLoadValues() {
   var on = hasLoad(), sig = globalInputs.ref_stress_mpa, Es = globalInputs.modulus_gpa;
@@ -173,8 +173,6 @@ function applyLoadValues() {
     d.microstrain_y_per_gpa = on && isNum(c[1]) ? c[1] * k : null;
     d.microstrain_z_per_gpa = on && isNum(c[2]) ? c[2] * k : null;
     d.microstrain_avg_per_gpa = on && isNum(c[3]) ? c[3] * k : null;
-    /* U = σ²/(2E): c/2e6 · σ²/Es MPa → × 1000 kJ/m³ */
-    d.u_compliance = on && isNum(c[3]) ? c[3] / 2e6 * sig * sig / Es * 1000 : null;
   });
 }
 /* After the load, material or window changes: real values, stats, ranks, scores. */
@@ -206,7 +204,7 @@ function pctOf(k) {
   for (var i = 0; i < DB.N; i++) if (isNum(DB.all[i][k])) idx.push(i);
   idx.sort(function (a, b) {
     var va = DB.all[a][k], vb = DB.all[b][k]; if (va !== vb) return va - vb;
-    var pa = DB.all[a]._perf || 0, pb = DB.all[b]._perf || 0; if (pa !== pb) return pa - pb;
+    var pa = DB.all[a]._beff || 0, pb = DB.all[b]._beff || 0; if (pa !== pb) return pa - pb;
     return a - b;
   });
   var n = Math.max(1, idx.length - 1);
@@ -226,7 +224,7 @@ function popNorm(k) {
 }
 function domainPop(dom) {
   var z = DOMAIN_Z_COMPOUND[dom] || DOMAIN_Z_COMPOUND.all, pop = {};
-  (z.needs || []).concat(['ortho_contrast', 'directionality', 'tortuosity_min', 'throat_ratio', 'pore_size_p50_norm', 'microstrain_avg_per_gpa', 'thermal_anisotropy', 'surface_complexity', '_sv', '_tp', '_au', '_keff'])
+  (z.needs || []).concat(['directionality', 'tortuosity_min', 'pore_size_p50_norm', 'microstrain_avg_per_gpa', 'thermal_anisotropy', '_sv', '_tp', '_au', '_keff'])
     .forEach(function (k) { pop[k] = popNorm(k); });
   return pop;
 }
@@ -297,26 +295,31 @@ function mockRows(n) {
     var mu = Math.min(1e6, (1e4 / E[0] + 1e4 / E[1] + 1e4 / E[2]) / 3);
     var flag = R() < (v < 0.18 ? 0.24 : 0.06);
     var Gm = [base * (0.28 + R() * 0.12), base * (0.28 + R() * 0.12), base * (0.28 + R() * 0.12)];
+    var tzB = R() < 0.12;   /* v0.11.0 — some mock designs have pores blocked along z */
     rows.push({
       id: 1040 + i, created_at: new Date(Date.UTC(2026, 9, 1 + Math.floor(R() * 9), Math.floor(R() * 24))).toISOString(),
       content_hash: 'mock' + i, schema_version: '0.27.1', family: fam, source_tool: 'f13ld.sweep', source_version: '0.27.1', exported_at: new Date(Date.UTC(2026, 9, 1 + Math.floor(R() * 8))).toISOString(),
       preset: (recipe.surface && recipe.surface.preset) || null, solver: 'gpu-fft', contributor_name: who[Math.min(6, Math.floor(Math.pow(R(), 1.6) * 7))], contributor_notes: null,
       domain: 'all', material: { key: 'ti6al4v', E_GPa: 110 }, e_solid_gpa: 110, sigma_ref_gpa: 0.01, cell_size_mm: cell,
       volume_fraction: +vf.toFixed(2), connect_idx: kap, perc_idx: R() < 0.92 ? 1 : 0.67, stiff_axis: 'XYZ'[E.indexOf(emx)],
-      anisotropy: emx / emn, directionality: emx / esum, ortho_contrast: Math.sqrt(E.reduce(function (s, e) { return s + (e - emean) * (e - emean); }, 0) / 3) / emean,
-      aniso_efficiency: (emx / emn) / v, surface_complexity: (sheet ? 2.4 : 1.4) + v * 3 + R() * 1.6,
+      anisotropy: emx / emn, directionality: emx / esum,
       ex_norm: E[0], ey_norm: E[1], ez_norm: E[2], stiffness_density_norm: emean / v,
       keff_x_norm: kx[0], keff_y_norm: kx[1], keff_z_norm: kx[2], keff_max_norm: Math.max.apply(null, kx), keff_avg_norm: (kx[0] + kx[1] + kx[2]) / 3, thermal_anisotropy: Math.max.apply(null, kx) / Math.min.apply(null, kx),
       /* Sweep's stored form: 1e6 / (E* · 100 GPa), capped at 1e6 */
-      microstrain_x_per_gpa: Math.min(1e6, 1e4 / E[0]), microstrain_y_per_gpa: Math.min(1e6, 1e4 / E[1]), microstrain_z_per_gpa: Math.min(1e6, 1e4 / E[2]), microstrain_avg_per_gpa: mu, u_compliance: mu / 2e6,
+      microstrain_x_per_gpa: Math.min(1e6, 1e4 / E[0]), microstrain_y_per_gpa: Math.min(1e6, 1e4 / E[1]), microstrain_z_per_gpa: Math.min(1e6, 1e4 / E[2]), microstrain_avg_per_gpa: mu,
       pore_size_norm: pore * 1.05, pore_size_p10_norm: pore * 0.55, pore_size_p50_norm: pore, pore_size_p90_norm: pore * 1.5, pore_size_cv: 0.15 + R() * 0.5,
-      throat_size_norm: pore * (0.35 + R() * 0.3), throat_ratio: 0.3 + R() * 0.5,
-      h_mean: (sheet ? 0 : 0.4) + (R() - 0.5) * 0.3, h_mean_abs: 0.2 + R() * 0.8, h_std: 0.1 + R() * 0.6, k_gauss_mean: -(0.1 + R() * 0.8), curvature_uniformity: (sheet ? 0.55 : 0.3) + R() * 0.35, mih: 1 + R() * 6, genus_per_cell: 2 + R() * 20,
+      throat_size_norm: pore * (0.35 + R() * 0.3),
+      h_mean: (sheet ? 0 : 0.4) + (R() - 0.5) * 0.3, h_mean_abs: 0.2 + R() * 0.8, h_std: 0.1 + R() * 0.6, curvature_uniformity: (sheet ? 0.55 : 0.3) + R() * 0.35, mih: 1 + R() * 6, genus_per_cell: 2 + R() * 20,
       tortuosity_min: 1.05 + R() * 0.6, tortuosity_avg: 1.2 + R() * 0.8, d_eff_max_norm: (1 - v) * (0.4 + R() * 0.4), d_eff_avg_norm: (1 - v) * (0.3 + R() * 0.35),
       linear_cap_active: false, linear_cap_kind: null, degenerate: false, solver_validity: 'valid', cg_iters: 40 + Math.floor(R() * 200), cg_converged: true,
       metrics_extended: { connect_x: kap >= 0.33, connect_y: kap >= 0.67, connect_z: kap >= 0.99, perc_x: true, perc_y: true, perc_z: R() < 0.9,
         Gyz_norm: Gm[0], Gxz_norm: Gm[1], Gxy_norm: Gm[2], specific_surface: R() < 0.7 ? +((sheet ? 5.2 : 2.6) + R() * 1.4).toFixed(3) : undefined, C_GPa: mockC(E, Gm, fam === 'beam' && R() < 0.3 ? -0.15 - R() * 0.2 : 0.18 + R() * 0.16, R), Es_ref_GPa: 110,   /* v0.9.0 */
-        stiffness_flag: flag, stiffness_flag_reasons: flag ? 'pore-limited ' + 'XYZ'[Math.floor(R() * 3)] : '', reference: i % 97 === 0 },
+        stiffness_flag: flag, stiffness_flag_reasons: flag ? 'pore-limited ' + 'XYZ'[Math.floor(R() * 3)] : '', reference: i % 97 === 0,
+        /* v0.11.0 — per-axis tortuosity (10 = blocked, its bit in tortuosity_nonperc) and the curvature profile */
+        tortuosity_x: 1.05 + R() * 0.6, tortuosity_y: 1.1 + R() * 0.7, tortuosity_z: tzB ? 10 : 1.1 + R() * 0.8, tortuosity_nonperc: tzB ? 4 : 0,
+        curv_f_neg: +(sheet ? 0.9 + R() * 0.1 : fam === 'beam' ? 0.05 + R() * 0.2 : 0.3 + R() * 0.6).toFixed(4), curv_f_sad: +(sheet ? 0.85 + R() * 0.15 : 0.2 + R() * 0.5).toFixed(4),
+        curv_k2_mean: -(1 + R() * 5), curv_k2_sd: 1 + R() * 8, curv_k2_neg_med: -(3 + R() * 12), curv_k_neg_int: -(5 + R() * 60),
+        curv_gb_resid: sheet ? R() * 0.2 : R() * 30, curv_flag: !sheet && R() < 0.6, curv_N: 64 },
       recipe: Object.assign(recipe, { homogenization: { grid: R() < 0.7 ? 64 : 32 } })
     });
   }

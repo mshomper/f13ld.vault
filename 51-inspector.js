@@ -38,6 +38,8 @@ function noticesHTML(d) {
     h += '<div class="notice out">' + gl('dot') + '<div><b>Outside your filters.</b> ' + (fails.length ? 'Hidden by ' + fails.map(function (t) { return '<button class="chip-mini" data-untag="' + esc(t.id) + '">' + esc(t.k + ' ' + t.v) + gl('x') + '</button>'; }).join(' ') : '') + '</div></div>';
   }
   if (d._stiff_flag === 'flagged') h += '<div class="notice warn">' + gl('flag') + '<div><b>Stiffness may read high</b>' + (d._flag_reasons ? ' — ' + esc(d._flag_reasons) : '') + '. Sweep\'s fast mode flagged it; verify in F13LD.lab.</div></div>';
+  /* v0.11.0 — Sweep's Gauss–Bonnet check on the curvature grid */
+  if (d._curv_flag === 'flagged') h += '<div class="notice warn">' + gl('flag') + '<div><b>Curvature not resolved</b> — the surface’s total curvature misses its topology by ' + (d._cgb != null ? Math.abs(d._cgb).toFixed(1) : '?') + ' (Gauss–Bonnet). Sharp creases, thin walls or fine struts the curvature grid can’t hold; read the curvature values as rough.</div></div>';
   if (d.linear_cap_active) h += '<div class="notice warn">' + gl('flag') + '<div><b>' + esc(d.linear_cap_kind || 'Yield') + ' cap reached</b> at the reference load — compliance metrics are empty for this design.</div></div>';
   /* v0.7.1 — from an aimed run (24-aim.js) */
   var AR = aimRunOf(d);
@@ -85,6 +87,7 @@ function provenanceHTML(d) {
     ['solver', solverText(d.solver)], ['aimed at', aimedText(d.solver)], ['grid', d._grid_N != null ? 'N = ' + d._grid_N : null], ['validity', d.solver_validity],
     ['converged', d.cg_converged == null ? null : (d.cg_converged ? 'yes' : 'no') + (d.cg_iters ? ' · ' + d.cg_iters + ' iterations' : '')],
     ['material', mat ? mat + (d.e_solid_gpa ? ' · ' + d.e_solid_gpa + ' GPa' : '') : (d.e_solid_gpa ? d.e_solid_gpa + ' GPa' : null)],
+    ['curvature', d._cfneg != null ? ((d.metrics_extended || {}).curv_N ? (d.metrics_extended.curv_N + '³ grid · ') : '') + 'Gauss–Bonnet residual ' + (d._cgb != null ? d._cgb.toFixed(2) : '—') : null],
     ['cell size', d.cell_size_mm != null ? (+d.cell_size_mm).toFixed(2) + ' mm' : null], ['σ ref', d.sigma_ref_gpa != null ? (+d.sigma_ref_gpa * 1000).toFixed(0) + ' MPa' : null],
     ['date', date ? new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null]
   ].filter(function (r) { return r[1] != null && r[1] !== ''; });

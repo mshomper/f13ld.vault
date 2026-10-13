@@ -152,6 +152,20 @@ svg{display:block}
 .pop .mi small{font-size:12px;color:var(--t3);margin-left:auto;flex-shrink:0}
 .pop .num{display:flex;gap:6px;padding:8px}
 .pop .num button{padding:0 12px;border-radius:8px;background:var(--vault-deep);color:#fff;font:600 13px 'Exo 2'}
+.dup{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 6px;padding:8px 10px;border-radius:9px;background:var(--vault-tint);border:1px solid rgba(91,164,238,.35);font-size:12px;color:var(--t2)}
+.dup[hidden]{display:none}
+.dup .g{color:var(--vault)}
+.dup span{flex:1;min-width:180px}
+.dup b{color:var(--t1);font-weight:600}
+.dup button{font:600 12px 'Exo 2';color:var(--vault);padding:3px 8px;border-radius:6px}
+.dup button:hover{background:var(--s3);color:var(--t1)}
+.pop{width:min(340px,calc(100vw - 20px))!important;max-height:min(460px,72vh)!important}
+.gch{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.gc{padding:3px 8px;border-radius:999px;border:1px solid var(--hair);background:var(--s2);font:500 12px 'Exo 2';color:var(--t3)}
+.gc:hover{color:var(--t1)}
+.gc.on{border-color:rgba(91,164,238,.6);color:var(--t1);background:var(--vault-tint)}
+.pop .pl{flex:1;min-height:0}
+.pc{font:500 12px var(--mono);color:var(--t3);padding:6px 12px;border-top:1px solid var(--hair)}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--s3);border:1px solid var(--hair2);color:var(--t1);padding:9px 14px;border-radius:9px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
 .toast.on{opacity:1}
 </style>
@@ -161,8 +175,8 @@ svg{display:block}
   <div class="top">
     <svg class="mark" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="7" fill="#0C447C" stroke="#5BA4EE" stroke-width="1.5"/><path d="M9 11l7 11 7-11" fill="none" stroke="#E6F1FB" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.2" fill="#c8f542"/></svg>
     <h1>F13LD<span>.vault</span></h1>
-    <span class="sub">Variable constructor · mockup rev 2</span>
-    <span class="tag">synthetic data · 320 designs</span>
+    <span class="sub">Variable constructor · mockup rev 3</span>
+    <span class="tag">synthetic values · 320 designs · all 69 metrics</span>
   </div>
 
   <div class="grid">
@@ -202,6 +216,10 @@ svg{display:block}
           </div>
         </div>
         <div class="fmsg" id="fmsg"></div>
+        <div class="dup" id="dup" hidden>
+          <svg class="g" viewBox="0 0 16 16"><rect x="2.5" y="4.5" width="7" height="7" rx="1.5"/><rect x="6.5" y="2.5" width="7" height="7" rx="1.5"/><circle class="acc" cx="10" cy="6" r="1.5"/></svg>
+          <span id="dupTx"></span><button id="dupUse">Use it instead</button>
+        </div>
 
         <div class="meta">
           <input class="fld" id="vname" placeholder="Name it" maxlength="40" autocomplete="off">
@@ -264,49 +282,55 @@ svg{display:block}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ───────── synthetic designs ───────── */
+/* ───────── synthetic designs — every Vault metric except domain score and scarcity.
+   The values are made up; only the relations that the duplicate check should
+   catch are real (e.g. Voigt efficiency = E* ÷ solid fraction). ───────── */
 var R=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(7);
 var FAM={tpms:'#5BA4EE',grain:'#1D9E75',beam:'#EF9F27',foam:'#EB6F85',noise:'#B48CF2'};
 var NAMES={tpms:['Gyroid sheet','Diamond sheet','Primitive','I-WP','Neovius'],grain:['Spinodoid L','Spinodoid C','GRF'],beam:['Octet','BCC','Kelvin strut'],foam:['Voronoi','Weaire–Phelan','Kelvin foam'],noise:['Veined','Foam noise']};
 var D=[];
+function sum(a){return a.reduce(function(s,x){return s+x;},0);}
+function rr(a,b){return a+R()*(b-a);}
 Object.keys(FAM).forEach(function(f,fi){
   var n=f==='tpms'?110:f==='beam'?70:f==='grain'?60:f==='foam'?50:30;
-  var nexp=[1.55,1.9,1.2,2.2,2.0][fi],C=[0.62,0.45,0.35,0.9,0.5][fi];
+  var nexp=[1.55,1.9,1.2,2.2,2.0][fi],C=[0.62,0.45,0.35,0.9,0.5][fi],L=4;
   for(var i=0;i<n;i++){
     var vf=6+R()*52,rho=vf/100,base=C*Math.pow(rho,nexp);
     var bias=f==='beam'?[1+R()*2.5,1,1]:f==='grain'?[1+R()*1.8,1+R()*.4,1]:[1+R()*.25,1+R()*.25,1+R()*.25];
-    var ms=(bias[0]+bias[1]+bias[2])/3,E=bias.map(function(b){return base*b/ms;});
-    var G=f==='noise'&&R()<.5?null:base*(0.25+R()*0.35);
-    var pore=(1-rho)*(0.5+R()*0.35),thr=pore*(0.35+R()*0.6),em=(E[0]+E[1]+E[2])/3;
-    D.push({fam:f,name:NAMES[f][Math.floor(R()*NAMES[f].length)]+' #'+(i+1),
-      volume_fraction:vf,ex_norm:E[0],ey_norm:E[1],ez_norm:E[2],_emax:Math.max.apply(null,E),_gmean:G,
-      pore_size_norm:pore,throat_size_norm:thr,_sv:(f==='tpms'?5:3)*(0.7+R()*.6),
-      keff_avg_norm:rho*(0.35+R()*0.45),tortuosity_min:1+rho*(0.4+R()*1.2),_score:R(),_nexp:nexp+(R()-.5)*.3,
-      ortho_contrast:Math.sqrt(E.reduce(function(s,e){return s+(e-em)*(e-em);},0)/3)/em});
+    var ms=sum(bias)/3,E=bias.map(function(b){return base*b/ms;}),em=sum(E)/3,emx=Math.max.apply(null,E),emn=Math.min.apply(null,E);
+    var hasG=!(f==='noise'&&R()<.5),hasC=hasG&&R()<.75;
+    var G=[0,1,2].map(function(){return base*rr(.2,.55);}),gm=sum(G)/3;
+    var pore=(1-rho)*rr(.5,.85),thr=pore*rr(.35,.95);
+    var kb=[0,1,2].map(function(a){return rho*rr(.35,.8)*(E[a]/em);}),kavg=sum(kb)/3,kmx=Math.max.apply(null,kb),kmn=Math.min.apply(null,kb);
+    var tmin=1+rho*rr(.4,1.6),hm=rr(-.15,.15),ha=Math.abs(hm)+rr(.05,.4),hs=rr(.05,.5),kg=-rr(.02,.4);
+    var d={fam:f,name:NAMES[f][Math.floor(R()*NAMES[f].length)]+' #'+(i+1),
+      volume_fraction:vf,connect_idx:rr(.7,1),perc_idx:rr(.6,1),anisotropy:emx/emn,directionality:emx/sum(E),
+      ortho_contrast:Math.sqrt(E.reduce(function(s,e){return s+(e-em)*(e-em);},0)/3)/em,surface_complexity:R(),
+      ex_norm:E[0],ey_norm:E[1],ez_norm:E[2],stiffness_density_norm:em/rho,_emax:emx,_beff:emx/rho,_perf:Math.sqrt(E[0]*E[0]+E[1]*E[1]+E[2]*E[2])/vf,
+      gyz_norm:hasG?G[0]:null,gxz_norm:hasG?G[1]:null,gxy_norm:hasG?G[2]:null,_gmean:hasG?gm:null,
+      _nexp:nexp+(R()-.5)*.3,
+      _numin:hasC?rr(f==='beam'?-.35:-.05,.3):null,_nu_xy:hasC?rr(-.1,.45):null,_nu_xz:hasC?rr(-.1,.45):null,_nu_yz:hasC?rr(-.1,.45):null,
+      _edmax:hasC?emx*rr(1,1.35):null,_edmin:hasC?emn*rr(.55,1):null,_au:hasC?(emx/emn-1)*2+rr(0,.6):null,_zener:hasC?rr(.5,2.2):null,
+      _kb:hasC?em*rr(.5,1):null,_hs:hasC?rr(.25,.9):null,_ge:hasC?rr(.18,.45):null,
+      pore_size_norm:pore,pore_size_p10_norm:pore*rr(.18,.3),pore_size_p50_norm:pore*rr(.4,.55),pore_size_p90_norm:pore*rr(.7,.9),pore_size_cv:rr(.15,.6),
+      throat_size_norm:thr,throat_ratio:thr,_tp:thr/pore,_sv:(f==='tpms'?5:3)*rr(.7,1.3),
+      keff_x_norm:kb[0],keff_y_norm:kb[1],keff_z_norm:kb[2],keff_max_norm:kmx,keff_avg_norm:kavg,thermal_anisotropy:kmx/kmn,_keff:kavg/rho,
+      tortuosity_min:tmin,tortuosity_avg:tmin*rr(1,1.3),d_eff_max_norm:(1-rho)/tmin,d_eff_avg_norm:(1-rho)/tmin*rr(.6,.95),
+      microstrain_x_per_gpa:9.09/E[0],microstrain_y_per_gpa:9.09/E[1],microstrain_z_per_gpa:9.09/E[2],microstrain_avg_per_gpa:9.09/em,u_compliance:4.5/em,
+      h_mean:hm/L,h_mean_abs:ha/L,h_std:hs/L,k_gauss_mean:kg/(L*L),curvature_uniformity:1/(1+hs/ha),mih:rr(.5,3)*L,
+      _hL:hm,_hLa:ha,_hsL:hs,_kL2:kg,genus_per_cell:Math.round(rr(1,9))};
+    d._mihL=d.mih/L;d._ga=d._emax/Math.pow(rho,d._nexp);
+    D.push(d);
   }
 });
 var N=D.length;
-
-var M=[
- {g:'Structure',k:'volume_fraction',l:'Volume fraction',s:'VF'},
- {g:'Derived',k:'_emax',l:'Peak stiffness E* / Es',s:'E*'},
- {g:'Derived',k:'_gmean',l:'Mean shear G / Es',s:'G*'},
- {g:'Derived',k:'_nexp',l:'Density exponent n',s:'n'},
- {g:'Derived',k:'_score',l:'Domain score',s:'Score'},
- {g:'Stiffness',k:'ex_norm',l:'Young’s Ex / Es',s:'Ex'},
- {g:'Stiffness',k:'ey_norm',l:'Young’s Ey / Es',s:'Ey'},
- {g:'Stiffness',k:'ez_norm',l:'Young’s Ez / Es',s:'Ez'},
- {g:'Pore',k:'pore_size_norm',l:'Pore / cell',s:'Pore'},
- {g:'Pore',k:'throat_size_norm',l:'Throat / cell',s:'Throat'},
- {g:'Geometry',k:'_sv',l:'Specific surface S/V²ᐟ³',s:'S/V'},
- {g:'Thermal',k:'keff_avg_norm',l:'Conductivity k avg / ks',s:'k avg'},
- {g:'Transport',k:'tortuosity_min',l:'Tortuosity (min axis)',s:'τ min'},
- {g:'Retired · still in the data',k:'ortho_contrast',l:'Ortho contrast',s:'Ortho Ω'}
-];
+var M=[{"g": "Geometry", "k": "_sv", "l": "Specific surface S/V²ᐟ³", "s": "S/V"}, {"g": "Geometry", "k": "volume_fraction", "l": "Volume fraction", "s": "VF"}, {"g": "Geometry", "k": "connect_idx", "l": "Solid connectivity κ", "s": "κ solid"}, {"g": "Geometry", "k": "perc_idx", "l": "Void percolation", "s": "κ void"}, {"g": "Geometry", "k": "anisotropy", "l": "Axial anisotropy", "s": "Axial aniso"}, {"g": "Geometry", "k": "directionality", "l": "Directionality Ψ", "s": "Dir Ψ"}, {"g": "Geometry", "k": "surface_complexity", "l": "Surface complexity (voxel faces)", "s": "Surface"}, {"g": "Stiffness", "k": "ex_norm", "l": "Stiffness Ex / Es", "s": "Ex"}, {"g": "Stiffness", "k": "ey_norm", "l": "Stiffness Ey / Es", "s": "Ey"}, {"g": "Stiffness", "k": "ez_norm", "l": "Stiffness Ez / Es", "s": "Ez"}, {"g": "Stiffness", "k": "stiffness_density_norm", "l": "Voigt efficiency (mean axis)", "s": "Voigt avg"}, {"g": "Shear", "k": "gyz_norm", "l": "Shear Gyz / Es", "s": "Gyz"}, {"g": "Shear", "k": "gxz_norm", "l": "Shear Gxz / Es", "s": "Gxz"}, {"g": "Shear", "k": "gxy_norm", "l": "Shear Gxy / Es", "s": "Gxy"}, {"g": "Elastic tensor", "k": "_numin", "l": "Poisson’s ratio (min)", "s": "ν min"}, {"g": "Elastic tensor", "k": "_nu_xy", "l": "Poisson’s ratio ν xy", "s": "ν xy"}, {"g": "Elastic tensor", "k": "_nu_xz", "l": "Poisson’s ratio ν xz", "s": "ν xz"}, {"g": "Elastic tensor", "k": "_nu_yz", "l": "Poisson’s ratio ν yz", "s": "ν yz"}, {"g": "Elastic tensor", "k": "_edmax", "l": "Stiffest direction E / Es", "s": "E dir max"}, {"g": "Elastic tensor", "k": "_edmin", "l": "Softest direction E / Es", "s": "E dir min"}, {"g": "Elastic tensor", "k": "_au", "l": "Universal anisotropy A^U", "s": "A^U"}, {"g": "Elastic tensor", "k": "_zener", "l": "Zener ratio", "s": "Zener"}, {"g": "Elastic tensor", "k": "_kb", "l": "Bulk modulus K / Es", "s": "K"}, {"g": "Elastic tensor", "k": "_hs", "l": "Hashin–Shtrikman efficiency", "s": "HS eff"}, {"g": "Elastic tensor", "k": "_ge", "l": "Shear ÷ Young’s G/E", "s": "G/E"}, {"g": "Derived", "k": "_emax", "l": "Peak stiffness E* / Es", "s": "E*"}, {"g": "Derived", "k": "_gmean", "l": "Mean shear G / Es", "s": "G*"}, {"g": "Derived", "k": "_nexp", "l": "Density exponent n", "s": "n"}, {"g": "Derived", "k": "_beff", "l": "Voigt efficiency (stiffest axis)", "s": "Voigt max"}, {"g": "Derived", "k": "_ga", "l": "Gibson–Ashby prefactor C", "s": "C"}, {"g": "Pore", "k": "_tp", "l": "Throat ÷ pore", "s": "Throat/pore"}, {"g": "Pore", "k": "pore_size_norm", "l": "Mean pore φ / cell", "s": "Pore"}, {"g": "Pore", "k": "pore_size_p10_norm", "l": "Pore P10 / cell", "s": "P10"}, {"g": "Pore", "k": "pore_size_p50_norm", "l": "Pore P50 / cell", "s": "P50"}, {"g": "Pore", "k": "pore_size_p90_norm", "l": "Pore P90 / cell", "s": "P90"}, {"g": "Pore", "k": "pore_size_cv", "l": "Pore size CV", "s": "Pore CV"}, {"g": "Pore", "k": "throat_size_norm", "l": "Throat / cell", "s": "Throat"}, {"g": "Thermal", "k": "_keff", "l": "Conductivity efficiency", "s": "k eff"}, {"g": "Thermal", "k": "keff_x_norm", "l": "Thermal cond. kx / ks", "s": "kx"}, {"g": "Thermal", "k": "keff_y_norm", "l": "Thermal cond. ky / ks", "s": "ky"}, {"g": "Thermal", "k": "keff_z_norm", "l": "Thermal cond. kz / ks", "s": "kz"}, {"g": "Thermal", "k": "keff_max_norm", "l": "Thermal cond. (best axis)", "s": "k max"}, {"g": "Thermal", "k": "keff_avg_norm", "l": "Thermal cond. (avg) / ks", "s": "k avg"}, {"g": "Thermal", "k": "thermal_anisotropy", "l": "Thermal anisotropy kα", "s": "k aniso"}, {"g": "Transport", "k": "tortuosity_min", "l": "Tortuosity (min axis)", "s": "τ min"}, {"g": "Transport", "k": "tortuosity_avg", "l": "Tortuosity (avg)", "s": "τ avg"}, {"g": "Transport", "k": "d_eff_max_norm", "l": "D_eff (max axis) / D₀", "s": "D max"}, {"g": "Transport", "k": "d_eff_avg_norm", "l": "D_eff (avg) / D₀", "s": "D avg"}, {"g": "Curvature", "k": "_hL", "l": "Mean curvature H̄·L (signed)", "s": "H̄L"}, {"g": "Curvature", "k": "_hLa", "l": "Mean curvature |H̄|·L", "s": "|H̄|L"}, {"g": "Curvature", "k": "_hsL", "l": "Curvature spread σ(H)·L", "s": "σH·L"}, {"g": "Curvature", "k": "_kL2", "l": "Gaussian curvature K·L²", "s": "KL²"}, {"g": "Curvature", "k": "_mihL", "l": "Integrated curvature ∫H dA ÷ L", "s": "MIH/L"}, {"g": "Curvature", "k": "curvature_uniformity", "l": "Curvature uniformity", "s": "Curv unif"}, {"g": "Compliance", "k": "microstrain_x_per_gpa", "l": "μstrain X", "s": "με x"}, {"g": "Compliance", "k": "microstrain_y_per_gpa", "l": "μstrain Y", "s": "με y"}, {"g": "Compliance", "k": "microstrain_z_per_gpa", "l": "μstrain Z", "s": "με z"}, {"g": "Compliance", "k": "microstrain_avg_per_gpa", "l": "μstrain (avg)", "s": "με avg"}, {"g": "Topology", "k": "genus_per_cell", "l": "Genus per cell", "s": "Genus"}, {"g": "Retired · still in the data", "k": "_perf", "l": "Stiffness efficiency |E|/VF", "s": "|E|/VF"}, {"g": "Retired · still in the data", "k": "ortho_contrast", "l": "Ortho contrast Ω", "s": "Ortho Ω"}, {"g": "Retired · still in the data", "k": "aniso_efficiency", "l": "Aniso efficiency α/ρ", "s": "α/ρ"}, {"g": "Retired · still in the data", "k": "u_compliance", "l": "Strain energy U", "s": "U/σ²"}, {"g": "Retired · still in the data", "k": "throat_ratio", "l": "Throat ratio (stored)", "s": "Throat r"}, {"g": "Retired · still in the data", "k": "h_mean", "l": "Mean curvature H̄ (signed)", "s": "H̄"}, {"g": "Retired · still in the data", "k": "h_mean_abs", "l": "Mean curvature |H̄|", "s": "|H̄|"}, {"g": "Retired · still in the data", "k": "h_std", "l": "Curvature std σ(H)", "s": "σH"}, {"g": "Retired · still in the data", "k": "k_gauss_mean", "l": "Gaussian curvature K", "s": "K gauss"}, {"g": "Retired · still in the data", "k": "mih", "l": "Mean integrated curvature", "s": "MIH"}];
 var BYS={},BYK={};M.forEach(function(m){BYS[m.s]=m;BYK[m.k]=m;});
 var USER=[],EDITING=null;
 function userBy(s){for(var i=0;i<USER.length;i++)if(USER[i].s===s)return USER[i];return null;}
 function userByK(k){for(var i=0;i<USER.length;i++)if(USER[i].k===k)return USER[i];return null;}
+function metaOf(k){return BYK[k]||userByK(k);}
+function shortOf(k){var m=metaOf(k);return m?m.s:k;}
 
 /* ───────── formula: tokenize → tree → evaluate over every design (no eval) ───────── */
 var FN={abs:1,sqrt:1,log10:1,ln:1,rank:1,scale:1,min:-1,max:-1,mean:-1};
@@ -327,7 +351,7 @@ function tokenize(s){
 }
 function isStart(t){return t&&(t.t==='m'||t.t==='n'||t.t==='fn'||(t.t==='p'&&t.v==='('));}
 function isEnd(t){return t&&(t.t==='m'||t.t==='n'||(t.t==='p'&&t.v===')'));}
-function tlab(t){return t.t==='p'?'the bracket':t.v;}
+function tlab(t){return t.t==='p'?'the bracket':t.t==='m'?shortOf(t.v):t.v;}
 function parse(toks){
   var i=0;
   function adj(inList){var a=toks[i-1],b=toks[i];if(isEnd(a)&&isStart(b))err((inList?'Add a comma or an operator between ':'Add an operator between ')+tlab(a)+' and '+tlab(b),[a,b]);}
@@ -342,7 +366,7 @@ function parse(toks){
     if(!t)err('Ends too soon — add a metric or a number');
     if(t.t==='bad')err(t.why,t);
     if(t.t==='n')return {num:+t.v};
-    if(t.t==='m'){var m=BYS[t.v],u=userBy(t.v);if(!m&&!u)err('“'+t.v+'” is not a metric',t);if(u&&u===EDITING)err('A recipe cannot use itself',t);return {key:m?m.k:u.k};}
+    if(t.t==='m'){var m=metaOf(t.v);if(!m)err('“'+t.v+'” is not a metric',t);if(m===EDITING)err('A recipe cannot use itself',t);return {key:m.k};}
     if(t.t==='fn'){
       if(!pk()||pk().v!=='(')err(t.v+' needs brackets after it',t);i++;
       var args=[expr()];while(pk()&&pk().v===','){i++;args.push(expr());}
@@ -385,12 +409,12 @@ function compile(f){try{return evalTree(parse(tokenize(f)));}catch(e){return nul
 
 /* ───────── recipes ───────── */
 var TPL=[
- {n:'Ratio',s:'[G*] / [E*]',name:'Shear to stiffness'},
- {n:'Per material',s:'[S/V] / ([VF] / 100)',name:'Surface per material'},
- {n:'Density-scaled',s:'[E*] / ([VF] / 100) ^ 2',name:'Stiffness past ρ²'},
- {n:'Axis balance',s:'min([Ex], [Ey], [Ez]) / max([Ex], [Ey], [Ez])',name:'Axis balance'},
- {n:'Rank blend',s:'0.6 * rank([S/V]) + 0.4 * rank([k avg])',name:'Surface and conduction'},
- {n:'Distance to target',s:'abs([Pore] - 0.45)',name:'Pore off target'}
+ {n:'Ratio',s:'[_gmean] / [_emax]',name:'Shear to stiffness'},
+ {n:'Per material',s:'[_sv] / ([volume_fraction] / 100)',name:'Surface per material'},
+ {n:'Density-scaled',s:'[_emax] / ([volume_fraction] / 100) ^ 2',name:'Stiffness past ρ²'},
+ {n:'Weakest axis',s:'min([ex_norm], [ey_norm], [ez_norm]) / ([volume_fraction] / 100)',name:'Weakest-axis efficiency'},
+ {n:'Rank blend',s:'0.6 * rank([_sv]) + 0.4 * rank([keff_avg_norm])',name:'Surface and conduction'},
+ {n:'Distance to target',s:'abs([pore_size_norm] - 0.45)',name:'Pore off target'}
 ];
 var $=function(s){return document.querySelector(s);};
 var FORM='',SCALE='auto',BETTER='0',XK='volume_fraction',LAST=null,TPLON=-1;
@@ -398,7 +422,7 @@ $('#recipes').insertAdjacentHTML('beforeend',TPL.map(function(t,i){return '<butt
 $('#recipes').onclick=function(e){var b=e.target.closest('[data-t]');if(!b)return;var t=TPL[+b.dataset.t];TPLON=+b.dataset.t;FORM=t.s;if(!EDITING){$('#vname').value=t.name;$('#vshort').value='';}refresh();};
 
 function untok(t){return t.map(function(x){return x.t==='m'?'['+x.v+']':x.v;}).join(' ').replace(/\( /g,'(').replace(/ \)/g,')').replace(/ ,/g,',');}
-function pretty(f){return f.replace(/\*/g,'×').replace(/\//g,'÷').replace(/\[([^\]]+)\]/g,'$1').replace(/ - /g,' − ');}
+function pretty(f){return f.replace(/\[([^\]]+)\]/g,function(_,k){return '\u0001'+shortOf(k)+'\u0002';}).replace(/\*/g,'×').replace(/\//g,'÷').replace(/ - /g,' − ').replace(/\u0001([^\u0002]*)\u0002/g,'$1');}
 /* Inside min / max / mean, a value added right after another value gets its comma automatically. */
 function innerFn(toks){var st=[];toks.forEach(function(t,i){if(t.t==='p'&&t.v==='(')st.push(i>0&&toks[i-1].t==='fn'?toks[i-1].v:null);else if(t.t==='p'&&t.v===')')st.pop();});return st.length?st[st.length-1]:null;}
 function append(s){
@@ -422,20 +446,27 @@ function openPop(anchor,html,onpick,afterOpen){
   p.addEventListener('click',function(e){var b=e.target.closest('[data-v]');if(b){onpick(b.dataset.v);closePop();}});
   POP=p;if(afterOpen)afterOpen(p);return p;
 }
-function metricItems(q,cur,valueOf){
-  var g=null,h='',list=USER.map(function(u){return {g:'My recipes',l:u.l,s:u.s,k:u.k};}).concat(M);
-  list.forEach(function(m){
-    if(EDITING&&m.s===EDITING.s)return;
-    if(q&&m.l.toLowerCase().indexOf(q)<0&&m.s.toLowerCase().indexOf(q)<0)return;
-    if(m.g!==g){g=m.g;h+='<div class="mg">'+m.g+'</div>';}
-    h+='<button class="mi'+(m.s===cur||m.k===cur?' on':'')+'" data-v="'+(valueOf==='k'?m.k:m.s)+'"><span>'+m.l+'</span><em>'+m.s+'</em></button>';
+function pickList(){return USER.map(function(u){return {g:'My recipes',l:u.l,s:u.s,k:u.k};}).concat(M);}
+function groupNames(){var o=[];pickList().forEach(function(m){if(o.indexOf(m.g)<0)o.push(m.g);});return o;}
+function metricItems(q,grp,cur){
+  var g=null,h='',n=0;
+  pickList().forEach(function(m){
+    if(EDITING&&m.k===EDITING.k)return;
+    if(grp&&m.g!==grp)return;
+    if(q&&m.l.toLowerCase().indexOf(q)<0&&m.s.toLowerCase().indexOf(q)<0&&m.g.toLowerCase().indexOf(q)<0)return;
+    if(m.g!==g){g=m.g;h+='<div class="mg">'+esc(m.g)+'</div>';}
+    h+='<button class="mi'+(m.k===cur?' on':'')+'" data-v="'+esc(m.k)+'"><span>'+esc(m.l)+'</span><em>'+esc(m.s)+'</em></button>';n++;
   });
-  return h||'<div class="mg">No metric matches</div>';
+  return {h:h||'<div class="mg">No metric matches</div>',n:n};
 }
-function metricPop(anchor,head,cur,valueOf,onpick){
-  openPop(anchor,'<div class="ps"><input class="fld" placeholder="'+head+'" autocomplete="off" spellcheck="false"></div><div class="pl">'+metricItems('',cur,valueOf)+'</div>',onpick,function(p){
-    var inp=p.querySelector('input'),pl=p.querySelector('.pl');
-    inp.oninput=function(){pl.innerHTML=metricItems(inp.value.trim().toLowerCase(),cur,valueOf);};
+function metricPop(anchor,head,cur,onpick){
+  var gs=groupNames(),chips='<div class="gch"><button class="gc on" data-g="">All</button>'+gs.map(function(g){return '<button class="gc" data-g="'+esc(g)+'">'+esc(g.replace(' · still in the data',''))+'</button>';}).join('')+'</div>';
+  openPop(anchor,'<div class="ps"><input class="fld" placeholder="'+head+'" autocomplete="off" spellcheck="false">'+chips+'</div><div class="pl"></div><div class="pc"></div>',onpick,function(p){
+    var inp=p.querySelector('input'),pl=p.querySelector('.pl'),pc=p.querySelector('.pc'),grp='';
+    function draw(){var r=metricItems(inp.value.trim().toLowerCase(),grp,cur);pl.innerHTML=r.h;pl.scrollTop=0;pc.textContent=r.n+' metric'+(r.n===1?'':'s');}
+    inp.oninput=draw;
+    p.querySelector('.gch').onclick=function(e){var b=e.target.closest('[data-g]');if(!b)return;grp=b.dataset.g;[].forEach.call(this.children,function(c){c.classList.toggle('on',c===b);});draw();};
+    draw();placePop(p,anchor);
     if(matchMedia('(hover:hover)').matches)inp.focus();
   });
 }
@@ -447,7 +478,7 @@ function numberPop(anchor,start,onok){
   });
 }
 ['#addM','#addF','#addN','#xpick'].forEach(function(s){$(s).setAttribute('data-popper','');});
-$('#addM').onclick=function(){metricPop($('#addM'),'Search metrics',null,'s',function(v){append('['+v+']');});};
+$('#addM').onclick=function(){metricPop($('#addM'),'Search '+M.length+' metrics',null,function(v){append('['+v+']');});};
 $('#addF').onclick=function(){openPop($('#addF'),'<div class="pl">'+FN_INFO.map(function(f){return '<button class="mi" data-v="'+f[0]+'"><span style="font-family:var(--mono);color:var(--vault)">'+(f[0]==='scale'?'scale 0–1':f[0])+'</span><small>'+f[1]+'</small></button>';}).join('')+'</div>',function(v){append(v+'(');});};
 $('#addN').onclick=function(){numberPop($('#addN'),'1',function(v){append(v);});};
 [].forEach.call(document.querySelectorAll('.tb[data-k]'),function(b){b.onclick=function(){append(b.dataset.k);};});
@@ -455,10 +486,11 @@ $('#bk').onclick=function(){var t=tokenize(FORM);t.pop();if(t.length&&t[t.length
 $('#clr').onclick=function(){FORM='';TPLON=-1;refresh();};
 $('#fline').onclick=function(e){
   var c=e.target.closest('[data-i]');if(!c)return;var toks=tokenize(FORM),t=toks[+c.dataset.i];
-  if(t.t==='m')metricPop(c,'Swap '+t.v+' for…',t.v,'s',function(v){t.v=v;FORM=untok(toks);refresh();});
+  if(t.t==='m')metricPop(c,'Swap '+shortOf(t.v)+' for…',t.v,function(v){t.v=v;FORM=untok(toks);refresh();});
   else if(t.t==='n')numberPop(c,t.v,function(v){t.v=v;FORM=untok(toks);refresh();});
 };
-$('#xpick').onclick=function(){metricPop($('#xpick'),'Plot against…',XK,'k',function(k){XK=k;preview();});};
+$('#dupUse').onclick=function(){if(!DUP)return;XK=DUP.m.k;toast('In Vault this puts <b>'+esc(DUP.m.l)+'</b> on the axis you were building for');};
+$('#xpick').onclick=function(){metricPop($('#xpick'),'Plot against…',XK,function(k){XK=k;preview();});};
 
 /* ───────── refresh ───────── */
 function fmt(v){if(!isFinite(v))return '—';var a=Math.abs(v);return a===0?'0':a>=1e4||a<1e-3?v.toExponential(1):a>=100?v.toFixed(0):a>=10?v.toFixed(1):a>=1?v.toFixed(2):v.toPrecision(2);}
@@ -468,7 +500,7 @@ function refresh(){
   try{tree=parse(toks);}catch(e){err=e.message;badTok=e.tok;}
   var html=toks.map(function(t,i){
     var bad=((Array.isArray(badTok)?badTok.indexOf(t)>=0:t===badTok)||t.t==='bad')?' bad':'';
-    if(t.t==='m'){var m=BYS[t.v],u=userBy(t.v);return '<span class="tk '+(u?'u':'m')+bad+'" data-i="'+i+'" data-popper title="'+(m?m.l:u?u.l:t.v)+' — tap to swap">'+t.v+'</span>';}
+    if(t.t==='m'){var m=metaOf(t.v),u=userByK(t.v);return '<span class="tk '+(u?'u':'m')+bad+'" data-i="'+i+'" data-popper title="'+esc(m?m.l:t.v)+' — tap to swap">'+esc(m?m.s:t.v)+'</span>';}
     if(t.t==='n')return '<span class="tk n'+bad+'" data-i="'+i+'" data-popper title="Tap to change">'+t.v+'</span>';
     if(t.t==='op')return '<span class="tk op'+bad+'">'+({'*':'×','/':'÷','-':'−'}[t.v]||t.v)+'</span>';
     if(t.t==='p')return '<span class="tk '+(t.v===','?'c':'p')+bad+'">'+t.v+'</span>';
@@ -482,7 +514,29 @@ function refresh(){
   $('#fmsg').textContent=showErr?err:(toks.length?'Tap a blue metric to swap it, an amber number to change it.':'');
   LAST=tree?evalTree(tree):null;
   $('#save').disabled=!LAST;
+  dupCheck();
   preview();
+}
+
+
+/* ───────── duplicate check: does the recipe move in lockstep with a metric already in the menu? ───────── */
+var RANKC={};
+function ranksOf(arr){var idx=[],i;for(i=0;i<N;i++)if(isFinite(arr[i]))idx.push(i);idx.sort(function(a,b){return arr[a]-arr[b];});var r=new Float64Array(N).fill(NaN);idx.forEach(function(ix,j){r[ix]=j;});return r;}
+function rho(ra,rb){var xs=[],ys=[],i;for(i=0;i<N;i++)if(isFinite(ra[i])&&isFinite(rb[i])){xs.push(ra[i]);ys.push(rb[i]);}
+  var n=xs.length;if(n<20)return {r:0,n:n};var mx=sum(xs)/n,my=sum(ys)/n,sxy=0,sxx=0,syy=0;
+  for(i=0;i<n;i++){var a=xs[i]-mx,b=ys[i]-my;sxy+=a*b;sxx+=a*a;syy+=b*b;}return {r:sxx&&syy?sxy/Math.sqrt(sxx*syy):0,n:n};}
+var DUP=null;
+function dupCheck(){
+  DUP=null;var box=$('#dup');if(!LAST){box.hidden=true;return;}
+  var me=ranksOf(LAST),best=null;
+  pickList().forEach(function(m){
+    if(EDITING&&m.k===EDITING.k)return;
+    var rk=userByK(m.k)?ranksOf(m.vals||userByK(m.k).vals):(RANKC[m.k]||(RANKC[m.k]=ranksOf(col(m.k))));
+    var c=rho(me,rk);if(Math.abs(c.r)>=0.995&&(!best||Math.abs(c.r)>Math.abs(best.r)))best={m:m,r:c.r};
+  });
+  if(!best){box.hidden=true;return;}
+  DUP=best;box.hidden=false;
+  $('#dupTx').innerHTML='Moves in lockstep with <b>'+esc(best.m.l)+'</b>'+(best.r<0?', in the opposite direction':'')+' — already in the menu.';
 }
 
 /* ───────── stylized shape preview ───────── */
@@ -554,7 +608,8 @@ seg('#segScale',function(v){SCALE=v;});seg('#segBetter',function(v){BETTER=v;});
 var LS_KEY='f13ld.vault.variables.v1';
 function store(){try{localStorage.setItem(LS_KEY,JSON.stringify(USER.map(function(u){return {k:u.k,l:u.l,s:u.s,f:u.f,scale:u.scale,better:u.better};})));}catch(e){}}
 function load(){try{var a=JSON.parse(localStorage.getItem(LS_KEY)||'[]');if(Array.isArray(a))a.forEach(addRecipe);}catch(e){}}
-function addRecipe(r){if(!r||typeof r.f!=='string'||typeof r.l!=='string')return null;var s=uniqShort(String(r.s||autoShort(r.l)).slice(0,10)),u={k:r.k||newKey(),l:r.l.slice(0,40),s:s,f:r.f,scale:r.scale||'auto',better:String(r.better||'0')};USER.push(u);u.vals=compile(u.f)||new Float64Array(N).fill(NaN);return u;}
+function migrate(f){return f.replace(/\[([^\]]+)\]/g,function(all,x){return !metaOf(x)&&BYS[x]?'['+BYS[x].k+']':all;});}
+function addRecipe(r){if(!r||typeof r.f!=='string'||typeof r.l!=='string')return null;r.f=migrate(r.f);var s=uniqShort(String(r.s||autoShort(r.l)).slice(0,10)),u={k:r.k||newKey(),l:r.l.slice(0,40),s:s,f:r.f,scale:r.scale||'auto',better:String(r.better||'0')};USER.push(u);u.vals=compile(u.f)||new Float64Array(N).fill(NaN);return u;}
 function newKey(){return '~u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);}
 function autoShort(n){var w=n.split(/\s+/).filter(Boolean);return w.length>1?w.map(function(x){return x[0].toUpperCase();}).join('').slice(0,5):n.slice(0,8);}
 function uniqShort(s){var b=s,i=2;while(BYS[s]||(userBy(s)&&userBy(s)!==EDITING))s=b+i++;return s;}
@@ -580,7 +635,7 @@ $('#saved').onclick=function(e){
   if(b.dataset.ed!=null)startEdit(USER[+b.dataset.ed]);
   if(b.dataset.du!=null){var d=USER[+b.dataset.du];endEdit();FORM=d.f;TPLON=-1;$('#vname').value=(d.l+' copy').slice(0,40);$('#vshort').value='';refresh();}
   if(b.dataset.rm!=null){
-    var r=USER[+b.dataset.rm],dep=USER.filter(function(x){return x!==r&&x.f.indexOf('['+r.s+']')>=0;});
+    var r=USER[+b.dataset.rm],dep=USER.filter(function(x){return x!==r&&x.f.indexOf('['+r.k+']')>=0;});
     if(dep.length){toast('<b>'+esc(dep[0].l)+'</b> uses this one — change it first');return;}
     if(EDITING===r)endEdit();USER.splice(+b.dataset.rm,1);store();drawSaved();drawMenu();toast('Deleted <b>'+esc(r.l)+'</b>');
   }
@@ -600,7 +655,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp
 function drawMenu(hl){
   var h='<div class="mh">2D · Y axis</div><button class="mi new"><svg class="g" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></svg><span>New variable…</span></button>';
   if(USER.length)h+='<div class="mg">My recipes</div>'+USER.slice(0,4).map(function(u){return '<button class="mi mine"'+(u.k===hl?' style="color:var(--neon)"':'')+'><span>'+esc(u.l)+'</span><em>'+esc(u.s)+'</em></button>';}).join('');
-  h+='<div class="mg">Derived</div><button class="mi"><span>Peak stiffness E* / Es</span><em>E*</em></button><button class="mi"><span>Mean shear G / Es</span><em>G*</em></button>';
+  h+='<div class="mg">Geometry</div><button class="mi"><span>Volume fraction</span><em>VF</em></button><button class="mi"><span>Axial anisotropy</span><em>Axial aniso</em></button>';
   $('#axmenu').innerHTML=h;
 }
 var tt;function toast(h){var t=$('#toast');t.innerHTML=h;t.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('on');},2400);}

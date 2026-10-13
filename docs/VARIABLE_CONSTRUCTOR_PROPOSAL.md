@@ -19,7 +19,7 @@ registered the same way, so it reaches every picker without touching each one.
 **Constructor panel** (desktop: drawer tab or modal; phone: full-height sheet)
 
 1. **Starting recipes** in one row of small pills — Ratio, Per material
-   (÷ VF), Density-scaled (÷ ρⁿ), Axis balance, Rank blend, Distance to target.
+   (÷ VF), Density-scaled (÷ ρⁿ), Weakest axis, Rank blend, Distance to target.
 2. **Formula bar** (rev 2, Matt 2026-10-12: more succinct). One line of
    chips — metrics in blue (short name, full name on hover), numbers in amber;
    tap a chip to swap or change it. One toolbar under it: Metric (searchable
@@ -47,8 +47,18 @@ uses it), export to / import from a `.json` file. **Saved per browser**
 - Operators `+ − × ÷ ^`, brackets, numbers.
 - Functions: `abs`, `sqrt`, `log10`, `ln`, `min`, `max`, `mean`,
   `rank` (0–1 percentile over the loaded designs), `scale` (0–1 min–max).
-- Inputs: any metric, including retired ones (still in the data) and other
-  saved variables (no loops).
+- Inputs (Matt 2026-10-12): every metric in Vault's menus, derived and
+  elastic-tensor ones included, plus retired ones (still in the data) and
+  other saved recipes (no loops). **Domain score and scarcity are left out**
+  — they change with the domain, so a recipe built on them would change
+  meaning silently. No warning tags on any input.
+- Formulas store metric keys, not short names; chips show the short name.
+- **Metric picker**: search plus group filters (All, My recipes, Geometry,
+  Stiffness, …, Retired) and a live count — 69 metrics today.
+- **Duplicate check**: if a recipe moves in lockstep with a metric or saved
+  recipe already in the menu (rank correlation ≥ 0.995 over at least 20
+  designs, either direction), the builder says so and offers "Use it
+  instead". Saving is still allowed.
 - A design whose inputs are missing, or that hits ÷ 0 or log of ≤ 0, is left
   empty — the same treatment missing metrics get today.
 - Values are the ones Vault stores: stiffness as a fraction of the solid,

@@ -1,5 +1,7 @@
 # F13LD.vault — where the variable constructor lives, and the extended tour
 
+**Built in v0.10.0** — see `docs/SESSION_RECAP_2026-10-12_v0.10.md`. The tour offers itself once to returning users who finished the old guide (Matt).
+
 Companion mockup: `docs/vault-tour-mockup.html` (offline, stand-in layout and data).
 Constructor detail: `docs/VARIABLE_CONSTRUCTOR_PROPOSAL.md`, `docs/variable-constructor-mockup.html`.
 
@@ -43,10 +45,12 @@ stops asks the user to **try it** (with a "Do it" shortcut).
 | 5 | Your build, any time | Drawer · Build target | — |
 | 6 | Make your own metric | Drawer · Variables | — |
 | 7 | Plot anything against anything | Axis chips | Tap the Y axis → New variable… |
-| 8 | Take a design further | Mesh · Lab · Queue pills (+ inspector Sweep / Download) | — |
-| 9 | That's the tour | Guide button; Ctrl K on desktop | — |
+| 8 | Find the holes | Gap map button | Turn on the gap map |
+| 9 | Aim Sweep at a gap | 2D Target tool → Aim Sweep banner | Drop a target |
+| 10 | Take a design further | Mesh · Lab · Queue pills (+ inspector Sweep / Download) | — |
+| 11 | That's the tour | Guide button; Ctrl K on desktop | — |
 
-Stop 8 lists what each hand-off does: **Mesh** — a watertight, print-ready
+Stops 8 and 9 were added at Matt's request (2026-10-12) — the gap map and aiming go hand in hand. Stop 10 lists what each hand-off does: **Mesh** — a watertight, print-ready
 3MF at your cell size; **Lab** — a full solve to verify stiffness, yield and
 buckling; **Sweep** — explore around it, or aim at a target; **Queue** —
 collect designs across devices with a word-pair code; **Download** — the

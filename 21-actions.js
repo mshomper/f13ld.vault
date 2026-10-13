@@ -62,6 +62,7 @@ function pulseOn(now) { return now < (S.pulseUntil || 0); }
 function pulsePh(now, per) { return pulseOn(now) ? (now % per) / per : 0.999; }
 function select(d, src) {
   pulseKick();
+  if (d && src !== 'step-quiet' && src !== 'tour' && typeof tourEvent === 'function') tourEvent('select');   /* v0.10.0 */
   S.sel = d || null;
   S.near = d ? nearestOf(d, 6) : [];
   if (d) {
@@ -148,7 +149,7 @@ function setTool(t) { S.tool = t; $$('#dTool [data-tool]').forEach(function (b) 
 function setTool2(t) { S.tool2 = t; $$('[data-tool2]').forEach(function (b) { b.classList.toggle('on', b.dataset.tool2 === t); }); if (t === 'target') toast('Click the 2D plot to drop a target — designs rank by closeness'); }
 function setPareto(mode) { S.pareto = mode; computeFront(); $$('[data-act="pareto"]').forEach(function (b) { b.classList.toggle('on', !!mode); }); markViewsDirty(); if (mode) toast('Pareto front · <b>' + FRONT.list.filter(function (d) { return d._m; }).length + '</b> designs', { label: 'Filter to them', icon: 'filters', run: filterToFront }); }
 function filterToFront() { if (!FRONT.list.length) return; F.region = FRONT.list.filter(function (d) { return d._m; }).map(function (d) { return d._id; }); changed('Pareto front · ' + F.region.length + ' designs', true); }
-function setGap(on) { S.gap = on; computeGapGrid(); $$('[data-act="gap"]').forEach(function (b) { b.classList.toggle('on', on); }); markViewsDirty(); if (on) toast('Shaded = designs in the Vault · dashed = holes · click a hole to target it'); }
+function setGap(on) { if (on && typeof tourEvent === 'function') tourEvent('gap'); S.gap = on; computeGapGrid(); $$('[data-act="gap"]').forEach(function (b) { b.classList.toggle('on', on); }); markViewsDirty(); if (on) toast('Shaded = designs in the Vault · dashed = holes · click a hole to target it'); }
 function applyPreset(x, y) { S._domAxesAuto = false; setAxis2('x', x, true); setAxis2('y', y, true); VIEWS.p2 && VIEWS.p2.reset(); toast('2D axes · <b>' + esc(mLabel(x)) + '</b> × <b>' + esc(mLabel(y)) + '</b>'); }
 function clearAll() {
   var keep = F.rangeKeys; F = freshFilters(); F.rangeKeys = keep;

@@ -12,6 +12,7 @@ function togglePin(d) {
   if (i >= 0) S.pins.splice(i, 1);
   else { if (S.pins.length >= 4) { toast('Compare holds four — unpin one first'); return; } S.pins.push(d); }
   pinsChanged();
+  if (S.pins.indexOf(d) >= 0 && typeof tourEvent === 'function') tourEvent('pin');   /* v0.10.0 */
   toast(S.pins.indexOf(d) >= 0 ? 'Pinned <b>' + esc(displayPreset(d)) + '</b> · ' + S.pins.length + ' of 4' : 'Unpinned <b>' + esc(displayPreset(d)) + '</b>');
 }
 function pinsChanged() {
@@ -35,7 +36,9 @@ function cmpVal(d, k) { if (k !== '_score') return d[k]; var p = pct(d, '_score'
 function renderCompare() {
   var el = $('#dCompare'); if (!el) return;
   if (!S.pins.length) { el.innerHTML = '<div class="cmp-empty">' + ic('pin') + '<div>Pin up to four designs — the pin on a card, or <b>P</b> on the selected design — to compare their geometry and metrics side by side.</div></div>'; return; }
-  var keys = compareKeys(F.domain).filter(hasMetric), goals = DOMAIN_GOALS[F.domain] || DOMAIN_GOALS.all, best = {}, top = {};
+  var keys = compareKeys(F.domain), goals = Object.assign({}, DOMAIN_GOALS[F.domain] || DOMAIN_GOALS.all), best = {}, top = {};
+  VARS.forEach(function (v) { if (v.better && keys.indexOf(v.k) < 0) { keys.push(v.k); goals[v.k] = v.better; } });   /* v0.10.0 — your variables, by your better */
+  keys = keys.filter(hasMetric);
   keys.forEach(function (k) {
     var vs = S.pins.map(function (d) { return cmpVal(d, k); }).filter(isNum); if (!vs.length) return;
     top[k] = Math.max.apply(null, vs.map(Math.abs)) || 1;

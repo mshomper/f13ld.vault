@@ -721,13 +721,15 @@ var METRIC_SHORT = {
 };
 function mShort(k) { var m = METRIC_MAP[k]; return (m && m.short) || METRIC_SHORT[k] || (m ? m.label : k); }
 function mLabel(k) { if (k === '_score') return domainZLabel(); var m = METRIC_MAP[k]; return m ? m.label : k; }
-function mGloss(k) { return METRIC_GLOSSARY[k] || DERIVED_GLOSSARY[k] || null; }
+function mGloss(k) { return METRIC_GLOSSARY[k] || DERIVED_GLOSSARY[k] || (typeof varGloss === 'function' ? varGloss(k) : null); }
 
 /* Every metric the UI can pick, grouped for menus. */
 function pickableMetrics() {
   return metricsAll().filter(function (m) { return !m.retired; });   /* v0.9.0 — retired metrics stay in the inspector and the key */
 }
-function metricsAll() { return DERIVED_METRICS.concat(ALL_METRICS); }
+/* v0.10.0 — the user's own variables (25-variables.js) come first, as "My variables". */
+var USER_METRICS = [];
+function metricsAll() { return USER_METRICS.concat(DERIVED_METRICS, ALL_METRICS); }
 function isRetired(k) { var m = METRIC_MAP[k]; return !!(m && m.retired); }
 
 /* Domains: v0.4 ids, with an icon each. */

@@ -62,6 +62,7 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `21-actions.js` | views registry, point animation, select/step, setters, presets |
 | `23-reach.js` | v0.7: aiming F13LD.sweep at a 2D target — seed by reachability (density trend per family), the `&t=` payload, Voigt-bound physics warnings; `SWEEP_TARGET_KEYS` mirrors Sweep's `13-target.js` |
 | `24-aim.js` | v0.7.1: aimed runs (grouped from `solver.target` in Sweep v0.28+ exports) — Source filter, Aimed run colour, ghost targets / seed path in 2D (`aimOverlay2D` in `32-plot2d.js`); colour modes density exponent, bound efficiency, Pareto depth, similar to selected. v0.8.0: `_nexp` (computed at load in `11-data.js` `ingestRows`, before the stats) and `_beff` (`shapeDesign`) are also derived metrics — plot axes and range filters; a borrowed exponent is faded while `_nexp` is on any axis |
+| `25-variables.js` | v0.10.0: My variables — formula tokenizer / parser / evaluator over metric keys (no eval), registry in `METRIC_MAP` (`USER_METRICS`, group "My variables"), `computeVars` at load and on load changes, per-browser storage (`LS_VARS`), share-link carry (`#v=` field `u`, remapped on import), delete / sanitize |
 | `30-points-gl.js` | WebGL1 point renderer (dim / glow / core), premultiplied alpha |
 | `31-hero3d.js` | 3D design space (ranked axes; orbit, pan, brush, label placer) |
 | `32-plot2d.js` | 2D plot (real values, log axes, box ranges, target, Pareto, gap map) |
@@ -76,6 +77,8 @@ Numbered classic scripts, one global scope, loaded in order by `index.html`
 | `64-splits.js` | resizable splits, stored as fractions per layout |
 | `65-welcome.js` | v0.9.0 first-visit guide (domain → build → top 24); stress presets shared with the Biomedical card |
 | `66-trends.js` | v0.9.0 correlation map (rank ρ over the filtered set, click a pair → 2D) |
+| `67-variables-ui.js` | v0.10.0: the variable builder — drawer tab Variables (desktop) / `#varDlg` sheet (phone); templates, formula chips, auto-commas in min / max / mean, shape preview, duplicate check (rank ρ ≥ 0.995), export / import; "New variable…" in every metric menu saves onto that axis / colour / sort / filter |
+| `68-tour.js` | v0.10.0: the tour — 11 stops on desktop, 9 on the phone (no Compare / Build there); ring + card, try-its via `tourEvent()` hooks in `select`, `togglePin`, `setGap`, `setTarget`, `openVarBuilder`; offered from the guide's last step, once to returning users (`LS_TOUR`), and from the guide button menu |
 | `70-handoff.js` | Mesh / Lab / Sweep (`#r=`; Sweep also `&t=` target + ranges), Queue |
 | `80-mobile.js` | phone layout: bottom sheet, gallery, inspector, filters |
 | `99-init.js` | boot, events, keyboard, loop |
@@ -105,6 +108,8 @@ npm run audit               # tests/render-audit.js — real Chrome, 4 sizes, sc
 
 ## Notes
 
-- Latest session recap: `docs/SESSION_RECAP_2026-10-11_v0.9.md` (v0.8.2 axes + splash; v0.9.0 welcome guide, metrics audit, correlation map). Before it: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
+- Latest session recap: `docs/SESSION_RECAP_2026-10-12_v0.10.md` (v0.10.0: My variables, the tour). Before it: `docs/SESSION_RECAP_2026-10-11_v0.9.md` (v0.8.2 axes + splash; v0.9.0 welcome guide, metrics audit, correlation map). Before it: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
 - **Noise revisions**: noise recipes carry `surface.noise_rev` (spec: F13LD.noise `docs/NOISE_REV2.md`). Vault noise is revision 2; keep mock and fixture noise recipes at revision 2.
+- **Variables (v0.10)**: formulas store metric keys (`[_emax]`); chips show short names. Domain score and scarcity can't be inputs. A variable is a metric like any other once `computeVars` has run — but it is not targetable by Aim Sweep (`sweepCanAim` is false). The drawer tab is "Build" now (was "Build target").
+- **Bake check**: `grain-reactiondiff` fails `npm test`'s bake step on `main` too (the fixture is deferred in geom) — not a regression.
 - `32-plot2d.js` `paretoCurve`: the 2D front is drawn as a monotone cubic through the front designs (screen space), extended to the plot edges.

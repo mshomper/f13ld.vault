@@ -18,6 +18,9 @@ var ICONS = {
   key:     '<path d="M5 6H12V13H5Z M5 28H12V35H5Z"' + SV + ' opacity=".75"/><path d="M17 9.5H35M17 20.5H31M17 31.5H35"' + SV + ' opacity=".8"/><path d="M5 17H12V24H5Z"' + SV + '/><circle class="acc" cx="8.5" cy="20.5" r="2.4"/>',
   cell:    '<path d="M20 4L34 12V28L20 36L6 28V12Z"' + SV + '/><path d="M20 12L27 16V24L20 28L13 24V16Z"' + SV + ' stroke-width="2" opacity=".55"/><circle class="acc" cx="20" cy="20" r="3.2"/>',
   search:  '<circle cx="17" cy="17" r="10.5"' + SV + '/><path d="M25 25L34 34"' + SV + '/>',
+  vars:    '<path d="M6 10H34M6 20H21M6 30H27"' + SV + '/><circle class="acc" cx="30" cy="20" r="4"/>',   /* v0.10.0 — My variables */
+  keep:    '<path d="M8 21L16 29L32 11"' + SV + '/><circle class="acc" cx="16" cy="29" r="2.6"/>',
+  tour:    '<circle cx="20" cy="20" r="15"' + SV + ' opacity=".55"/><path d="M16 13L28 20L16 27Z"' + SV + '/><circle class="acc" cx="28" cy="20" r="2.6"/>',
   orbit:   '<ellipse cx="20" cy="20" rx="15" ry="7"' + SV + '/><path d="M29 10.5L34.5 12.5L32 17.5"' + SV + '/><circle class="acc" cx="20" cy="20" r="3.4"/>',
   brush:   '<path d="M6 6H34V34H6Z"' + SV + ' stroke-dasharray="3.5 4.5"/><circle class="acc" cx="20" cy="20" r="3.6"/>',
   reset:   '<path d="M9.5 13A13 13 0 1 1 7 21"' + SV + '/><path d="M8 5V13H16"' + SV + '/><circle class="acc" cx="20" cy="20" r="3"/>',

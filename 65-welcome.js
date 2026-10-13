@@ -66,9 +66,9 @@ function openWelcome() {
 function closeWelcome(how) {
   if (!WG.open) return;
   WG.open = false;
-  if (how === 'done' || WG.never) Store.set(LS_WELCOME, true);
+  if (how === 'done' || how === 'tour' || WG.never) Store.set(LS_WELCOME, true);
   var el = $('#welDlg'); el.classList.remove('open', 'wg-docked'); el.innerHTML = '';
-  if (how !== 'filter') setSpot(null);
+  if (how !== 'filter' && how !== 'tour') setSpot(null);   /* the tour keeps the top designs ringed */
   /* the guide stood in for the Biomedical card; if it closed early, the card takes over */
   if (how === 'skip' && bioPromptWanted()) setTimeout(openBioPrompt, 250);
 }
@@ -116,7 +116,9 @@ function renderWelcome() {
   } else {
     var n = S.spot ? S.spot.size : 0, dn = dom === 'all' ? 'all applications' : DOMAIN_SHORT[dom];
     html = head + '<div class="wg-c"><h2 id="wgT">Top ' + n + ' for ' + esc(dn) + '</h2>' +
-      '<p class="wg-sub">' + (n ? 'Ringed in lime in the design space and marked at the head of the list. A few ways in:' : 'No design scores for this domain yet. A few ways in:') + '</p>' +
+      '<p class="wg-sub">' + (n ? 'Ringed in lime in the design space and marked at the head of the list.' : 'No design scores for this domain yet.') + ' Want a quick look at what you can do with them?</p>' +
+      '<button class="sbtn wg-tour" data-wg="tour">' + ic('tour') + 'Show me around · 3 min</button>' +
+      '<p class="wg-sub wg-or">Or find your own way in:</p>' +
       '<div class="wg-tips">' +
         '<div class="wg-tip"><span class="kbd">' + 'drag' + '</span>Orbit the 3D space' + (S.mobile ? '' : ' · Ctrl + drag pans') + '</div>' +
         '<div class="wg-tip"><span class="kbd">' + (S.mobile ? 'tap' : 'click') + '</span>Any point opens its geometry and scores</div>' +
@@ -138,6 +140,7 @@ function renderWelcome() {
 function welcomeAct(a, b) {
   if (a === 'never') { WG.never = !WG.never; b.classList.toggle('on', WG.never); b.setAttribute('aria-checked', String(WG.never)); return; }
   if (a === 'skip') { closeWelcome('skip'); return; }
+  if (a === 'tour') { closeWelcome('tour'); startTour(); return; }   /* v0.10.0 */
   if (a === 'done') { closeWelcome('done'); return; }
   if (a === 'back') { WG.step = Math.max(0, WG.step - 1); renderWelcome(); return; }
   if (a === 'filter') {

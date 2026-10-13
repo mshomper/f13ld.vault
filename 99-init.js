@@ -26,6 +26,7 @@ function splashTick(now) {
     SPLASH.done = true; sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 600);
     S.introT0 = performance.now() + 100;
     if (welcomeWanted()) setTimeout(function () { if (!WG.open && welcomeWanted()) openWelcome(); }, 650);   /* v0.9.0 */
+    else if (tourOfferWanted()) setTimeout(function () { if (!WG.open && !TOUR.on && tourOfferWanted()) offerTour(); }, 1400);   /* v0.10.0 — once, for people who finished the old guide */
     if (!S.mobile && !S.sel && S.list[0] && !S._linkSel) setTimeout(function () { if (!S.sel && S.list[0]) select(S.list[0], 'step-quiet'); }, 1500);
   }
 }
@@ -141,6 +142,7 @@ document.addEventListener('click', function (e) {
   if ((b = t.closest('[data-axis2]'))) { openMenu(b, metricMenuHTML('setax2', b.dataset.axis2, S.ax2[b.dataset.axis2], '2D ' + b.dataset.axis2.toUpperCase() + ' axis'), { up: b.dataset.axis2 === 'x', focus: true, host: S.mobile ? $('#mApp') : document.body }); return; }
   if ((b = t.closest('[data-setax3]'))) { var p3 = b.dataset.setax3.split(':'); closeMenu(); setAxis3(p3[0], p3[1]); return; }
   if ((b = t.closest('[data-setax2]'))) { var p2 = b.dataset.setax2.split(':'); closeMenu(); setAxis2(p2[0], p2[1]); return; }
+  if ((b = t.closest('[data-newvar]'))) { var nv = b.dataset.newvar.split(':'); closeMenu(); openVarBuilder({ target: nv[0] ? { attr: nv[0], axis: nv[1] || '' } : null }); return; }   /* v0.10.0 */
   if ((b = t.closest('[data-color]'))) { closeMenu(); setColor(b.dataset.color); return; }
   if ((b = t.closest('[data-preset]'))) { closeMenu(); var pp = b.dataset.preset.split('|'); applyPreset(pp[0], pp[1]); return; }
   if ((b = t.closest('[data-pareto]'))) { closeMenu(); setPareto(b.dataset.pareto === 'off' ? null : b.dataset.pareto); return; }
@@ -191,14 +193,17 @@ function act(a, b, e) {
     case 'pareto': openMenu(b, '<div class="mh">Pareto front</div>' + [['auto', 'Best for ' + DOMAIN_SHORT[F.domain]], ['xlo-yhi', 'Low X · high Y'], ['xhi-yhi', 'High X · high Y'], ['xlo-ylo', 'Low X · low Y'], ['xhi-ylo', 'High X · low Y'], ['off', 'Off']].map(function (o) { return '<button data-pareto="' + o[0] + '" class="' + ((S.pareto || 'off') === o[0] ? 'on' : '') + '">' + esc(o[1]) + '</button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
     case 'presets': openMenu(b, '<div class="mh">2D presets · ' + esc(DOMAIN_SHORT[F.domain]) + '</div>' + (AXIS_PRESETS[F.domain] || AXIS_PRESETS.all).concat(F.domain === 'all' ? [] : AXIS_PRESETS.all.slice(0, 1)).filter(function (p) { return hasMetric(p[0]) && hasMetric(p[1]); }).map(function (p) { return '<button data-preset="' + p[0] + '|' + p[1] + '"><span>' + esc(p[2]) + '</span><em>' + esc(mShort(p[0]) + ' × ' + mShort(p[1])) + '</em></button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
     case 'legend-more': openMenu(b, '<div class="mh">' + esc($('.colorName').textContent) + '</div><div class="lg-all">' + $$('#legend .lg-it').map(function (k) { var c = k.cloneNode(true); c.style.display = ''; return c.outerHTML; }).join('') + '</div>', { focus: true }); break;
-    case 'color': openMenu(b, '<div class="mh">Colour points by</div>' + COLOR_MODE_LIST.map(function (m) { return '<button data-color="' + m.id + '" class="' + (S.color === m.id ? 'on' : '') + '">' + esc(m.label) + '</button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
+    case 'color': openMenu(b, '<div class="mh">Colour points by</div>' + COLOR_MODE_LIST.map(function (m) { return '<button data-color="' + m.id + '" class="' + (S.color === m.id ? 'on' : '') + '">' + esc(m.label) + '</button>'; }).join('') + varMenuGroupHTML('color', S.color), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
     case 'sort': openMenu(b, '<div class="mh">Sort results</div>' + (F.target ? [['_target:1', 'Closest to the target']] : []).concat([['_score:-1', domainZLabel()], ['_beff:-1', 'Voigt efficiency'], ['volume_fraction:1', 'Lightest first'], ['_emax:-1', 'Stiffest first'], ['anisotropy:1', 'Most isotropic'], ['pore_size_p50_norm:-1', 'Largest pores'], ['keff_max_norm:-1', 'Best conductivity'], ['created_at:-1', 'Newest'], ['_name:1', 'Name']])
-      .map(function (o) { return '<button data-sort="' + o[0] + '" class="' + (S.sort.k + ':' + S.sort.dir === o[0] ? 'on' : '') + '">' + esc(o[1]) + '</button>'; }).join(''), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
-    case 'm-menu': openMenu(b, '<div class="mh">View</div><button data-act="color">Colour points…</button><button data-act="m-presets">2D presets…</button><button data-act="reset-views">Reset views</button><button data-act="alive">' + (S.alive ? 'Stop' : 'Start') + ' ambient motion</button><button data-act="link">Copy a link to this view</button><button data-act="trends">Correlation map</button><button data-act="guide">Welcome guide</button>', { host: $('#mApp'), focus: true }); break;
+      .map(function (o) { return '<button data-sort="' + o[0] + '" class="' + (S.sort.k + ':' + S.sort.dir === o[0] ? 'on' : '') + '">' + esc(o[1]) + '</button>'; }).join('') + varMenuGroupHTML('sort', S.sort.k), { focus: true, host: S.mobile ? $('#mApp') : document.body }); break;
+    case 'm-menu': openMenu(b, '<div class="mh">View</div><button data-act="color">Colour points…</button><button data-act="m-presets">2D presets…</button><button data-act="reset-views">Reset views</button><button data-act="alive">' + (S.alive ? 'Stop' : 'Start') + ' ambient motion</button><button data-act="link">Copy a link to this view</button><button data-act="trends">Correlation map</button><button data-act="vars">My variables…</button><button data-act="tour">Tour</button><button data-act="welcome">Welcome guide</button>', { host: $('#mApp'), focus: true }); break;
     case 'm-presets': setMhv('2d'); act('presets', b, e); break;
     case 'palette': openCP(); break;
     case 'kbd': showShortcuts(); break;
-    case 'guide': openWelcome(); break;   /* v0.9.0 */
+    case 'guide': guideMenu(b); break;   /* v0.10.0 — the tour, or the welcome guide again */
+    case 'tour': closeMenu(); startTour(); break;
+    case 'welcome': closeMenu(); openWelcome(); break;
+    case 'vars': closeMenu(); openVarBuilder({}); break;
     case 'trends': openTrends(); break;   /* v0.9.0 */
     case 'kbd-close': closeShortcuts(); break;
     case 'bio-prompt': openBioPrompt(); break;
@@ -245,6 +250,9 @@ document.addEventListener('keydown', function (e) {
   if (mod && !typing(e) && (k.toLowerCase() === 'z' || k.toLowerCase() === 'y')) { e.preventDefault(); if (k.toLowerCase() === 'y' || e.shiftKey) redo(); else undo(); return; }
   if (k === 'Enter' && e.target.closest && e.target.closest('#bioDlg') && e.target.tagName === 'INPUT') { e.preventDefault(); closeBioPrompt('apply'); return; }
   if (k === 'Escape') {
+    if (_menu) { closeMenu(); return; }
+    if ($('#varDlg').classList.contains('open')) { closeVarDlg(); return; }   /* v0.10.0 */
+    if (TOUR.on) { endTour(); return; }
     if (TR.open) closeTrends();   /* v0.9.0 */
     else if (WG.open) closeWelcome(WG.step === 2 ? 'done' : 'skip');   /* v0.9.0 */
     else if ($('#bioDlg').classList.contains('open')) closeBioPrompt('close');

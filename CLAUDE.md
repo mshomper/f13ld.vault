@@ -28,9 +28,9 @@ https://mshomper.github.io/f13ld.vault
 - **Words**: never use "genuine" or "genuinely" in UI text or docs.
 - **Heavy checks run on Matt's machine**, not in the VM: hand him the command.
 - **Strain (v0.6)**: Vault rebuilds strain from stiffness (`11-data.js`
-  `strainCoefficients` / `applyLoadValues`). `microstrain_*_per_gpa` and
-  `u_compliance` hold *real* με and kJ/m³ under the Build target load, and are
-  empty without one, which hides strain everywhere. Sweep's stored values are
+  `strainCoefficients` / `applyLoadValues`). `microstrain_*_per_gpa` hold
+  *real* με under the Build target load, and are empty without one, which
+  hides strain everywhere (strain energy `u_compliance` trimmed in v0.11.0). Sweep's stored values are
   per GPa of stress for its own solid modulus (100 GPa unless the export
   records `Es_ref_GPa`). The Biomedical score uses a Frost-style window
   (default 1,000–3,500 με) and asks for load and cell size when they are missing.
@@ -108,7 +108,7 @@ npm run audit               # tests/render-audit.js — real Chrome, 4 sizes, sc
 
 ## Notes
 
-- Latest session recap: `docs/SESSION_RECAP_2026-10-13_v0.11.md` (v0.11.0, branch: curvature profile, true surface area S_V / BS/BV, legacy trims, tortuosity over open axes — for the reseed). Before it: `docs/SESSION_RECAP_2026-10-12_v0.10.md` (v0.10.0: My variables, the tour). Before it: `docs/SESSION_RECAP_2026-10-11_v0.9.md` (v0.8.2 axes + splash; v0.9.0 welcome guide, metrics audit, correlation map). Before it: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
+- Latest session recap: `docs/SESSION_RECAP_2026-10-13_v0.11.md` (v0.11.0: curvature profile, true surface area S_V / BS/BV, legacy trims, tortuosity over open axes — for the reseed). Before it: `docs/SESSION_RECAP_2026-10-12_v0.10.md` (v0.10.0: My variables, the tour). Before it: `docs/SESSION_RECAP_2026-10-11_v0.9.md` (v0.8.2 axes + splash; v0.9.0 welcome guide, metrics audit, correlation map). Before it: `docs/SESSION_RECAP_2026-10-11.md` (v0.8.1: noise revision 2 — Vault holds fixed noise only; the gate is F13LD.ingest's push rule plus the `f13ld_designs_noise_rev2` database policy). Previous: `docs/SESSION_RECAP_2026-10-10.md` (v0.8.0: wave, axes / filters, Pareto curve; next: wipe and re-seed), `docs/SESSION_RECAP_2026-10-09.md`.
 - **Noise revisions**: noise recipes carry `surface.noise_rev` (spec: F13LD.noise `docs/NOISE_REV2.md`). Vault noise is revision 2; keep mock and fixture noise recipes at revision 2.
 - **Variables (v0.10)**: formulas store metric keys (`[_emax]`); chips show short names. Domain score and scarcity can't be inputs. A variable is a metric like any other once `computeVars` has run — but it is not targetable by Aim Sweep (`sweepCanAim` is false). The drawer tab is "Build" now (was "Build target").
 - **Curvature (v0.11)**: Sweep ≥ 0.33 stores `curv_*` in `metrics_extended` (one fixed curvature grid, `curv_N`); Vault derives `_cfneg _cfsad _ck2m _ck2sd _ck2med _crad _ckneg` and `d._curv_flag` (filter `F.cflag`, colour `_curv_flag`). Curvature is not in any domain score yet (Matt). Never add a signed mean of K back — it is fixed by topology.

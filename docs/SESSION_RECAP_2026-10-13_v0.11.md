@@ -1,8 +1,8 @@
 # F13LD.vault — session recap, 2026-10-13 · v0.11.0
 
-Branch **`v0.11.0-curvature`** (not merged). Goes with F13LD.sweep v0.33.0
-(`v0.33.0-curvature`, the curvature profile) and F13LD.ingest v0.11.1
-(`v0.11.1-aniso-check`). No database change: the new Sweep fields land in
+**Merged to `main` 2026-10-13** after Matt's click-test, with F13LD.sweep v0.33.0
+(the curvature profile, fixed 64³ curvature grid) and F13LD.ingest v0.11.1
+(push file 1.1.1). No database change: the new Sweep fields land in
 `metrics_extended`. Made for the wipe and reseed.
 
 ## Surface area (Matt: a true measure for comparison)
@@ -67,8 +67,7 @@ thickness), and their Aim targets.
   no page errors. Full `npm run audit` on Matt's machine.
 
 ## Next
-- Merge with Sweep v0.33.0 and Ingest v0.11.1 after Matt's click-test, then
-  wipe and reseed.
+- Matt wipes and reseeds from Sweep v0.33.0.
 - After the reseed: correlation map on concave area vs volume fraction and
   within each family; decide on a curvature factor for the Biomedical
   score (window on the median concave radius, ~90–500 µm, editable in Build).

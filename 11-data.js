@@ -319,7 +319,7 @@ function mockRows(n) {
         tortuosity_x: 1.05 + R() * 0.6, tortuosity_y: 1.1 + R() * 0.7, tortuosity_z: tzB ? 10 : 1.1 + R() * 0.8, tortuosity_nonperc: tzB ? 4 : 0,
         curv_f_neg: +(sheet ? 0.9 + R() * 0.1 : fam === 'beam' ? 0.05 + R() * 0.2 : 0.3 + R() * 0.6).toFixed(4), curv_f_sad: +(sheet ? 0.85 + R() * 0.15 : 0.2 + R() * 0.5).toFixed(4),
         curv_k2_mean: -(1 + R() * 5), curv_k2_sd: 1 + R() * 8, curv_k2_neg_med: -(3 + R() * 12), curv_k_neg_int: -(5 + R() * 60),
-        curv_gb_resid: sheet ? R() * 0.2 : R() * 30, curv_flag: !sheet && R() < 0.6, curv_N: 48 },
+        curv_gb_resid: sheet ? R() * 0.2 : R() * 30, curv_flag: !sheet && R() < 0.6, curv_N: 64 },
       recipe: Object.assign(recipe, { homogenization: { grid: R() < 0.7 ? 64 : 32 } })
     });
   }

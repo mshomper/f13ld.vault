@@ -60,6 +60,7 @@ svg{display:block}
 .tk.n{padding:4px 7px;color:var(--warn);font:500 13px var(--mono);box-shadow:inset 0 0 0 1px rgba(240,180,41,.35);cursor:pointer}
 .tk.op{color:var(--neon);font:500 15px var(--mono);padding:0 2px}
 .tk.p{color:var(--t3);font:400 16px var(--mono)}
+.tk.c{color:var(--t3);opacity:.55;font:400 14px var(--mono);margin:0 2px 0 -3px}
 .tk.fn{color:var(--vault);font:500 13px var(--mono)}
 .tk.bad{color:var(--bad)!important;box-shadow:inset 0 0 0 1px var(--bad)!important}
 .ph{color:var(--t3);font-size:13px}
@@ -324,8 +325,12 @@ function tokenize(s){
   }
   return out;
 }
+function isStart(t){return t&&(t.t==='m'||t.t==='n'||t.t==='fn'||(t.t==='p'&&t.v==='('));}
+function isEnd(t){return t&&(t.t==='m'||t.t==='n'||(t.t==='p'&&t.v===')'));}
+function tlab(t){return t.t==='p'?'the bracket':t.v;}
 function parse(toks){
   var i=0;
+  function adj(inList){var a=toks[i-1],b=toks[i];if(isEnd(a)&&isStart(b))err((inList?'Add a comma or an operator between ':'Add an operator between ')+tlab(a)+' and '+tlab(b),[a,b]);}
   function pk(){return toks[i];}
   function err(msg,tok){var e=new Error(msg);e.tok=tok;throw e;}
   function expr(){var a=term();while(pk()&&pk().t==='op'&&(pk().v==='+'||pk().v==='-')){var o=toks[i++].v;a={op:o,a:a,b:term()};}return a;}
@@ -341,17 +346,17 @@ function parse(toks){
     if(t.t==='fn'){
       if(!pk()||pk().v!=='(')err(t.v+' needs brackets after it',t);i++;
       var args=[expr()];while(pk()&&pk().v===','){i++;args.push(expr());}
-      if(!pk()||pk().v!==')')err('A bracket is not closed',t);i++;
+      adj(FN[t.v]===-1);if(!pk()||pk().v!==')')err('A bracket after '+t.v+' is not closed',t);i++;
       if(FN[t.v]===1&&args.length!==1)err(t.v+' takes one input',t);
       if(FN[t.v]===-1&&args.length<2)err(t.v+' takes two or more inputs, separated by commas',t);
       return {fn:t.v,args:args};
     }
-    if(t.v==='('){var e=expr();if(!pk()||pk().v!==')')err('A bracket is not closed',t);i++;return e;}
+    if(t.v==='('){var e=expr();adj(false);if(!pk()||pk().v!==')')err('A bracket is not closed',t);i++;return e;}
     err('Unexpected “'+({'*':'×','/':'÷','-':'−'}[t.v]||t.v)+'”',t);
   }
   if(!toks.length)err('');
   var tree=expr();
-  if(i<toks.length)err('Unexpected “'+toks[i].v+'”',toks[i]);
+  if(i<toks.length){adj(false);err('Unexpected “'+toks[i].v+'”',toks[i]);}
   return tree;
 }
 function col(k){var u=userByK(k);if(u)return u.vals;var a=new Float64Array(N);for(var i=0;i<N;i++){var v=D[i][k];a[i]=(v==null||!isFinite(v))?NaN:v;}return a;}
@@ -394,7 +399,13 @@ $('#recipes').onclick=function(e){var b=e.target.closest('[data-t]');if(!b)retur
 
 function untok(t){return t.map(function(x){return x.t==='m'?'['+x.v+']':x.v;}).join(' ').replace(/\( /g,'(').replace(/ \)/g,')').replace(/ ,/g,',');}
 function pretty(f){return f.replace(/\*/g,'×').replace(/\//g,'÷').replace(/\[([^\]]+)\]/g,'$1').replace(/ - /g,' − ');}
-function append(s){FORM=(FORM+' '+s).trim();TPLON=-1;refresh();}
+/* Inside min / max / mean, a value added right after another value gets its comma automatically. */
+function innerFn(toks){var st=[];toks.forEach(function(t,i){if(t.t==='p'&&t.v==='(')st.push(i>0&&toks[i-1].t==='fn'?toks[i-1].v:null);else if(t.t==='p'&&t.v===')')st.pop();});return st.length?st[st.length-1]:null;}
+function append(s){
+  var toks=tokenize(FORM),nt=tokenize(s)[0],f=innerFn(toks);
+  if(f&&FN[f]===-1&&isEnd(toks[toks.length-1])&&isStart(nt))FORM+=',';
+  FORM=(FORM+' '+s).trim();TPLON=-1;refresh();
+}
 
 /* ───────── popovers ───────── */
 var POP=null;
@@ -440,7 +451,7 @@ $('#addM').onclick=function(){metricPop($('#addM'),'Search metrics',null,'s',fun
 $('#addF').onclick=function(){openPop($('#addF'),'<div class="pl">'+FN_INFO.map(function(f){return '<button class="mi" data-v="'+f[0]+'"><span style="font-family:var(--mono);color:var(--vault)">'+(f[0]==='scale'?'scale 0–1':f[0])+'</span><small>'+f[1]+'</small></button>';}).join('')+'</div>',function(v){append(v+'(');});};
 $('#addN').onclick=function(){numberPop($('#addN'),'1',function(v){append(v);});};
 [].forEach.call(document.querySelectorAll('.tb[data-k]'),function(b){b.onclick=function(){append(b.dataset.k);};});
-$('#bk').onclick=function(){var t=tokenize(FORM);t.pop();FORM=untok(t);TPLON=-1;refresh();};
+$('#bk').onclick=function(){var t=tokenize(FORM);t.pop();if(t.length&&t[t.length-1].v===','&&t[t.length-1].t==='p')t.pop();FORM=untok(t);TPLON=-1;refresh();};
 $('#clr').onclick=function(){FORM='';TPLON=-1;refresh();};
 $('#fline').onclick=function(e){
   var c=e.target.closest('[data-i]');if(!c)return;var toks=tokenize(FORM),t=toks[+c.dataset.i];
@@ -456,11 +467,11 @@ function refresh(){
   var toks=tokenize(FORM),err=null,badTok=null,tree=null;
   try{tree=parse(toks);}catch(e){err=e.message;badTok=e.tok;}
   var html=toks.map(function(t,i){
-    var bad=(t===badTok||t.t==='bad')?' bad':'';
+    var bad=((Array.isArray(badTok)?badTok.indexOf(t)>=0:t===badTok)||t.t==='bad')?' bad':'';
     if(t.t==='m'){var m=BYS[t.v],u=userBy(t.v);return '<span class="tk '+(u?'u':'m')+bad+'" data-i="'+i+'" data-popper title="'+(m?m.l:u?u.l:t.v)+' — tap to swap">'+t.v+'</span>';}
     if(t.t==='n')return '<span class="tk n'+bad+'" data-i="'+i+'" data-popper title="Tap to change">'+t.v+'</span>';
     if(t.t==='op')return '<span class="tk op'+bad+'">'+({'*':'×','/':'÷','-':'−'}[t.v]||t.v)+'</span>';
-    if(t.t==='p')return '<span class="tk p'+bad+'">'+t.v+'</span>';
+    if(t.t==='p')return '<span class="tk '+(t.v===','?'c':'p')+bad+'">'+t.v+'</span>';
     if(t.t==='fn')return '<span class="tk fn'+bad+'">'+(t.v==='scale'?'scale':t.v)+'</span>';
     return '<span class="tk fn bad">'+t.v+'</span>';
   }).join('');

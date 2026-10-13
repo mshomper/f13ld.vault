@@ -23,6 +23,8 @@ function tourEnsure2D() {
   if (S.mobile) { S.mInsp = false; renderMobile(); setSnap('peek'); setMhv('2d'); }
   else if (S.hv === '3d') setHv('split');
 }
+/* Phone: back to the results list with the sheet lowered, so the top bar and the plot are in view. */
+function tourTop() { if (S.mobile) { if (S.mInsp) { S.mInsp = false; renderMobile(); } setSnap('peek'); } }
 function tourShut() { closeMenu(); if (S.drawer) closeDrawer(); if (S.mobile) { closeMFilters(); if ($('#varDlg').classList.contains('open')) closeVarDlg(); } }
 
 var TOUR_STEPS = [
@@ -46,30 +48,30 @@ var TOUR_STEPS = [
     pre: function () { closeMenu(); openDrawer('target'); },
     p: 'The material, cell size and load you set at the start. Change them here and every pore size, strain and score follows.' },
   { id: 'vars', ic: 'vars', t: 'Make your own metric', d: '#dVars', m: '[data-act="m-menu"]',
-    pre: function () { closeMenu(); if (S.mobile) closeMFilters(); else openDrawer('vars'); },
+    pre: function () { closeMenu(); if (S.mobile) { closeMFilters(); tourTop(); } else openDrawer('vars'); },
     p: 'Combine any metric into a <b>variable</b> — a ratio, a per-material measure, your own score. It then works everywhere a metric does: axes, colour, sort, filters, Compare.',
     pm: 'Your own metrics — <b>variables</b> — live under this menu, and <b>New variable…</b> sits at the top of every metric menu. A variable works everywhere a metric does.' },
   { id: 'axes', ic: 'view2d', t: 'Plot anything against anything', d: '#pHero .hv-2d [data-axis2="y"]', m: '#mHero2 [data-axis2="y"]',
     pre: function () { tourShut(); tourEnsure2D(); },
     p: 'Tap an axis to put any metric — or one of your variables — on it. <b>New variable…</b> is at the top of every metric menu, and saves straight onto that axis.',
     tr: { k: 'newvar', tx: 'Tap the Y axis, then New variable…', dn: 'That’s the builder — your variable can go straight onto this axis' } },
-  { id: 'gap', ic: 'gap', t: 'Find the holes', d: '#pHero .hv-2d [data-act="gap"]', m: '#mHero2',
+  { id: 'gap', ic: 'gap', t: 'Find the holes', d: '#pHero .hv-2d [data-act="gap"]', m: '#mTools2 [data-act="gap"]',
     pre: function () { tourShut(); tourEnsure2D(); },
-    p: 'The <b>gap map</b> shades the parts of this plot where the Vault has few or no designs — space nobody has explored yet.',
-    pm: 'The <b>gap map</b> shades the parts of this plot where the Vault has few or no designs. Search “gap map” to turn it on any time.',
-    tr: { k: 'gap', tx: 'Turn on the gap map', dn: 'Shaded = few or no designs there', act: function () { setGap(true); } } },
-  { id: 'aim', ic: 'sweep', t: 'Aim Sweep at a gap', d: '#pHero .hv-2d [data-tool2="target"]', m: '#mHero2',
+    p: 'The <b>gap map</b> shades where the Vault has designs on this plot, and outlines the <b>holes</b> inside the cloud — space nobody has explored yet. Click a hole to drop a target there.',
+    pm: 'The <b>gap map</b> shades where the Vault has designs on this plot, and outlines the <b>holes</b> inside the cloud — space nobody has explored yet. Tap a hole to drop a target there.',
+    tr: { k: 'gap', tx: 'Turn on the gap map', dn: 'Blue = designs · dashed outlines = holes', act: function () { setGap(true); } } },
+  { id: 'aim', ic: 'sweep', t: 'Aim Sweep at a gap', d: '#pHero .hv-2d [data-tool2="target"]', m: '#mTools2 [data-act="m-target"]',
     pre: function () { tourShut(); tourEnsure2D(); },
     p: 'Pick <b>Target</b> and click inside a gap. Designs rank by how close they come, and <b>Aim Sweep</b> in the banner opens F13LD.sweep seeded from the designs that can reach it — new designs to fill the hole.',
-    pm: 'With the Target tool, tap inside a gap. Designs rank by how close they come, and <b>Aim Sweep</b> in the banner opens F13LD.sweep seeded from the designs that can reach it.',
-    tr: { k: 'target', tx: 'Pick Target, then click the plot', txm: 'Tap Do it, then tap the plot', dn: 'Target set — Aim Sweep is in the banner', act: function () { setTool2('target'); toast(S.mobile ? 'Tap the 2D plot to drop the target' : 'Click the 2D plot to drop the target'); } } },
+    pm: 'Turn on <b>Target</b> here, then tap inside a gap. Designs rank by how close they come, and <b>Aim Sweep</b> in the banner opens F13LD.sweep seeded from the designs that can reach it.',
+    tr: { k: 'target', tx: 'Pick Target, then click the plot', txm: 'Turn on Target, then tap the plot', dn: 'Target set — Aim Sweep is in the banner', act: function () { setTool2('target'); toast(S.mobile ? 'Tap the 2D plot to drop the target' : 'Click the 2D plot to drop the target'); } } },
   { id: 'further', ic: 'mesh', t: 'Take a design further', d: '#dApp .hpills', m: '#mBody .m-acts',
     pre: function () { tourShut(); tourEnsureDesign(); },
     p: 'Every design carries its <b>recipe</b>, so it opens in the rest of F13LD:',
     acts: [['mesh', 'Mesh', 'a watertight, print-ready 3MF at your cell size'], ['lab', 'Lab', 'a full solve to verify stiffness, yield and buckling'], ['sweep', 'Sweep', 'explore around it, or aim at a target (inspector)'], ['queue', 'Queue', 'collect designs across devices with a word-pair code'], ['download', 'Download', 'the recipe file, for any F13LD tool (inspector)']],
     actsm: [['mesh', 'Mesh', 'a watertight, print-ready 3MF at your cell size'], ['queue', 'Queue', 'collect designs across devices with a word-pair code'], ['link', 'Link', 'a link to this exact view, to share']] },
   { id: 'done', ic: 'guide', t: 'That’s the tour', d: '[data-act="guide"]', m: '[data-act="m-menu"]',
-    pre: function () { tourShut(); },
+    pre: function () { tourShut(); tourTop(); },
     p: 'Reopen the tour or the welcome guide from here. <b>Ctrl K</b> searches designs, metrics and actions.',
     pm: 'The tour, the welcome guide and your variables are in this menu.' }
 ];
@@ -87,11 +89,12 @@ function startTour() {
 function endTour(finished) {
   if (!TOUR.on && !TOUR.offer) return;
   var wasTour = TOUR.on;
-  TOUR.on = false; TOUR.offer = false; TOUR.el = null;
+  TOUR.on = false; TOUR.offer = false; TOUR.el = null; TOUR.alt = null; document.body.classList.remove('tour-aim');
   $('#tourRing').hidden = true; $('#tourCard').hidden = true; $('#tourCard').innerHTML = '';
   if (!wasTour) return;
   Store.set(LS_TOUR, 'done');
   tourShut(); if (S.mobile) { S.mInsp = false; renderMobile(); setSnap('half'); }
+  if (S.tool2 === 'target' && !F.target) setTool2('box');   /* the aiming stop's Target tool, never used */
   if (S.spot) setSpot(null);
   toast(finished ? 'Tour finished · reopen it from the guide' : 'Tour closed · reopen it from the guide');
 }
@@ -106,23 +109,28 @@ function offerTour() {
 
 function tourStep() { return TOUR.steps[TOUR.i]; }
 function tourTarget(st) {
+  var alt = TOUR.alt && $(TOUR.alt);   /* a try-it can move the ring to what it produced (the Aim Sweep banner) */
+  if (alt && alt.getClientRects().length) return alt;
   var sel = S.mobile ? st.m : st.d, el = sel ? $(sel) : null;
   if (el && !el.getClientRects().length) el = null;   /* hidden at this size */
   return el;
 }
+/* Phone: scroll only the results sheet to the control — scrollIntoView would also scroll the fixed app frame. */
+function tourBring(el) {
+  var mb = el && S.mobile && el.closest('#mBody');
+  if (mb) mb.scrollTop += el.getBoundingClientRect().top - mb.getBoundingClientRect().top - 8;
+  return el;
+}
 function tourShow() {
   var st = tourStep(); if (!st) return;
-  TOUR.el = null; TOUR.rect = '';
+  TOUR.el = null; TOUR.rect = ''; TOUR.alt = null;
+  document.body.classList.toggle('tour-aim', st.id === 'aim');   /* phone: the Aim Sweep banner sits above the card on this stop only */
   $('#tourRing').hidden = true;
   if (st.pre) st.pre();
   tourCard();
   setTimeout(function () {
     if (!TOUR.on || tourStep() !== st) return;
-    var el = tourTarget(st);
-    /* phone: scroll only the results sheet — scrollIntoView would also scroll the fixed app frame */
-    var mb = el && S.mobile && el.closest('#mBody');
-    if (mb) mb.scrollTop += el.getBoundingClientRect().top - mb.getBoundingClientRect().top - 8;
-    TOUR.el = el; TOUR.rect = '';
+    TOUR.el = tourBring(tourTarget(st)); TOUR.rect = '';
   }, st.pre ? 340 : 20);
 }
 function tourCard() {
@@ -142,7 +150,10 @@ function tourCard() {
 /* A try-it was done: tick it (the card only — the step's setup doesn't run again). */
 function tourEvent(k) {
   if (!TOUR.on) return; var st = tourStep();
-  if (st && st.tr && st.tr.k === k && !TOUR.did[k]) { TOUR.did[k] = 1; tourCard(); }
+  if (st && st.tr && st.tr.k === k && !TOUR.did[k]) {
+    TOUR.did[k] = 1; tourCard();
+    if (k === 'target') setTimeout(function () { if (!TOUR.on || tourStep() !== st) return; TOUR.alt = '.t-banner'; var b = $('.t-banner'); if (b) { TOUR.el = b; TOUR.rect = ''; } }, 120);   /* point at Aim Sweep */
+  }
 }
 
 /* Follow the target every frame (panels resize, sheets slide, the drawer opens). */
@@ -151,17 +162,19 @@ function tourTick() {
   if (!TOUR.on && !TOUR.offer) return;
   if (TOUR.on) {
     var st = tourStep();
-    if (st && (!TOUR.el || !TOUR.el.isConnected)) { var el = tourTarget(st); if (el) TOUR.el = el; }
+    if (st && TOUR.el && !TOUR.el.isConnected) { var el = tourTarget(st); if (el) TOUR.el = tourBring(el); }   /* the list re-rendered: find the control again and bring it back up */
     var ring = $('#tourRing'), e = TOUR.el;
-    if (e && e.isConnected && e.getClientRects().length) {
+    var cov = false;
+    if (e && S.mobile && document.elementFromPoint && e.isConnected && e.getClientRects().length) { var rc = e.getBoundingClientRect(), hit = document.elementFromPoint(rc.left + rc.width / 2, rc.top + Math.min(rc.height / 2, 20)); cov = !!hit && !e.contains(hit) && !hit.contains(e) && !hit.closest('#tourRing,#tourCard'); }
+    if (e && !cov && e.isConnected && e.getClientRects().length) {
       var r = e.getBoundingClientRect(), pad = 6, vh = innerHeight, vw = innerWidth;
       var top = Math.max(4, r.top - pad), left = Math.max(4, r.left - pad), bot = Math.min(vh - 4, r.bottom + pad), right = Math.min(vw - 4, r.right + pad);
       if (S.mobile) bot = Math.min(bot, vh - $('#tourCard').offsetHeight - 22);   /* never under the card */
       var key = [top, left, bot, right].map(Math.round).join(',');
       if (bot - top > 8 && right - left > 8) {
         if (key !== TOUR.rect) { TOUR.rect = key; ring.style.top = top + 'px'; ring.style.left = left + 'px'; ring.style.width = (right - left) + 'px'; ring.style.height = (bot - top) + 'px'; ring.hidden = false; tourPlaceCard(e); }
-      } else ring.hidden = true;
-    } else if (!ring.hidden) { ring.hidden = true; tourPlaceCard(null); }
+      } else { ring.hidden = true; TOUR.rect = ''; }
+    } else { if (!ring.hidden) { ring.hidden = true; tourPlaceCard(null); } TOUR.rect = ''; }   /* forget the last box, so the ring comes back when the control does */
   }
   TOUR.raf = requestAnimationFrame(tourTick);
 }

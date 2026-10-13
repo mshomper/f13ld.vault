@@ -52,6 +52,7 @@ function setMhv(v) {
   S.mhv = v; savePrefs();
   $$('#mHv [data-mhv]').forEach(function (b) { b.classList.toggle('on', b.dataset.mhv === v); });
   $('#mHero3').style.display = v === '3d' ? '' : 'none'; $('#mHero2').style.display = v === '2d' ? '' : 'none';
+  $('#mTools2').hidden = v !== '2d';   /* v0.10.1 — Target and gap map, in 2D only */
   markViewsDirty();
 }
 (function sheetDrag() {

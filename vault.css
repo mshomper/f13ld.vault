@@ -836,3 +836,10 @@ body.is-mobile .m-app{display:block;position:fixed;inset:0;overflow:hidden}
 .menu .vb-gch .vb-gc:hover{background:var(--s3);color:var(--t1)}
 .menu .vb-gch .vb-gc.on{color:var(--t1);background:var(--vault-tint)}
 .menu .vb-num .sbtn{width:auto;flex:0 0 auto;justify-content:center}
+
+/* ═══════════ v0.10.1 — phone 2D toolbar (Target, gap map) ═══════════ */
+.m-tools2{display:flex;gap:6px;flex-shrink:0}
+.m-tools2[hidden]{display:none}
+.m-tools2 .ibtn.on{color:var(--neon);border-color:var(--neon-ring);background:rgba(200,245,66,.1)}
+.m-top .m-pill{flex-shrink:1}
+.tour-aim .m-app .t-banner{top:104px;bottom:auto}   /* above the tour card on the aiming stop */

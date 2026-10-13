@@ -152,7 +152,11 @@ var COLOR_MODE_LIST = [
   { id: '_sim', label: 'Similar to selected', type: 'cont', abs: [0, 1], lo: 'unlike', hi: 'alike', prep: function () { ensureSim(); },
     tip: 'How close each design is to the selected one across volume fraction, stiffness, shear, anisotropy, pores, conductivity, connectivity, tortuosity and curvature.' }
 ];
-function colorMode() { return COLOR_MODE_LIST.filter(function (m) { return m.id === S.color; })[0] || COLOR_MODE_LIST[0]; }
+function colorMode() {
+  var m = COLOR_MODE_LIST.filter(function (x) { return x.id === S.color; })[0];
+  if (!m && isVarKey(S.color) && hasMetric(S.color)) m = { id: S.color, label: mLabel(S.color), type: 'cont' };   /* v0.10.0 — colour by your variable */
+  return m || COLOR_MODE_LIST[0];
+}
 var FLAG_COLORS = { flagged: '#f0b429', clean: '#3f4766', 'not recorded': '#5f6582' };
 var POIS_COLORS = { auxetic: '#c8f542', conventional: '#3f6aa0', 'not recorded': '#5f6582' };
 function catValue(d, id) {

@@ -146,7 +146,7 @@ function closeMenu() { if (_menu) { _menu.remove(); _menu = null; } }
 function metricMenuHTML(attr, axis, current, extra) {
   var groups = {}, order = [];
   pickableMetrics().forEach(function (m) { if (!hasMetric(m.key)) return; if (!groups[m.group]) { groups[m.group] = []; order.push(m.group); } groups[m.group].push(m); });
-  return '<div class="mh">' + esc(extra || (axis.toUpperCase() + ' axis')) + '</div><div class="msearch"><input placeholder="Search metrics" data-msearch autocomplete="off" spellcheck="false"></div><div class="mlist">' + order.map(function (g) {
+  return '<div class="mh">' + esc(extra || (axis.toUpperCase() + ' axis')) + '</div>' + varNewItemHTML(attr + ':' + axis) + '<div class="msearch"><input placeholder="Search metrics" data-msearch autocomplete="off" spellcheck="false"></div><div class="mlist">' + order.map(function (g) {
     return '<div class="mg">' + esc(g) + '</div>' + groups[g].map(function (m) { return '<button role="menuitem" data-' + attr + '="' + axis + ':' + m.key + '" class="' + (current === m.key ? 'on' : '') + '" data-label="' + esc(mLabel(m.key).toLowerCase()) + '">' + esc(mLabel(m.key)) + (DB.log[m.key] ? '<em>log</em>' : '') + '</button>'; }).join('');
   }).join('') + '</div>';
 }
@@ -160,6 +160,7 @@ function setTab(t) {
   $$('.dr-pane').forEach(function (p) { p.classList.toggle('on', p.dataset.pane === t); });
   if (t === 'compare') renderCompare();
   if (t === 'target') renderTargetPane();
+  if (t === 'vars') renderVarsPane();   /* v0.10.0 */
 }
 
 /* ── tooltip ─────────────────────────────────────────────────────────── */

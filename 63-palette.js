@@ -26,6 +26,8 @@ function cpActions() {
     ['Metric key', 'key', function () { openDrawer('key'); }, ''],
     ['Correlation map · which metrics trend together', 'trends', openTrends, ''],
     ['Welcome guide', 'guide', openWelcome, ''],
+    ['Tour · what Vault can do', 'tour', startTour, ''],
+    ['New variable · your own metric', 'vars', function () { openVarBuilder({}); }, ''],
     ['Keyboard shortcuts', 'keyboard', showShortcuts, '?']
   ];
 }
@@ -37,6 +39,7 @@ function cpBuild(q) {
     ds.forEach(function (d) { out.push({ g: 'Designs', l: displayPreset(d) + ' · ' + d._id, i: 'cell', s: (FAMILY_NAME[d.family] || d.family) + (d._m ? '' : ' · outside filters'), run: function () { select(d, 'hero'); } }); });
   }
   cpActions().forEach(function (a) { if (hit(a[0])) out.push({ g: 'Actions', l: a[0], i: a[1], s: a[3], run: a[2] }); });
+  VARS.forEach(function (v) { if (hit(v.label) || hit('variable')) out.push({ g: 'My variables', l: 'Edit · ' + v.label, i: 'vars', s: varPretty(v.f), run: function () { openVarBuilder({ edit: v.k }); } }); });   /* v0.10.0 */
   DOMAIN_IDS.forEach(function (k) { if (hit(DOMAIN_SHORT[k]) || hit('domain')) out.push({ g: 'Domains', l: 'Domain · ' + DOMAIN_SHORT[k], i: k, s: domainZLabel(k), run: function () { setDomain(k); } }); });
   (AXIS_PRESETS[F.domain] || AXIS_PRESETS.all).forEach(function (p) { if (hit(p[2]) || hit('preset')) out.push({ g: '2D presets', l: p[2], i: 'presets', s: mShort(p[0]) + ' × ' + mShort(p[1]), run: function () { applyPreset(p[0], p[1]); } }); });
   COLOR_MODE_LIST.forEach(function (m) { if (hit('colour ' + m.label) || hit('color ' + m.label)) out.push({ g: 'Colour', l: 'Colour points by ' + m.label, i: 'orbit', run: function () { setColor(m.id); } }); });

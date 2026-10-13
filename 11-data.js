@@ -103,6 +103,7 @@ function ingestRows(rows) {
   resetColorCaches(); ensureNexp();          /* v0.8.0 — density exponent at load: an axis and a range filter, not only a colour */
   gibsonAshby();                             /* v0.9.0 — needs n */
   metricsAll().forEach(function (m) { computeStat(m.key); });
+  computeVars();                             /* v0.10.0 — the user's own variables (25-variables.js), after every input they can use */
   var fam = {}, con = {}, grd = {};
   DB.all.forEach(function (d) {
     fam[d.family] = (fam[d.family] || 0) + 1;
@@ -181,6 +182,7 @@ function loadChanged() {
   if (!DB.N) return;
   applyLoadValues();
   STRAIN_KEYS.forEach(function (k) { computeStat(k); delete _pctCache[k]; delete _popCache[k]; });
+  computeVars();   /* v0.10.0 — a variable may use strain */
   if (!hasLoad()) {   /* strain went away: drop anything that pointed at it */
     STRAIN_KEYS.forEach(function (k) { delete F.ranges[k]; });
     F.rangeKeys = F.rangeKeys.filter(function (k) { return STRAIN_KEYS.indexOf(k) < 0; });
@@ -188,6 +190,7 @@ function loadChanged() {
     ['x', 'y', 'z'].forEach(function (a) { if (STRAIN_KEYS.indexOf(S.ax3[a]) >= 0) S.ax3[a] = { x: '_beff', y: 'anisotropy', z: '_score' }[a]; });
     if (STRAIN_KEYS.indexOf(S.sort.k) >= 0) S.sort = { k: '_score', dir: -1 };
   }
+  varSanitizeView();   /* v0.10.0 — a variable built on strain empties without a load */
   if (S._domAxesAuto && F.domain === 'biomedical' && hasLoad()) applyDomainAxes('biomedical');   /* v0.8.2 — pore vs strain once strain exists */
   computeScores(F.domain);
   aimHits();   /* v0.7.1 — strain targets count only with a load */

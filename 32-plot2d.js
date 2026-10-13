@@ -375,6 +375,7 @@ function setTarget(kx, ky, x, y) {
   F.target = { kx: kx, ky: ky, x: x, y: y };
   S.sort = { k: '_target', dir: 1 };
   changed('target set', true);
+  if (typeof tourEvent === 'function') tourEvent('target');   /* v0.10.0 */
 }
 function computeTargetDistances() {
   var T = F.target, sx = plotScale(T.kx), sy = plotScale(T.ky), tx = sx.f(T.x), ty = sy.f(T.y);

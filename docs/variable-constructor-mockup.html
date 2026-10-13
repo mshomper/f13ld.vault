@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vault Variable Constructor</title>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Mockup rev 2 — compact formula bar, stylized shape preview, per-browser recipes.
+   Tokens match vault.css. 12 px minimum text, no horizontal scroll, drawn icons only. */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06080f;--s0:#090b12;--s1:#0c0e16;--s2:#12141f;--s3:#181b29;--s4:#22263b;
+  --hair:rgba(255,255,255,.07);--hair2:rgba(255,255,255,.13);
+  --t1:#e4e6f2;--t2:#a3a8bf;--t3:#7a809c;
+  --green:#1D9E75;--neon:#c8f542;--warn:#f0b429;--bad:#fb7185;
+  --vault:#5BA4EE;--vault-deep:#0C447C;--vault-soft:rgba(12,68,124,.34);--vault-tint:rgba(91,164,238,.07);
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+html,body{background:var(--bg);color:var(--t2);font:14px/1.45 'Exo 2',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--vault);outline-offset:2px;border-radius:6px}
+svg{display:block}
+.g{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.g .acc{fill:var(--neon);stroke:none}
+
+.wrap{max-width:1120px;margin:0 auto;padding:16px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.mark{width:28px;height:28px}
+.top h1{font:700 17px 'Exo 2';letter-spacing:.08em;color:var(--t1)}
+.top h1 span{color:var(--vault)}
+.top .sub{font:500 12px var(--mono);color:var(--t3)}
+.tag{margin-left:auto;font:500 12px var(--mono);color:var(--warn);border:1px solid rgba(240,180,41,.3);padding:2px 8px;border-radius:6px}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:860px){.grid{display:flex;flex-direction:column}.col{display:contents}.card+.card{margin-top:0}.c-build{order:1}.c-shape{order:2}.c-saved{order:3}.c-menu{order:4}}
+.card{background:var(--s1);border:1px solid var(--hair);border-radius:14px;padding:14px;min-width:0}
+.card+.card{margin-top:14px}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:12px;min-width:0}
+.ch h2{font:600 12px 'Exo 2';letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.ch .r{margin-left:auto;display:flex;gap:4px}
+.cap{font:500 12px var(--mono);color:var(--t3)}
+
+/* recipes — one quiet row */
+.recipes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.recipes .cap{margin-right:2px}
+.rp{padding:4px 10px;border-radius:999px;border:1px solid var(--hair);background:var(--s2);font:500 12px 'Exo 2';color:var(--t2);transition:border-color .15s,color .15s}
+.rp:hover,.rp.on{border-color:rgba(91,164,238,.6);color:var(--t1)}
+.rp.on{background:var(--vault-tint)}
+
+/* formula bar */
+.fbar{border:1px solid var(--hair2);border-radius:12px;background:var(--s0);transition:border-color .15s}
+.fbar.err{border-color:rgba(251,113,133,.55)}
+.fline{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:10px 12px;min-height:50px}
+.tk{display:inline-flex;align-items:center;border-radius:6px;font:500 13px 'Exo 2';max-width:100%;line-height:1.2}
+.tk.m{padding:4px 8px;background:var(--vault-soft);color:var(--t1);box-shadow:inset 0 0 0 1px rgba(91,164,238,.4);cursor:pointer}
+.tk.m:hover{box-shadow:inset 0 0 0 1px var(--vault)}
+.tk.u{padding:4px 8px;background:rgba(200,245,66,.08);color:var(--neon);box-shadow:inset 0 0 0 1px rgba(200,245,66,.4);cursor:pointer}
+.tk.n{padding:4px 7px;color:var(--warn);font:500 13px var(--mono);box-shadow:inset 0 0 0 1px rgba(240,180,41,.35);cursor:pointer}
+.tk.op{color:var(--neon);font:500 15px var(--mono);padding:0 2px}
+.tk.p{color:var(--t3);font:400 16px var(--mono)}
+.tk.c{color:var(--t3);opacity:.55;font:400 14px var(--mono);margin:0 2px 0 -3px}
+.tk.fn{color:var(--vault);font:500 13px var(--mono)}
+.tk.bad{color:var(--bad)!important;box-shadow:inset 0 0 0 1px var(--bad)!important}
+.ph{color:var(--t3);font-size:13px}
+.caret{width:2px;height:20px;background:var(--neon);border-radius:1px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.tools{display:flex;align-items:center;gap:2px;padding:4px 6px;border-top:1px solid var(--hair);flex-wrap:wrap}
+.tb{height:32px;min-width:32px;padding:0 8px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font:500 13px 'Exo 2';color:var(--t2)}
+.tb:hover{background:var(--s3);color:var(--t1)}
+.tb.op{font:500 15px var(--mono);color:var(--t1);padding:0 4px;min-width:28px}
+.tb.pri{color:var(--vault)}
+.sep{width:1px;height:18px;background:var(--hair2);margin:0 4px}
+.tools .end{margin-left:auto;display:flex;gap:2px}
+.fmsg{font-size:12px;padding:6px 2px 0;min-height:24px;color:var(--t3)}
+.fmsg.err{color:var(--bad)}
+
+/* name + options */
+.meta{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:8px;margin-top:8px}
+.fld{background:var(--s2);border:1px solid var(--hair);border-radius:9px;padding:8px 10px;color:var(--t1);width:100%;min-width:0}
+.fld:focus{outline:none;border-color:var(--vault)}
+.fld::placeholder{color:var(--t3)}
+.opts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.seg{display:inline-flex;background:var(--s2);border:1px solid var(--hair);border-radius:8px;padding:2px}
+.seg button{padding:4px 9px;border-radius:6px;font:500 12px 'Exo 2';color:var(--t3)}
+.seg button.on{background:var(--s4);color:var(--t1)}
+.og{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.opts .lab{font:500 12px var(--mono);color:var(--t3)}
+.save{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;background:var(--vault-deep);border:1px solid var(--vault);color:#fff;font:600 13px 'Exo 2'}
+.save:hover{background:#1257a0}
+.save:disabled{opacity:.35;cursor:default}
+@media (max-width:520px){.save{margin-left:0;width:100%;justify-content:center}}
+
+/* shape preview */
+.shape{display:flex;flex-direction:column;gap:10px}
+.sline{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:13px}
+.sline b{font:600 15px var(--mono);color:var(--t1)}
+.sline .cap{white-space:nowrap}
+.cv{display:block;width:100%;border-radius:10px;background:radial-gradient(120% 100% at 50% 0%,rgba(91,164,238,.06),transparent 70%),var(--s0)}
+#hist{height:64px;max-height:64px}
+#scat{height:168px;max-height:168px}
+.vs{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);flex-wrap:wrap}
+.pick{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid var(--hair);background:var(--s2);color:var(--t2);font:500 12px 'Exo 2'}
+.pick:hover{border-color:var(--vault);color:var(--t1)}
+.miss{font-size:12px;color:var(--warn)}
+.tops{display:flex;flex-direction:column;gap:3px}
+.tp{display:flex;align-items:center;gap:8px;font-size:12px;min-width:0}
+.tp i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tp span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)}
+.tp em{font:500 12px var(--mono);font-style:normal;color:var(--neon)}
+
+/* saved list */
+.saved{display:flex;flex-direction:column}
+.sv{display:flex;align-items:center;gap:8px;padding:8px 2px;border-top:1px solid var(--hair);min-width:0}
+.sv:first-child{border-top:0}
+.sv .tx{flex:1;min-width:0}
+.sv .nm{font:600 13px 'Exo 2';color:var(--t1);display:flex;gap:6px;align-items:baseline;min-width:0}
+.sv .nm em{font:500 12px var(--mono);font-style:normal;color:var(--neon)}
+.sv code{display:block;font:500 12px var(--mono);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ib{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--t3);flex-shrink:0}
+.ib:hover{background:var(--s3);color:var(--t1)}
+.note{font-size:12px;color:var(--t3);line-height:1.5}
+.foot{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair)}
+.foot .note{flex:1}
+.soon{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);padding:4px 9px;border-radius:999px;border:1px dashed var(--hair2)}
+
+/* where it shows — compact */
+.menu{background:#11131d;border:1px solid var(--hair2);border-radius:10px;padding:4px;box-shadow:0 14px 40px rgba(0,0,0,.45)}
+.menu .mh{font:500 12px var(--mono);color:var(--t3);padding:6px 10px 4px}
+.menu .mg{font:600 12px 'Exo 2';letter-spacing:.06em;text-transform:uppercase;color:var(--t3);padding:8px 10px 2px}
+.menu .mi{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;font:500 13px 'Exo 2';color:var(--t2);width:100%;text-align:left;min-width:0}
+.menu .mi span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.menu .mi.new{color:var(--neon)}
+.menu .mi.mine{color:var(--t1)}
+.menu .mi em{margin-left:auto;font:500 12px var(--mono);font-style:normal;color:var(--t3)}
+.reach{font-size:12px;color:var(--t3);margin-top:10px;line-height:1.55}
+.reach b{color:var(--t2);font-weight:500}
+
+/* popovers */
+.pop{position:fixed;z-index:50;background:#11131d;border:1px solid var(--hair2);border-radius:12px;width:min(300px,calc(100vw - 20px));box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;max-height:min(400px,70vh);animation:pop .14s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(-4px)}}
+.pop .ps{padding:8px;border-bottom:1px solid var(--hair)}
+.pop .pl{overflow-y:auto;overflow-x:hidden;padding:4px}
+.pop .mg{font:600 12px 'Exo 2';letter-spacing:.06em;text-transform:uppercase;color:var(--t3);padding:8px 10px 2px}
+.pop .mi{display:flex;width:100%;padding:6px 10px;border-radius:7px;font:500 13px 'Exo 2';color:var(--t2);text-align:left;gap:8px;min-width:0;align-items:baseline}
+.pop .mi span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pop .mi:hover{background:var(--s3);color:var(--t1)}
+.pop .mi.on{color:var(--neon)}
+.pop .mi em{margin-left:auto;font:500 12px var(--mono);font-style:normal;color:var(--t3);flex-shrink:0}
+.pop .mi small{font-size:12px;color:var(--t3);margin-left:auto;flex-shrink:0}
+.pop .num{display:flex;gap:6px;padding:8px}
+.pop .num button{padding:0 12px;border-radius:8px;background:var(--vault-deep);color:#fff;font:600 13px 'Exo 2'}
+.dup{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 6px;padding:8px 10px;border-radius:9px;background:var(--vault-tint);border:1px solid rgba(91,164,238,.35);font-size:12px;color:var(--t2)}
+.dup[hidden]{display:none}
+.dup .g{color:var(--vault)}
+.dup span{flex:1;min-width:180px}
+.dup b{color:var(--t1);font-weight:600}
+.dup button{font:600 12px 'Exo 2';color:var(--vault);padding:3px 8px;border-radius:6px}
+.dup button:hover{background:var(--s3);color:var(--t1)}
+.pop{width:min(340px,calc(100vw - 20px))!important;max-height:min(460px,72vh)!important}
+.gch{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.gc{padding:3px 8px;border-radius:999px;border:1px solid var(--hair);background:var(--s2);font:500 12px 'Exo 2';color:var(--t3)}
+.gc:hover{color:var(--t1)}
+.gc.on{border-color:rgba(91,164,238,.6);color:var(--t1);background:var(--vault-tint)}
+.pop .pl{flex:1;min-height:0}
+.pc{font:500 12px var(--mono);color:var(--t3);padding:6px 12px;border-top:1px solid var(--hair)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--s3);border:1px solid var(--hair2);color:var(--t1);padding:9px 14px;border-radius:9px;font-size:13px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <svg class="mark" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="7" fill="#0C447C" stroke="#5BA4EE" stroke-width="1.5"/><path d="M9 11l7 11 7-11" fill="none" stroke="#E6F1FB" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.2" fill="#c8f542"/></svg>
+    <h1>F13LD<span>.vault</span></h1>
+    <span class="sub">Variable constructor · mockup rev 3</span>
+    <span class="tag">synthetic values · 320 designs · all 69 metrics</span>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="card c-build">
+        <div class="ch">
+          <svg class="g" viewBox="0 0 16 16" style="color:var(--vault)"><path d="M3 4h10M3 8h5M3 12h7"/><circle class="acc" cx="12" cy="8" r="1.7"/></svg>
+          <h2 id="title">New variable</h2>
+        </div>
+
+        <div class="recipes" id="recipes"><span class="cap">Start from</span></div>
+
+        <div class="fbar" id="fbar">
+          <div class="fline" id="fline"></div>
+          <div class="tools">
+            <button class="tb pri" id="addM" title="Add a metric">
+              <svg class="g" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></svg>Metric</button>
+            <span class="sep"></span>
+            <button class="tb op" data-k="+" title="Plus">+</button>
+            <button class="tb op" data-k="-" title="Minus">−</button>
+            <button class="tb op" data-k="*" title="Times">×</button>
+            <button class="tb op" data-k="/" title="Divide">÷</button>
+            <button class="tb op" data-k="^" title="Power">^</button>
+            <button class="tb op" data-k="(" title="Open bracket">(</button>
+            <button class="tb op" data-k=")" title="Close bracket">)</button>
+            <span class="sep"></span>
+            <button class="tb" id="addF" title="Add a function">
+              <svg class="g" viewBox="0 0 16 16"><path d="M10.5 3.2C8.8 2.7 8 3.6 7.7 5.2L6.3 11c-.4 1.6-1.2 2.3-2.8 1.8M5 7h5"/></svg>Function</button>
+            <button class="tb" id="addN" title="Add a number">
+              <svg class="g" viewBox="0 0 16 16"><path d="M6 3l-1.5 10M11 3L9.5 13M3 6h10M2.5 10h10"/></svg>Number</button>
+            <div class="end">
+              <button class="tb" id="bk" title="Remove the last piece" aria-label="Remove the last piece">
+                <svg class="g" viewBox="0 0 16 16"><path d="M6 3.5h7a1 1 0 011 1v7a1 1 0 01-1 1H6L2 8z"/><path d="M8 6.2l3.4 3.6M11.4 6.2L8 9.8"/></svg></button>
+              <button class="tb" id="clr" title="Clear the formula" aria-label="Clear the formula">
+                <svg class="g" viewBox="0 0 16 16"><path d="M4 4.5l8 8M12 4.5l-8 8"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="fmsg" id="fmsg"></div>
+        <div class="dup" id="dup" hidden>
+          <svg class="g" viewBox="0 0 16 16"><rect x="2.5" y="4.5" width="7" height="7" rx="1.5"/><rect x="6.5" y="2.5" width="7" height="7" rx="1.5"/><circle class="acc" cx="10" cy="6" r="1.5"/></svg>
+          <span id="dupTx"></span><button id="dupUse">Use it instead</button>
+        </div>
+
+        <div class="meta">
+          <input class="fld" id="vname" placeholder="Name it" maxlength="40" autocomplete="off">
+          <input class="fld" id="vshort" placeholder="Short" maxlength="10" autocomplete="off">
+        </div>
+        <div class="opts">
+          <span class="og"><span class="lab">Scale</span>
+          <span class="seg" id="segScale"><button data-v="auto" class="on">Auto</button><button data-v="lin">Linear</button><button data-v="log">Log</button></span></span>
+          <span class="og"><span class="lab">Better</span>
+          <span class="seg" id="segBetter"><button data-v="1">Higher</button><button data-v="-1">Lower</button><button data-v="0" class="on">Neither</button></span></span>
+          <button class="save" id="save" disabled>
+            <svg class="g" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3L12.5 5"/></svg><span id="saveTx">Save</span></button>
+        </div>
+      </div>
+
+      <div class="card c-saved">
+        <div class="ch">
+          <svg class="g" viewBox="0 0 16 16" style="color:var(--neon)"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/><path d="M5 6h6M5 9.5h3.5"/></svg>
+          <h2>My recipes</h2>
+          <div class="r">
+            <button class="ib" id="exp" title="Export recipes to a file" aria-label="Export recipes to a file"><svg class="g" viewBox="0 0 16 16"><path d="M8 2.5v7.5M5 7l3 3 3-3M3 12.5h10"/></svg></button>
+            <button class="ib" id="imp" title="Import recipes from a file" aria-label="Import recipes from a file"><svg class="g" viewBox="0 0 16 16"><path d="M8 10V2.5M5 5.5l3-3 3 3M3 12.5h10"/></svg></button>
+            <input type="file" id="impFile" accept=".json,application/json" hidden>
+          </div>
+        </div>
+        <div class="saved" id="saved"></div>
+        <div class="foot">
+          <span class="note">Saved in this browser only.</span>
+          <span class="soon" title="Shared recipes will be reviewed before they appear for everyone">
+            <svg class="g" viewBox="0 0 16 16"><circle cx="5.5" cy="6" r="2"/><circle cx="10.5" cy="6" r="2"/><path d="M2 12.5c.6-2 2-3 3.5-3s2.9 1 3.5 3M9.5 9.6c.3-.1.7-.1 1-.1 1.5 0 2.9 1 3.5 3"/></svg>Community sharing · later, reviewed</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card c-shape">
+        <div class="ch">
+          <svg class="g" viewBox="0 0 16 16" style="color:var(--vault)"><path d="M2 12c2-1 3-7 5-7s2.5 5 4 5 1.8-3 3-4"/><circle class="acc" cx="7" cy="5" r="1.6"/></svg>
+          <h2>Shape</h2>
+        </div>
+        <div class="shape">
+          <div class="sline" id="sline"><span class="cap">Build a formula to see how it spreads across the Vault.</span></div>
+          <canvas class="cv" id="hist" data-h="64"></canvas>
+          <div class="vs">Against <button class="pick" id="xpick"><span id="xlab">Volume fraction</span>
+            <svg class="g" viewBox="0 0 16 16" style="width:12px;height:12px"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg></button><span id="lg" style="margin-left:auto"></span></div>
+          <canvas class="cv" id="scat" data-h="168"></canvas>
+          <div class="miss" id="miss"></div>
+          <div class="tops" id="tops"></div>
+        </div>
+      </div>
+
+      <div class="card c-menu">
+        <div class="ch"><h2>Then, in every metric menu</h2></div>
+        <div class="menu" id="axmenu"></div>
+        <div class="reach"><b>Axes, colour, sort, filters, correlation map, Compare.</b> Share links carry the recipe. Not targetable by Aim Sweep yet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────── synthetic designs — every Vault metric except domain score and scarcity.
+   The values are made up; only the relations that the duplicate check should
+   catch are real (e.g. Voigt efficiency = E* ÷ solid fraction). ───────── */
+var R=(function(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};})(7);
+var FAM={tpms:'#5BA4EE',grain:'#1D9E75',beam:'#EF9F27',foam:'#EB6F85',noise:'#B48CF2'};
+var NAMES={tpms:['Gyroid sheet','Diamond sheet','Primitive','I-WP','Neovius'],grain:['Spinodoid L','Spinodoid C','GRF'],beam:['Octet','BCC','Kelvin strut'],foam:['Voronoi','Weaire–Phelan','Kelvin foam'],noise:['Veined','Foam noise']};
+var D=[];
+function sum(a){return a.reduce(function(s,x){return s+x;},0);}
+function rr(a,b){return a+R()*(b-a);}
+Object.keys(FAM).forEach(function(f,fi){
+  var n=f==='tpms'?110:f==='beam'?70:f==='grain'?60:f==='foam'?50:30;
+  var nexp=[1.55,1.9,1.2,2.2,2.0][fi],C=[0.62,0.45,0.35,0.9,0.5][fi],L=4;
+  for(var i=0;i<n;i++){
+    var vf=6+R()*52,rho=vf/100,base=C*Math.pow(rho,nexp);
+    var bias=f==='beam'?[1+R()*2.5,1,1]:f==='grain'?[1+R()*1.8,1+R()*.4,1]:[1+R()*.25,1+R()*.25,1+R()*.25];
+    var ms=sum(bias)/3,E=bias.map(function(b){return base*b/ms;}),em=sum(E)/3,emx=Math.max.apply(null,E),emn=Math.min.apply(null,E);
+    var hasG=!(f==='noise'&&R()<.5),hasC=hasG&&R()<.75;
+    var G=[0,1,2].map(function(){return base*rr(.2,.55);}),gm=sum(G)/3;
+    var pore=(1-rho)*rr(.5,.85),thr=pore*rr(.35,.95);
+    var kb=[0,1,2].map(function(a){return rho*rr(.35,.8)*(E[a]/em);}),kavg=sum(kb)/3,kmx=Math.max.apply(null,kb),kmn=Math.min.apply(null,kb);
+    var tmin=1+rho*rr(.4,1.6),hm=rr(-.15,.15),ha=Math.abs(hm)+rr(.05,.4),hs=rr(.05,.5),kg=-rr(.02,.4);
+    var d={fam:f,name:NAMES[f][Math.floor(R()*NAMES[f].length)]+' #'+(i+1),
+      volume_fraction:vf,connect_idx:rr(.7,1),perc_idx:rr(.6,1),anisotropy:emx/emn,directionality:emx/sum(E),
+      ortho_contrast:Math.sqrt(E.reduce(function(s,e){return s+(e-em)*(e-em);},0)/3)/em,surface_complexity:R(),
+      ex_norm:E[0],ey_norm:E[1],ez_norm:E[2],stiffness_density_norm:em/rho,_emax:emx,_beff:emx/rho,_perf:Math.sqrt(E[0]*E[0]+E[1]*E[1]+E[2]*E[2])/vf,
+      gyz_norm:hasG?G[0]:null,gxz_norm:hasG?G[1]:null,gxy_norm:hasG?G[2]:null,_gmean:hasG?gm:null,
+      _nexp:nexp+(R()-.5)*.3,
+      _numin:hasC?rr(f==='beam'?-.35:-.05,.3):null,_nu_xy:hasC?rr(-.1,.45):null,_nu_xz:hasC?rr(-.1,.45):null,_nu_yz:hasC?rr(-.1,.45):null,
+      _edmax:hasC?emx*rr(1,1.35):null,_edmin:hasC?emn*rr(.55,1):null,_au:hasC?(emx/emn-1)*2+rr(0,.6):null,_zener:hasC?rr(.5,2.2):null,
+      _kb:hasC?em*rr(.5,1):null,_hs:hasC?rr(.25,.9):null,_ge:hasC?rr(.18,.45):null,
+      pore_size_norm:pore,pore_size_p10_norm:pore*rr(.18,.3),pore_size_p50_norm:pore*rr(.4,.55),pore_size_p90_norm:pore*rr(.7,.9),pore_size_cv:rr(.15,.6),
+      throat_size_norm:thr,throat_ratio:thr,_tp:thr/pore,_sv:(f==='tpms'?5:3)*rr(.7,1.3),
+      keff_x_norm:kb[0],keff_y_norm:kb[1],keff_z_norm:kb[2],keff_max_norm:kmx,keff_avg_norm:kavg,thermal_anisotropy:kmx/kmn,_keff:kavg/rho,
+      tortuosity_min:tmin,tortuosity_avg:tmin*rr(1,1.3),d_eff_max_norm:(1-rho)/tmin,d_eff_avg_norm:(1-rho)/tmin*rr(.6,.95),
+      microstrain_x_per_gpa:9.09/E[0],microstrain_y_per_gpa:9.09/E[1],microstrain_z_per_gpa:9.09/E[2],microstrain_avg_per_gpa:9.09/em,u_compliance:4.5/em,
+      h_mean:hm/L,h_mean_abs:ha/L,h_std:hs/L,k_gauss_mean:kg/(L*L),curvature_uniformity:1/(1+hs/ha),mih:rr(.5,3)*L,
+      _hL:hm,_hLa:ha,_hsL:hs,_kL2:kg,genus_per_cell:Math.round(rr(1,9))};
+    d._mihL=d.mih/L;d._ga=d._emax/Math.pow(rho,d._nexp);
+    D.push(d);
+  }
+});
+var N=D.length;
+var M=[{"g": "Geometry", "k": "_sv", "l": "Specific surface S/V²ᐟ³", "s": "S/V"}, {"g": "Geometry", "k": "volume_fraction", "l": "Volume fraction", "s": "VF"}, {"g": "Geometry", "k": "connect_idx", "l": "Solid connectivity κ", "s": "κ solid"}, {"g": "Geometry", "k": "perc_idx", "l": "Void percolation", "s": "κ void"}, {"g": "Geometry", "k": "anisotropy", "l": "Axial anisotropy", "s": "Axial aniso"}, {"g": "Geometry", "k": "directionality", "l": "Directionality Ψ", "s": "Dir Ψ"}, {"g": "Geometry", "k": "surface_complexity", "l": "Surface complexity (voxel faces)", "s": "Surface"}, {"g": "Stiffness", "k": "ex_norm", "l": "Stiffness Ex / Es", "s": "Ex"}, {"g": "Stiffness", "k": "ey_norm", "l": "Stiffness Ey / Es", "s": "Ey"}, {"g": "Stiffness", "k": "ez_norm", "l": "Stiffness Ez / Es", "s": "Ez"}, {"g": "Stiffness", "k": "stiffness_density_norm", "l": "Voigt efficiency (mean axis)", "s": "Voigt avg"}, {"g": "Shear", "k": "gyz_norm", "l": "Shear Gyz / Es", "s": "Gyz"}, {"g": "Shear", "k": "gxz_norm", "l": "Shear Gxz / Es", "s": "Gxz"}, {"g": "Shear", "k": "gxy_norm", "l": "Shear Gxy / Es", "s": "Gxy"}, {"g": "Elastic tensor", "k": "_numin", "l": "Poisson’s ratio (min)", "s": "ν min"}, {"g": "Elastic tensor", "k": "_nu_xy", "l": "Poisson’s ratio ν xy", "s": "ν xy"}, {"g": "Elastic tensor", "k": "_nu_xz", "l": "Poisson’s ratio ν xz", "s": "ν xz"}, {"g": "Elastic tensor", "k": "_nu_yz", "l": "Poisson’s ratio ν yz", "s": "ν yz"}, {"g": "Elastic tensor", "k": "_edmax", "l": "Stiffest direction E / Es", "s": "E dir max"}, {"g": "Elastic tensor", "k": "_edmin", "l": "Softest direction E / Es", "s": "E dir min"}, {"g": "Elastic tensor", "k": "_au", "l": "Universal anisotropy A^U", "s": "A^U"}, {"g": "Elastic tensor", "k": "_zener", "l": "Zener ratio", "s": "Zener"}, {"g": "Elastic tensor", "k": "_kb", "l": "Bulk modulus K / Es", "s": "K"}, {"g": "Elastic tensor", "k": "_hs", "l": "Hashin–Shtrikman efficiency", "s": "HS eff"}, {"g": "Elastic tensor", "k": "_ge", "l": "Shear ÷ Young’s G/E", "s": "G/E"}, {"g": "Derived", "k": "_emax", "l": "Peak stiffness E* / Es", "s": "E*"}, {"g": "Derived", "k": "_gmean", "l": "Mean shear G / Es", "s": "G*"}, {"g": "Derived", "k": "_nexp", "l": "Density exponent n", "s": "n"}, {"g": "Derived", "k": "_beff", "l": "Voigt efficiency (stiffest axis)", "s": "Voigt max"}, {"g": "Derived", "k": "_ga", "l": "Gibson–Ashby prefactor C", "s": "C"}, {"g": "Pore", "k": "_tp", "l": "Throat ÷ pore", "s": "Throat/pore"}, {"g": "Pore", "k": "pore_size_norm", "l": "Mean pore φ / cell", "s": "Pore"}, {"g": "Pore", "k": "pore_size_p10_norm", "l": "Pore P10 / cell", "s": "P10"}, {"g": "Pore", "k": "pore_size_p50_norm", "l": "Pore P50 / cell", "s": "P50"}, {"g": "Pore", "k": "pore_size_p90_norm", "l": "Pore P90 / cell", "s": "P90"}, {"g": "Pore", "k": "pore_size_cv", "l": "Pore size CV", "s": "Pore CV"}, {"g": "Pore", "k": "throat_size_norm", "l": "Throat / cell", "s": "Throat"}, {"g": "Thermal", "k": "_keff", "l": "Conductivity efficiency", "s": "k eff"}, {"g": "Thermal", "k": "keff_x_norm", "l": "Thermal cond. kx / ks", "s": "kx"}, {"g": "Thermal", "k": "keff_y_norm", "l": "Thermal cond. ky / ks", "s": "ky"}, {"g": "Thermal", "k": "keff_z_norm", "l": "Thermal cond. kz / ks", "s": "kz"}, {"g": "Thermal", "k": "keff_max_norm", "l": "Thermal cond. (best axis)", "s": "k max"}, {"g": "Thermal", "k": "keff_avg_norm", "l": "Thermal cond. (avg) / ks", "s": "k avg"}, {"g": "Thermal", "k": "thermal_anisotropy", "l": "Thermal anisotropy kα", "s": "k aniso"}, {"g": "Transport", "k": "tortuosity_min", "l": "Tortuosity (min axis)", "s": "τ min"}, {"g": "Transport", "k": "tortuosity_avg", "l": "Tortuosity (avg)", "s": "τ avg"}, {"g": "Transport", "k": "d_eff_max_norm", "l": "D_eff (max axis) / D₀", "s": "D max"}, {"g": "Transport", "k": "d_eff_avg_norm", "l": "D_eff (avg) / D₀", "s": "D avg"}, {"g": "Curvature", "k": "_hL", "l": "Mean curvature H̄·L (signed)", "s": "H̄L"}, {"g": "Curvature", "k": "_hLa", "l": "Mean curvature |H̄|·L", "s": "|H̄|L"}, {"g": "Curvature", "k": "_hsL", "l": "Curvature spread σ(H)·L", "s": "σH·L"}, {"g": "Curvature", "k": "_kL2", "l": "Gaussian curvature K·L²", "s": "KL²"}, {"g": "Curvature", "k": "_mihL", "l": "Integrated curvature ∫H dA ÷ L", "s": "MIH/L"}, {"g": "Curvature", "k": "curvature_uniformity", "l": "Curvature uniformity", "s": "Curv unif"}, {"g": "Compliance", "k": "microstrain_x_per_gpa", "l": "μstrain X", "s": "με x"}, {"g": "Compliance", "k": "microstrain_y_per_gpa", "l": "μstrain Y", "s": "με y"}, {"g": "Compliance", "k": "microstrain_z_per_gpa", "l": "μstrain Z", "s": "με z"}, {"g": "Compliance", "k": "microstrain_avg_per_gpa", "l": "μstrain (avg)", "s": "με avg"}, {"g": "Topology", "k": "genus_per_cell", "l": "Genus per cell", "s": "Genus"}, {"g": "Retired · still in the data", "k": "_perf", "l": "Stiffness efficiency |E|/VF", "s": "|E|/VF"}, {"g": "Retired · still in the data", "k": "ortho_contrast", "l": "Ortho contrast Ω", "s": "Ortho Ω"}, {"g": "Retired · still in the data", "k": "aniso_efficiency", "l": "Aniso efficiency α/ρ", "s": "α/ρ"}, {"g": "Retired · still in the data", "k": "u_compliance", "l": "Strain energy U", "s": "U/σ²"}, {"g": "Retired · still in the data", "k": "throat_ratio", "l": "Throat ratio (stored)", "s": "Throat r"}, {"g": "Retired · still in the data", "k": "h_mean", "l": "Mean curvature H̄ (signed)", "s": "H̄"}, {"g": "Retired · still in the data", "k": "h_mean_abs", "l": "Mean curvature |H̄|", "s": "|H̄|"}, {"g": "Retired · still in the data", "k": "h_std", "l": "Curvature std σ(H)", "s": "σH"}, {"g": "Retired · still in the data", "k": "k_gauss_mean", "l": "Gaussian curvature K", "s": "K gauss"}, {"g": "Retired · still in the data", "k": "mih", "l": "Mean integrated curvature", "s": "MIH"}];
+var BYS={},BYK={};M.forEach(function(m){BYS[m.s]=m;BYK[m.k]=m;});
+var USER=[],EDITING=null;
+function userBy(s){for(var i=0;i<USER.length;i++)if(USER[i].s===s)return USER[i];return null;}
+function userByK(k){for(var i=0;i<USER.length;i++)if(USER[i].k===k)return USER[i];return null;}
+function metaOf(k){return BYK[k]||userByK(k);}
+function shortOf(k){var m=metaOf(k);return m?m.s:k;}
+
+/* ───────── formula: tokenize → tree → evaluate over every design (no eval) ───────── */
+var FN={abs:1,sqrt:1,log10:1,ln:1,rank:1,scale:1,min:-1,max:-1,mean:-1};
+var FN_INFO=[['abs','Size, ignoring sign'],['sqrt','Square root'],['log10','Log, base 10'],['ln','Natural log'],['min','Smallest of several'],['max','Largest of several'],['mean','Average of several'],['rank','0–1 rank across the Vault'],['scale','0–1 between the Vault’s min and max']];
+function tokenize(s){
+  var out=[],i=0;
+  while(i<s.length){
+    var c=s[i];
+    if(/\s/.test(c)){i++;continue;}
+    if(c==='['){var j=s.indexOf(']',i);if(j<0){out.push({t:'bad',v:s.slice(i),why:'A metric is missing its closing bracket'});break;}out.push({t:'m',v:s.slice(i+1,j)});i=j+1;continue;}
+    if(/[0-9.]/.test(c)){var m=/^[0-9]*\.?[0-9]+(e[-+]?[0-9]+)?/i.exec(s.slice(i));if(!m){out.push({t:'bad',v:c,why:'Not a number'});i++;continue;}out.push({t:'n',v:m[0]});i+=m[0].length;continue;}
+    if(/[a-z]/i.test(c)){var w=/^[a-z0-9]+/i.exec(s.slice(i))[0];out.push(FN[w]?{t:'fn',v:w}:{t:'bad',v:w,why:'Unknown word “'+w+'”'});i+=w.length;continue;}
+    if('+-*/^'.indexOf(c)>=0){out.push({t:'op',v:c});i++;continue;}
+    if('(),'.indexOf(c)>=0){out.push({t:'p',v:c});i++;continue;}
+    out.push({t:'bad',v:c,why:'Unknown symbol “'+c+'”'});i++;
+  }
+  return out;
+}
+function isStart(t){return t&&(t.t==='m'||t.t==='n'||t.t==='fn'||(t.t==='p'&&t.v==='('));}
+function isEnd(t){return t&&(t.t==='m'||t.t==='n'||(t.t==='p'&&t.v===')'));}
+function tlab(t){return t.t==='p'?'the bracket':t.t==='m'?shortOf(t.v):t.v;}
+function parse(toks){
+  var i=0;
+  function adj(inList){var a=toks[i-1],b=toks[i];if(isEnd(a)&&isStart(b))err((inList?'Add a comma or an operator between ':'Add an operator between ')+tlab(a)+' and '+tlab(b),[a,b]);}
+  function pk(){return toks[i];}
+  function err(msg,tok){var e=new Error(msg);e.tok=tok;throw e;}
+  function expr(){var a=term();while(pk()&&pk().t==='op'&&(pk().v==='+'||pk().v==='-')){var o=toks[i++].v;a={op:o,a:a,b:term()};}return a;}
+  function term(){var a=power();while(pk()&&pk().t==='op'&&(pk().v==='*'||pk().v==='/')){var o=toks[i++].v;a={op:o,a:a,b:power()};}return a;}
+  function power(){var a=unary();if(pk()&&pk().t==='op'&&pk().v==='^'){i++;a={op:'^',a:a,b:power()};}return a;}
+  function unary(){if(pk()&&pk().t==='op'&&pk().v==='-'){i++;return {op:'neg',a:unary()};}return atom();}
+  function atom(){
+    var t=toks[i++];
+    if(!t)err('Ends too soon — add a metric or a number');
+    if(t.t==='bad')err(t.why,t);
+    if(t.t==='n')return {num:+t.v};
+    if(t.t==='m'){var m=metaOf(t.v);if(!m)err('“'+t.v+'” is not a metric',t);if(m===EDITING)err('A recipe cannot use itself',t);return {key:m.k};}
+    if(t.t==='fn'){
+      if(!pk()||pk().v!=='(')err(t.v+' needs brackets after it',t);i++;
+      var args=[expr()];while(pk()&&pk().v===','){i++;args.push(expr());}
+      adj(FN[t.v]===-1);if(!pk()||pk().v!==')')err('A bracket after '+t.v+' is not closed',t);i++;
+      if(FN[t.v]===1&&args.length!==1)err(t.v+' takes one input',t);
+      if(FN[t.v]===-1&&args.length<2)err(t.v+' takes two or more inputs, separated by commas',t);
+      return {fn:t.v,args:args};
+    }
+    if(t.v==='('){var e=expr();adj(false);if(!pk()||pk().v!==')')err('A bracket is not closed',t);i++;return e;}
+    err('Unexpected “'+({'*':'×','/':'÷','-':'−'}[t.v]||t.v)+'”',t);
+  }
+  if(!toks.length)err('');
+  var tree=expr();
+  if(i<toks.length){adj(false);err('Unexpected “'+toks[i].v+'”',toks[i]);}
+  return tree;
+}
+function col(k){var u=userByK(k);if(u)return u.vals;var a=new Float64Array(N);for(var i=0;i<N;i++){var v=D[i][k];a[i]=(v==null||!isFinite(v))?NaN:v;}return a;}
+function evalTree(n){
+  var o=new Float64Array(N),i;
+  if(n.num!=null){o.fill(n.num);return o;}
+  if(n.key)return col(n.key);
+  if(n.op==='neg'){var a0=evalTree(n.a);for(i=0;i<N;i++)o[i]=-a0[i];return o;}
+  if(n.op){var a=evalTree(n.a),b=evalTree(n.b);for(i=0;i<N;i++){var x=a[i],y=b[i];o[i]=n.op==='+'?x+y:n.op==='-'?x-y:n.op==='*'?x*y:n.op==='/'?(y===0?NaN:x/y):Math.pow(x,y);}return o;}
+  var A=n.args.map(evalTree),f=n.fn,v;
+  if(f==='rank'||f==='scale'){
+    var src=A[0],idx=[];for(i=0;i<N;i++)if(isFinite(src[i]))idx.push(i);o.fill(NaN);
+    if(f==='rank'){idx.sort(function(p,q){return src[p]-src[q];});idx.forEach(function(ix,r){o[ix]=idx.length>1?r/(idx.length-1):0.5;});return o;}
+    var lo=Infinity,hi=-Infinity;idx.forEach(function(ix){lo=Math.min(lo,src[ix]);hi=Math.max(hi,src[ix]);});
+    idx.forEach(function(ix){o[ix]=hi>lo?(src[ix]-lo)/(hi-lo):0;});return o;
+  }
+  for(i=0;i<N;i++){
+    var x0=A[0][i];
+    if(f==='abs')v=Math.abs(x0);else if(f==='sqrt')v=x0<0?NaN:Math.sqrt(x0);else if(f==='log10')v=x0<=0?NaN:Math.log10(x0);else if(f==='ln')v=x0<=0?NaN:Math.log(x0);
+    else{var xs=A.map(function(c){return c[i];});v=f==='min'?Math.min.apply(null,xs):f==='max'?Math.max.apply(null,xs):xs.reduce(function(s,q){return s+q;},0)/xs.length;}
+    o[i]=isFinite(v)?v:NaN;
+  }
+  return o;
+}
+function compile(f){try{return evalTree(parse(tokenize(f)));}catch(e){return null;}}
+
+/* ───────── recipes ───────── */
+var TPL=[
+ {n:'Ratio',s:'[_gmean] / [_emax]',name:'Shear to stiffness'},
+ {n:'Per material',s:'[_sv] / ([volume_fraction] / 100)',name:'Surface per material'},
+ {n:'Density-scaled',s:'[_emax] / ([volume_fraction] / 100) ^ 2',name:'Stiffness past ρ²'},
+ {n:'Weakest axis',s:'min([ex_norm], [ey_norm], [ez_norm]) / ([volume_fraction] / 100)',name:'Weakest-axis efficiency'},
+ {n:'Rank blend',s:'0.6 * rank([_sv]) + 0.4 * rank([keff_avg_norm])',name:'Surface and conduction'},
+ {n:'Distance to target',s:'abs([pore_size_norm] - 0.45)',name:'Pore off target'}
+];
+var $=function(s){return document.querySelector(s);};
+var FORM='',SCALE='auto',BETTER='0',XK='volume_fraction',LAST=null,TPLON=-1;
+$('#recipes').insertAdjacentHTML('beforeend',TPL.map(function(t,i){return '<button class="rp" data-t="'+i+'" title="'+pretty(t.s)+'">'+t.n+'</button>';}).join(''));
+$('#recipes').onclick=function(e){var b=e.target.closest('[data-t]');if(!b)return;var t=TPL[+b.dataset.t];TPLON=+b.dataset.t;FORM=t.s;if(!EDITING){$('#vname').value=t.name;$('#vshort').value='';}refresh();};
+
+function untok(t){return t.map(function(x){return x.t==='m'?'['+x.v+']':x.v;}).join(' ').replace(/\( /g,'(').replace(/ \)/g,')').replace(/ ,/g,',');}
+function pretty(f){return f.replace(/\[([^\]]+)\]/g,function(_,k){return '\u0001'+shortOf(k)+'\u0002';}).replace(/\*/g,'×').replace(/\//g,'÷').replace(/ - /g,' − ').replace(/\u0001([^\u0002]*)\u0002/g,'$1');}
+/* Inside min / max / mean, a value added right after another value gets its comma automatically. */
+function innerFn(toks){var st=[];toks.forEach(function(t,i){if(t.t==='p'&&t.v==='(')st.push(i>0&&toks[i-1].t==='fn'?toks[i-1].v:null);else if(t.t==='p'&&t.v===')')st.pop();});return st.length?st[st.length-1]:null;}
+function append(s){
+  var toks=tokenize(FORM),nt=tokenize(s)[0],f=innerFn(toks);
+  if(f&&FN[f]===-1&&isEnd(toks[toks.length-1])&&isStart(nt))FORM+=',';
+  FORM=(FORM+' '+s).trim();TPLON=-1;refresh();
+}
+
+/* ───────── popovers ───────── */
+var POP=null;
+function closePop(){if(POP){POP.remove();POP=null;}}
+document.addEventListener('pointerdown',function(e){if(POP&&!POP.contains(e.target)&&!e.target.closest('[data-popper]'))closePop();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closePop();});
+function placePop(p,anchor){
+  var r=anchor.getBoundingClientRect(),w=p.offsetWidth,h=p.offsetHeight;
+  p.style.left=Math.max(10,Math.min(r.left,innerWidth-w-10))+'px';
+  p.style.top=(r.bottom+6+h>innerHeight-10?Math.max(10,r.top-h-6):r.bottom+6)+'px';
+}
+function openPop(anchor,html,onpick,afterOpen){
+  closePop();var p=document.createElement('div');p.className='pop';p.innerHTML=html;document.body.appendChild(p);placePop(p,anchor);
+  p.addEventListener('click',function(e){var b=e.target.closest('[data-v]');if(b){onpick(b.dataset.v);closePop();}});
+  POP=p;if(afterOpen)afterOpen(p);return p;
+}
+function pickList(){return USER.map(function(u){return {g:'My recipes',l:u.l,s:u.s,k:u.k};}).concat(M);}
+function groupNames(){var o=[];pickList().forEach(function(m){if(o.indexOf(m.g)<0)o.push(m.g);});return o;}
+function metricItems(q,grp,cur){
+  var g=null,h='',n=0;
+  pickList().forEach(function(m){
+    if(EDITING&&m.k===EDITING.k)return;
+    if(grp&&m.g!==grp)return;
+    if(q&&m.l.toLowerCase().indexOf(q)<0&&m.s.toLowerCase().indexOf(q)<0&&m.g.toLowerCase().indexOf(q)<0)return;
+    if(m.g!==g){g=m.g;h+='<div class="mg">'+esc(m.g)+'</div>';}
+    h+='<button class="mi'+(m.k===cur?' on':'')+'" data-v="'+esc(m.k)+'"><span>'+esc(m.l)+'</span><em>'+esc(m.s)+'</em></button>';n++;
+  });
+  return {h:h||'<div class="mg">No metric matches</div>',n:n};
+}
+function metricPop(anchor,head,cur,onpick){
+  var gs=groupNames(),chips='<div class="gch"><button class="gc on" data-g="">All</button>'+gs.map(function(g){return '<button class="gc" data-g="'+esc(g)+'">'+esc(g.replace(' · still in the data',''))+'</button>';}).join('')+'</div>';
+  openPop(anchor,'<div class="ps"><input class="fld" placeholder="'+head+'" autocomplete="off" spellcheck="false">'+chips+'</div><div class="pl"></div><div class="pc"></div>',onpick,function(p){
+    var inp=p.querySelector('input'),pl=p.querySelector('.pl'),pc=p.querySelector('.pc'),grp='';
+    function draw(){var r=metricItems(inp.value.trim().toLowerCase(),grp,cur);pl.innerHTML=r.h;pl.scrollTop=0;pc.textContent=r.n+' metric'+(r.n===1?'':'s');}
+    inp.oninput=draw;
+    p.querySelector('.gch').onclick=function(e){var b=e.target.closest('[data-g]');if(!b)return;grp=b.dataset.g;[].forEach.call(this.children,function(c){c.classList.toggle('on',c===b);});draw();};
+    draw();placePop(p,anchor);
+    if(matchMedia('(hover:hover)').matches)inp.focus();
+  });
+}
+function numberPop(anchor,start,onok){
+  openPop(anchor,'<div class="num"><input class="fld" inputmode="decimal" value="'+start+'"><button>Set</button></div>',function(){},function(p){
+    var inp=p.querySelector('input');inp.focus();inp.select();
+    function ok(){var v=inp.value.trim();if(v!==''&&isFinite(+v)){onok(String(+v));closePop();}else inp.style.borderColor='var(--bad)';}
+    p.querySelector('button').onclick=ok;inp.onkeydown=function(e){if(e.key==='Enter')ok();};
+  });
+}
+['#addM','#addF','#addN','#xpick'].forEach(function(s){$(s).setAttribute('data-popper','');});
+$('#addM').onclick=function(){metricPop($('#addM'),'Search '+M.length+' metrics',null,function(v){append('['+v+']');});};
+$('#addF').onclick=function(){openPop($('#addF'),'<div class="pl">'+FN_INFO.map(function(f){return '<button class="mi" data-v="'+f[0]+'"><span style="font-family:var(--mono);color:var(--vault)">'+(f[0]==='scale'?'scale 0–1':f[0])+'</span><small>'+f[1]+'</small></button>';}).join('')+'</div>',function(v){append(v+'(');});};
+$('#addN').onclick=function(){numberPop($('#addN'),'1',function(v){append(v);});};
+[].forEach.call(document.querySelectorAll('.tb[data-k]'),function(b){b.onclick=function(){append(b.dataset.k);};});
+$('#bk').onclick=function(){var t=tokenize(FORM);t.pop();if(t.length&&t[t.length-1].v===','&&t[t.length-1].t==='p')t.pop();FORM=untok(t);TPLON=-1;refresh();};
+$('#clr').onclick=function(){FORM='';TPLON=-1;refresh();};
+$('#fline').onclick=function(e){
+  var c=e.target.closest('[data-i]');if(!c)return;var toks=tokenize(FORM),t=toks[+c.dataset.i];
+  if(t.t==='m')metricPop(c,'Swap '+shortOf(t.v)+' for…',t.v,function(v){t.v=v;FORM=untok(toks);refresh();});
+  else if(t.t==='n')numberPop(c,t.v,function(v){t.v=v;FORM=untok(toks);refresh();});
+};
+$('#dupUse').onclick=function(){if(!DUP)return;XK=DUP.m.k;toast('In Vault this puts <b>'+esc(DUP.m.l)+'</b> on the axis you were building for');};
+$('#xpick').onclick=function(){metricPop($('#xpick'),'Plot against…',XK,function(k){XK=k;preview();});};
+
+/* ───────── refresh ───────── */
+function fmt(v){if(!isFinite(v))return '—';var a=Math.abs(v);return a===0?'0':a>=1e4||a<1e-3?v.toExponential(1):a>=100?v.toFixed(0):a>=10?v.toFixed(1):a>=1?v.toFixed(2):v.toPrecision(2);}
+function refresh(){
+  [].forEach.call(document.querySelectorAll('.rp'),function(b){b.classList.toggle('on',+b.dataset.t===TPLON);});
+  var toks=tokenize(FORM),err=null,badTok=null,tree=null;
+  try{tree=parse(toks);}catch(e){err=e.message;badTok=e.tok;}
+  var html=toks.map(function(t,i){
+    var bad=((Array.isArray(badTok)?badTok.indexOf(t)>=0:t===badTok)||t.t==='bad')?' bad':'';
+    if(t.t==='m'){var m=metaOf(t.v),u=userByK(t.v);return '<span class="tk '+(u?'u':'m')+bad+'" data-i="'+i+'" data-popper title="'+esc(m?m.l:t.v)+' — tap to swap">'+esc(m?m.s:t.v)+'</span>';}
+    if(t.t==='n')return '<span class="tk n'+bad+'" data-i="'+i+'" data-popper title="Tap to change">'+t.v+'</span>';
+    if(t.t==='op')return '<span class="tk op'+bad+'">'+({'*':'×','/':'÷','-':'−'}[t.v]||t.v)+'</span>';
+    if(t.t==='p')return '<span class="tk '+(t.v===','?'c':'p')+bad+'">'+t.v+'</span>';
+    if(t.t==='fn')return '<span class="tk fn'+bad+'">'+(t.v==='scale'?'scale':t.v)+'</span>';
+    return '<span class="tk fn bad">'+t.v+'</span>';
+  }).join('');
+  $('#fline').innerHTML=(html||'<span class="ph">Pick a starting recipe, or add a metric</span>')+'<span class="caret"></span>';
+  var showErr=!!err&&toks.length>0;
+  $('#fbar').classList.toggle('err',showErr);
+  $('#fmsg').className='fmsg'+(showErr?' err':'');
+  $('#fmsg').textContent=showErr?err:(toks.length?'Tap a blue metric to swap it, an amber number to change it.':'');
+  LAST=tree?evalTree(tree):null;
+  $('#save').disabled=!LAST;
+  dupCheck();
+  preview();
+}
+
+
+/* ───────── duplicate check: does the recipe move in lockstep with a metric already in the menu? ───────── */
+var RANKC={};
+function ranksOf(arr){var idx=[],i;for(i=0;i<N;i++)if(isFinite(arr[i]))idx.push(i);idx.sort(function(a,b){return arr[a]-arr[b];});var r=new Float64Array(N).fill(NaN);idx.forEach(function(ix,j){r[ix]=j;});return r;}
+function rho(ra,rb){var xs=[],ys=[],i;for(i=0;i<N;i++)if(isFinite(ra[i])&&isFinite(rb[i])){xs.push(ra[i]);ys.push(rb[i]);}
+  var n=xs.length;if(n<20)return {r:0,n:n};var mx=sum(xs)/n,my=sum(ys)/n,sxy=0,sxx=0,syy=0;
+  for(i=0;i<n;i++){var a=xs[i]-mx,b=ys[i]-my;sxy+=a*b;sxx+=a*a;syy+=b*b;}return {r:sxx&&syy?sxy/Math.sqrt(sxx*syy):0,n:n};}
+var DUP=null;
+function dupCheck(){
+  DUP=null;var box=$('#dup');if(!LAST){box.hidden=true;return;}
+  var me=ranksOf(LAST),best=null;
+  pickList().forEach(function(m){
+    if(EDITING&&m.k===EDITING.k)return;
+    var rk=userByK(m.k)?ranksOf(m.vals||userByK(m.k).vals):(RANKC[m.k]||(RANKC[m.k]=ranksOf(col(m.k))));
+    var c=rho(me,rk);if(Math.abs(c.r)>=0.995&&(!best||Math.abs(c.r)>Math.abs(best.r)))best={m:m,r:c.r};
+  });
+  if(!best){box.hidden=true;return;}
+  DUP=best;box.hidden=false;
+  $('#dupTx').innerHTML='Moves in lockstep with <b>'+esc(best.m.l)+'</b>'+(best.r<0?', in the opposite direction':'')+' — already in the menu.';
+}
+
+/* ───────── stylized shape preview ───────── */
+function ctxOf(c){
+  /* Display size comes from data-h (and CSS); only the backing store scales with density. */
+  var dpr=Math.min(devicePixelRatio||1,3),w=c.clientWidth,h=+c.dataset.h;
+  c.style.height=h+'px';c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);
+  var x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return {x:x,w:w,h:h};
+}
+function useLog(s){if(!s.length||s[0]<=0)return false;if(SCALE==='log')return true;if(SCALE==='lin')return false;var lo=s[Math.floor(s.length*.02)],hi=s[Math.ceil(s.length*.98)-1];return hi/Math.max(lo,1e-12)>=40;}
+function smoothPath(x,pts){x.moveTo(pts[0][0],pts[0][1]);for(var i=1;i<pts.length-1;i++){var mx=(pts[i][0]+pts[i+1][0])/2,my=(pts[i][1]+pts[i+1][1])/2;x.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);}var l=pts[pts.length-1];x.lineTo(l[0],l[1]);}
+function emptyHint(c,txt){c.x.fillStyle='#7a809c';c.x.font='12px "Exo 2"';c.x.textAlign='center';c.x.fillText(txt,c.w/2,c.h/2+4);}
+function preview(){
+  var H=ctxOf($('#hist')),S=ctxOf($('#scat'));
+  var who=[],vals=[];if(LAST)for(var i=0;i<N;i++)if(isFinite(LAST[i])){who.push(i);vals.push(LAST[i]);}
+  var srt=vals.slice().sort(function(a,b){return a-b;}),lg=useLog(srt);
+  var xm=BYK[XK]||userByK(XK);$('#xlab').textContent=xm?xm.l:XK;
+  if(!srt.length){
+    emptyHint(H,'Spread');emptyHint(S,'Trend');
+    $('#sline').innerHTML='<span class="cap">Build a formula to see how it spreads across the Vault.</span>';
+    $('#miss').textContent='';$('#tops').innerHTML='';$('#lg').textContent='';return;
+  }
+  var med=srt[Math.floor(srt.length/2)];
+  $('#sline').innerHTML='<b>'+fmt(srt[0])+'</b><span class="cap">to</span><b>'+fmt(srt[srt.length-1])+'</b><span class="cap" style="margin-left:auto">median '+fmt(med)+' · '+srt.length+' of '+N+'</span>';
+  $('#lg').textContent=lg?'log scale':'';
+  var tf=function(v){return lg?Math.log10(v):v;},lo=tf(srt[0]),hi=tf(srt[srt.length-1]);if(hi===lo){hi=lo+1;}
+  /* histogram as a soft density ridge */
+  var B=48,cnt=new Array(B).fill(0);srt.forEach(function(v){cnt[Math.min(B-1,Math.floor((tf(v)-lo)/(hi-lo)*B))]++;});
+  var K=[1,3,5,3,1],sm=cnt.map(function(_,b){var s=0,w=0;K.forEach(function(k,j){var q=b+j-2;if(q>=0&&q<B){s+=cnt[q]*k;w+=k;}});return s/w;});
+  var mx=Math.max.apply(null,sm)||1,x=H.x,pad=10,base=H.h-8,top=8;
+  var pts=sm.map(function(c,b){return [pad+(b+.5)/B*(H.w-2*pad),base-(c/mx)*(base-top)];});
+  pts.unshift([pad,base]);pts.push([H.w-pad,base]);
+  var gr=x.createLinearGradient(0,top,0,base);gr.addColorStop(0,'rgba(91,164,238,.55)');gr.addColorStop(1,'rgba(91,164,238,.03)');
+  x.beginPath();smoothPath(x,pts);x.closePath();x.fillStyle=gr;x.fill();
+  x.beginPath();smoothPath(x,pts);x.strokeStyle='rgba(169,205,245,.9)';x.lineWidth=1.4;x.stroke();
+  var mxp=pad+(tf(med)-lo)/(hi-lo)*(H.w-2*pad);
+  x.strokeStyle='rgba(200,245,66,.9)';x.lineWidth=1.5;x.setLineDash([2,3]);x.beginPath();x.moveTo(mxp,top-2);x.lineTo(mxp,base);x.stroke();x.setLineDash([]);
+  x.fillStyle='#c8f542';x.beginPath();x.arc(mxp,top-2,2.4,0,6.3);x.fill();
+  x.strokeStyle='rgba(255,255,255,.08)';x.beginPath();x.moveTo(pad,base+.5);x.lineTo(H.w-pad,base+.5);x.stroke();
+
+  /* scatter: dim glowing cloud + neon median trend */
+  var xs=col(XK),P=who.filter(function(i){return isFinite(xs[i]);});
+  x=S.x;
+  if(!P.length){emptyHint(S,'No overlap with that metric');}
+  else{
+    var xv=P.map(function(i){return xs[i];}),xlo=Math.min.apply(null,xv),xhi=Math.max.apply(null,xv);if(xhi===xlo)xhi=xlo+1;
+    var L=12,Rm=12,T=12,Bm=20,pw=S.w-L-Rm,ph=S.h-T-Bm;
+    var px=function(v){return L+(v-xlo)/(xhi-xlo)*pw;},py=function(v){return T+ph-(tf(v)-lo)/(hi-lo)*ph;};
+    x.strokeStyle='rgba(255,255,255,.07)';x.lineWidth=1;x.beginPath();x.moveTo(L,T+ph+.5);x.lineTo(L+pw,T+ph+.5);x.moveTo(L-.5,T);x.lineTo(L-.5,T+ph);x.stroke();
+    x.globalCompositeOperation='lighter';
+    P.forEach(function(i){var cx=px(xs[i]),cy=py(LAST[i]);x.fillStyle=FAM[D[i].fam];x.globalAlpha=.16;x.beginPath();x.arc(cx,cy,5,0,6.3);x.fill();x.globalAlpha=.85;x.beginPath();x.arc(cx,cy,1.6,0,6.3);x.fill();});
+    x.globalAlpha=1;x.globalCompositeOperation='source-over';
+    var NB=10,bins=[];for(var b=0;b<NB;b++)bins.push([]);
+    P.forEach(function(i){bins[Math.min(NB-1,Math.floor((xs[i]-xlo)/(xhi-xlo)*NB))].push(tf(LAST[i]));});
+    var tr=[];bins.forEach(function(bb,b){if(bb.length<3)return;bb.sort(function(a,c){return a-c;});tr.push([L+(b+.5)/NB*pw,T+ph-(bb[Math.floor(bb.length/2)]-lo)/(hi-lo)*ph]);});
+    if(tr.length>1){x.beginPath();smoothPath(x,tr);x.strokeStyle='rgba(200,245,66,.25)';x.lineWidth=6;x.stroke();x.beginPath();smoothPath(x,tr);x.strokeStyle='#c8f542';x.lineWidth=1.8;x.stroke();}
+    x.fillStyle='#7a809c';x.font='12px "Exo 2"';x.textAlign='left';x.fillText(fmt(xlo),L,S.h-4);x.textAlign='right';x.fillText(fmt(xhi),L+pw,S.h-4);
+  }
+  var miss=N-vals.length;
+  $('#miss').textContent=miss?miss+' designs left empty (a missing input, ÷ 0, or log of a negative).':'';
+  var dir=BETTER==='-1'?1:-1,top3=who.slice().sort(function(a,b){return dir*(LAST[a]-LAST[b]);}).slice(0,3);
+  $('#tops').innerHTML='<span class="cap" style="margin-bottom:2px">'+(BETTER==='-1'?'Lowest':'Highest')+'</span>'+top3.map(function(i){return '<div class="tp"><i style="background:'+FAM[D[i].fam]+'"></i><span>'+D[i].name+' · VF '+D[i].volume_fraction.toFixed(0)+'%</span><em>'+fmt(LAST[i])+'</em></div>';}).join('');
+}
+function seg(id,set){$(id).onclick=function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call($(id).children,function(c){c.classList.toggle('on',c===b);});set(b.dataset.v);preview();};}
+function setSeg(id,v){[].forEach.call($(id).children,function(c){c.classList.toggle('on',c.dataset.v===v);});}
+seg('#segScale',function(v){SCALE=v;});seg('#segBetter',function(v){BETTER=v;});
+
+/* ───────── per-browser recipes ───────── */
+var LS_KEY='f13ld.vault.variables.v1';
+function store(){try{localStorage.setItem(LS_KEY,JSON.stringify(USER.map(function(u){return {k:u.k,l:u.l,s:u.s,f:u.f,scale:u.scale,better:u.better};})));}catch(e){}}
+function load(){try{var a=JSON.parse(localStorage.getItem(LS_KEY)||'[]');if(Array.isArray(a))a.forEach(addRecipe);}catch(e){}}
+function migrate(f){return f.replace(/\[([^\]]+)\]/g,function(all,x){return !metaOf(x)&&BYS[x]?'['+BYS[x].k+']':all;});}
+function addRecipe(r){if(!r||typeof r.f!=='string'||typeof r.l!=='string')return null;r.f=migrate(r.f);var s=uniqShort(String(r.s||autoShort(r.l)).slice(0,10)),u={k:r.k||newKey(),l:r.l.slice(0,40),s:s,f:r.f,scale:r.scale||'auto',better:String(r.better||'0')};USER.push(u);u.vals=compile(u.f)||new Float64Array(N).fill(NaN);return u;}
+function newKey(){return '~u'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);}
+function autoShort(n){var w=n.split(/\s+/).filter(Boolean);return w.length>1?w.map(function(x){return x[0].toUpperCase();}).join('').slice(0,5):n.slice(0,8);}
+function uniqShort(s){var b=s,i=2;while(BYS[s]||(userBy(s)&&userBy(s)!==EDITING))s=b+i++;return s;}
+function startEdit(u){EDITING=u;FORM=u.f;TPLON=-1;$('#vname').value=u.l;$('#vshort').value=u.s;SCALE=u.scale;BETTER=u.better;setSeg('#segScale',SCALE);setSeg('#segBetter',BETTER);$('#title').textContent='Edit · '+u.l;$('#saveTx').textContent='Update';refresh();}
+function endEdit(){EDITING=null;$('#title').textContent='New variable';$('#saveTx').textContent='Save';}
+$('#save').onclick=function(){
+  if(!LAST)return;var name=$('#vname').value.trim()||'My variable '+(USER.length+1);
+  var s=uniqShort($('#vshort').value.trim()||autoShort(name)),u;
+  if(EDITING){u=EDITING;u.l=name;u.s=s;u.f=FORM;u.scale=SCALE;u.better=BETTER;u.vals=LAST;USER.forEach(function(o){if(o!==u)o.vals=compile(o.f)||o.vals;});}
+  else u=addRecipe({l:name,s:s,f:FORM,scale:SCALE,better:BETTER});
+  var was=!!EDITING;endEdit();store();drawSaved();drawMenu(u.k);
+  toast((was?'Updated ':'Saved ')+'<b>'+name+'</b> · in every metric menu');
+};
+function drawSaved(){
+  $('#saved').innerHTML=USER.length?USER.map(function(u,i){return '<div class="sv"><div class="tx"><div class="nm">'+esc(u.l)+'<em>'+esc(u.s)+'</em></div><code>'+esc(pretty(u.f))+'</code></div>'+
+    '<button class="ib" data-ed="'+i+'" title="Edit" aria-label="Edit"><svg class="g" viewBox="0 0 16 16"><path d="M3 13l.6-2.6L10.8 3.2l2 2-7.2 7.2z"/></svg></button>'+
+    '<button class="ib" data-du="'+i+'" title="Duplicate" aria-label="Duplicate"><svg class="g" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"/><path d="M3 10.5V4a1 1 0 011-1h6.5"/></svg></button>'+
+    '<button class="ib" data-rm="'+i+'" title="Delete" aria-label="Delete"><svg class="g" viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.8 4.5l.6 8.5h5.2l.6-8.5"/></svg></button></div>';}).join('')
+    :'<span class="note">No recipes yet. Save one and it appears here and in every metric menu.</span>';
+}
+$('#saved').onclick=function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.ed!=null)startEdit(USER[+b.dataset.ed]);
+  if(b.dataset.du!=null){var d=USER[+b.dataset.du];endEdit();FORM=d.f;TPLON=-1;$('#vname').value=(d.l+' copy').slice(0,40);$('#vshort').value='';refresh();}
+  if(b.dataset.rm!=null){
+    var r=USER[+b.dataset.rm],dep=USER.filter(function(x){return x!==r&&x.f.indexOf('['+r.k+']')>=0;});
+    if(dep.length){toast('<b>'+esc(dep[0].l)+'</b> uses this one — change it first');return;}
+    if(EDITING===r)endEdit();USER.splice(+b.dataset.rm,1);store();drawSaved();drawMenu();toast('Deleted <b>'+esc(r.l)+'</b>');
+  }
+};
+$('#exp').onclick=function(){
+  if(!USER.length){toast('Nothing to export yet');return;}
+  var blob=new Blob([JSON.stringify({f13ld:'vault-variables',v:1,recipes:USER.map(function(u){return {name:u.l,short:u.s,formula:u.f,scale:u.scale,better:+u.better};})},null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='f13ld-vault-recipes.json';document.body.appendChild(a);a.click();a.remove();
+};
+$('#imp').onclick=function(){$('#impFile').click();};
+$('#impFile').onchange=function(){
+  var f=this.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(){var n=0;try{var j=JSON.parse(rd.result);(j.recipes||[]).forEach(function(r){if(USER.length<24&&addRecipe({l:String(r.name||'Imported'),s:r.short,f:String(r.formula||''),scale:r.scale,better:r.better}))n++;});}catch(e){}store();drawSaved();drawMenu();toast(n?'Imported <b>'+n+'</b> recipe'+(n>1?'s':''):'That file had no recipes');};
+  rd.readAsText(f);this.value='';
+};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function drawMenu(hl){
+  var h='<div class="mh">2D · Y axis</div><button class="mi new"><svg class="g" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></svg><span>New variable…</span></button>';
+  if(USER.length)h+='<div class="mg">My recipes</div>'+USER.slice(0,4).map(function(u){return '<button class="mi mine"'+(u.k===hl?' style="color:var(--neon)"':'')+'><span>'+esc(u.l)+'</span><em>'+esc(u.s)+'</em></button>';}).join('');
+  h+='<div class="mg">Geometry</div><button class="mi"><span>Volume fraction</span><em>VF</em></button><button class="mi"><span>Axial anisotropy</span><em>Axial aniso</em></button>';
+  $('#axmenu').innerHTML=h;
+}
+var tt;function toast(h){var t=$('#toast');t.innerHTML=h;t.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('on');},2400);}
+
+load();drawSaved();drawMenu();refresh();
+var rz;addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(preview,80);});
+</script>
+</body>
+</html>

@@ -48,6 +48,7 @@ function histCommit(label) {
 function histApply(snap) {
   var o = JSON.parse(snap), domWas = F.domain;
   F = Object.assign(freshFilters(), o);
+  varSanitizeF(F);   /* v0.10.0 — a deleted variable's range can't come back */
   HIST.cur = snap;
   if (F.domain !== domWas) domainChanged(true);
   rangesChanged();
@@ -86,7 +87,9 @@ function b64d(s) { try { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.l
 function viewState() {
   var f = {}, base = freshFilters();
   Object.keys(F).forEach(function (k) { if (JSON.stringify(F[k]) !== JSON.stringify(base[k])) f[k] = F[k]; });
-  return { f: f, s: S.sel ? S.sel._id : null, a3: S.ax3, a2: S.ax2, c: S.color, hv: S.hv, p: S.pins.map(function (d) { return d._id; }) };
+  var o = { f: f, s: S.sel ? S.sel._id : null, a3: S.ax3, a2: S.ax2, c: S.color, hv: S.hv, p: S.pins.map(function (d) { return d._id; }) };
+  var u = varsForView(); if (u.length) o.u = u;   /* v0.10.0 — the variables this view uses travel with it */
+  return o;
 }
 function shareURL() {
   var u = location.href.split('#')[0];
@@ -101,8 +104,16 @@ function readShareLink() {
   var m = /#v=([A-Za-z0-9_-]+)/.exec(location.hash || ''); if (!m) return false;
   var j = b64d(m[1]); if (!j) return false;
   var o; try { o = JSON.parse(j); } catch (e) { return false; }
-  F = Object.assign(freshFilters(), o.f || {});
+  /* v0.10.0 — variables first, so the link's axes and filters can point at them */
+  var lv = varsFromLink(o.u), mp = function (k) { return lv.map[k] || k; }, f = o.f || {};
+  if (f.ranges) { var rr = {}; Object.keys(f.ranges).forEach(function (k) { rr[mp(k)] = f.ranges[k]; }); f.ranges = rr; }
+  if (f.rangeKeys) f.rangeKeys = f.rangeKeys.map(mp);
+  ['a3', 'a2'].forEach(function (a) { if (o[a]) Object.keys(o[a]).forEach(function (x) { o[a][x] = mp(o[a][x]); }); });
+  if (o.c) o.c = mp(o.c);
+  F = Object.assign(freshFilters(), f);
+  varSanitizeF(F);
   if (o.a3) S.ax3 = o.a3; if (o.a2) S.ax2 = o.a2; if (o.c) S.color = o.c; if (o.hv) S.hv = o.hv;
+  if (lv.added.length) setTimeout(function () { toast('This view uses ' + (lv.added.length === 1 ? 'a variable' : lv.added.length + ' variables') + ' · <b>' + esc(lv.added.map(function (v) { return v.label; }).join(', ')) + '</b>', { label: 'Keep', icon: 'tick', run: varsKeepLinked }); }, 1800);
   S._linkSel = o.s || null; S._linkPins = o.p || [];
   return true;
 }
